@@ -1,5 +1,5 @@
 # SmallBASIC for FLTK
-# Copyright(C) 2001-2013 Chris Warren-Smith.
+# Copyright(C) 2001-2019 Chris Warren-Smith.
 #
 # This program is distributed under the terms of the GPL v2.0 or later
 # Download the GNU Public License (GPL) from www.gnu.org
@@ -49,8 +49,8 @@ iconsdir = $(datadir)/icons/hicolor/32x32/apps
 icons_DATA = ../../../images/sb-desktop-32x32.png
 
 if WITH_WIN32
-sbasici_LDADD += sbfltk.res
-sbasici_DEPENDENCIES += sbfltk.res
-sbfltk.res : sbfltk.rc
+sbasici_LDADD += win.res
+sbasici_DEPENDENCIES += win.res
+win.res : win.rc
 	$(WINDRES) $< -O coff -o $@
 endif

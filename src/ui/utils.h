@@ -31,6 +31,9 @@
 #elif defined(_SDL)
  void appLog(const char *format, ...);
  #define deviceLog(...) appLog(__VA_ARGS__)
+#elif defined(_FLTK)
+ extern "C" void trace(const char *format, ...);
+ #define deviceLog trace
 #endif
 
 #if defined(_DEBUG)
