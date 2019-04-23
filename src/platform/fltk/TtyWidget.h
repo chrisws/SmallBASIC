@@ -6,16 +6,16 @@
 // Download the GNU Public License (GPL) from www.gnu.org
 // 
 
-#ifndef FL_TTY_WIDGET
-#define FL_TTY_WIDGET
+#ifndef Fl_TTY_WIDGET
+#define Fl_TTY_WIDGET
 
 #include <stdlib.h>
 #include <string.h>
-#include <fltk/events.h>
-#include <fltk/Font.h>
-#include <fltk/draw.h>
-#include <fltk/Group.h>
-#include <fltk/Scrollbar.h>
+#include <FL/Fl_events.h>
+#include <FL/Fl_Font.h>
+#include <FL/Fl_draw.h>
+#include <FL/Fl_Group.h>
+#include <FL/Fl_Scrollbar.h>
 
 #include "ui/strlib.h"
 
@@ -120,7 +120,7 @@ struct TtyTextSeg {
     *invert = get(INVERT, invert);
 
     if (this->color != (Color)NO_COLOR) {
-      fltk::setcolor(this->color);
+      Fl_setcolor(this->color);
     }
 
     return set(BOLD) || set(ITALIC);

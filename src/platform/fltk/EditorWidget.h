@@ -12,14 +12,14 @@
 #ifndef EDITOR_WIDGET_H
 #define EDITOR_WIDGET_H
 
-#include <fltk/Browser.h>
-#include <fltk/Window.h>
-#include <fltk/Widget.h>
-#include <fltk/Input.h>
-#include <fltk/ToggleButton.h>
-#include <fltk/Button.h>
-#include <fltk/TextEditor.h>
-#include <fltk/Choice.h>
+#include <FL/Fl_Browser.h>
+#include <FL/Fl_Window.h>
+#include <FL/Fl_Widget.h>
+#include <FL/Fl_Input.h>
+#include <FL/Fl_ToggleButton.h>
+#include <FL/Fl_Button.h>
+#include <FL/Fl_TextEditor.h>
+#include <FL/Fl_Choice.h>
 #include <limits.h>
 
 #include "ui/strlib.h"
@@ -174,8 +174,8 @@ private:
   Input *commandText;
   Widget *rowStatus;
   Widget *colStatus;
-  fltk::Button *runStatus;
-  fltk::Button *modStatus;
+  Fl_Button *runStatus;
+  Fl_Button *modStatus;
   Browser *funcList;
 
   ToggleButton *logPrintBn;
@@ -185,7 +185,7 @@ private:
 
   // same order as display items
   CommandOpt commandOpt;
-  fltk::Button *commandChoice;
+  Fl_Button *commandChoice;
 
   strlib::String commandBuffer;
 };

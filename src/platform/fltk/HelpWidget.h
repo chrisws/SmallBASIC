@@ -6,15 +6,15 @@
 // Download the GNU Public License (GPL) from www.gnu.org
 // 
 
-#ifndef FL_HELP_WIDGET
-#define FL_HELP_WIDGET
+#ifndef Fl_HELP_WIDGET
+#define Fl_HELP_WIDGET
 
-#include <fltk/Widget.h>
-#include <fltk/draw.h>
-#include <fltk/Image.h>
-#include <fltk/SharedImage.h>
-#include <fltk/Group.h>
-#include <fltk/Scrollbar.h>
+#include <FL/Fl_Widget.h>
+#include <FL/Fl_draw.h>
+#include <FL/Fl_Image.h>
+#include <FL/Fl_SharedImage.h>
+#include <FL/Fl_Group.h>
+#include <FL/Fl_Scrollbar.h>
 
 #include "ui/strlib.h"
 #include "platform/fltk/utils.h"
@@ -128,7 +128,7 @@ private:
   strlib::String selection;
 };
 
-#ifdef FL_HELP_WIDGET_RESOURCES
+#ifdef Fl_HELP_WIDGET_RESOURCES
 // somewhere to keep this clutter
 
 static const char *dot_xpm[] = {

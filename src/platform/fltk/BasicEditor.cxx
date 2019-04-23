@@ -8,8 +8,8 @@
 // Download the GNU Public License (GPL) from www.gnu.org
 //
 
-#include <fltk/damage.h>
-#include <fltk/events.h>
+#include <FL/Fl_damage.h>
+#include <FL/Fl_events.h>
 
 #include "platform/fltk/BasicEditor.h"
 #include "platform/fltk/kwp.h"

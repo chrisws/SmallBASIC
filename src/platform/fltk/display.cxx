@@ -1,21 +1,15 @@
 // This file is part of SmallBASIC
 //
-// Copyright(C) 2001-2014 Chris Warren-Smith.
+// Copyright(C) 2001-2019 Chris Warren-Smith.
 //
 // This program is distributed under the terms of the GPL v2.0 or later
 // Download the GNU Public License (GPL) from www.gnu.org
 //
 
-#include <fltk/ask.h>
-#include <fltk/Cursor.h>
-#include <fltk/Font.h>
-#include <fltk/Image.h>
-#include <fltk/Monitor.h>
-#include <fltk/draw.h>
-#include <fltk/events.h>
-#include <fltk/Group.h>
-#include <fltk/layout.h>
-#include <fltk/run.h>
+#include <FL/fl_ask.H>
+#include <FL/fl_draw.H>
+#include <FL/Fl_Image.H>
+#include <FL/Fl_Group.H>
 
 #include <time.h>
 #include "platform/fltk/display.h"
@@ -23,23 +17,31 @@
 #include "platform/fltk/system.h"
 #include "common/device.h"
 #include "ui/ansiwidget.h"
-
-using namespace fltk;
+#include "ui/canvas.h"
 
 #define SIZE_LIMIT 4
 
 DisplayWidget *widget;
 Canvas *drawTarget;
 bool mouseActive;
-Color drawColor;
+Fl_Color drawColor;
 int drawColorRaw;
 extern System *g_system;
+
+/*
+  float scale;
+  if (scale != Fl_Graphics_Driver::default_driver().scale()) {
+    // the screen scaling factor has changed
+    fl_rescale_offscreen(oscr);
+    scale = Fl_Graphics_Driver::default_driver().scale();
+  }
+*/
 
 //
 // Canvas
 //
 Canvas::Canvas(int size) :
-  _img(NULL),
+  _offscreen(0),
   _clip(NULL),
   _size(size),
   _style(0),
@@ -47,49 +49,50 @@ Canvas::Canvas(int size) :
 }
 
 Canvas::~Canvas() {
-  if (_img) {
-    _img->destroy();
-  }
-  delete _img;
   delete _clip;
+  if (_offscreen) {
+    fl_delete_offscreen(_offscreen);
+  }
 }
 
 void Canvas::beginDraw() {
-  _img->make_current();
-  setcolor(drawColor);
+  fl_begin_offscreen(_offscreen);
+  Fl::set_color(drawColor);
   if (_clip) {
-    push_clip(*_clip);
+    fl_push_clip(*_clip);
   }
 }
 
 void Canvas::create(int w, int h) {
-  _img = new Image(w, h);
-  _img->set_forceARGB32();
+  _w = h;
+  _h = h;
+  widget->make_current();
+  _offscreen = fl_create_offscreen(_w, _h);
 
-  GSave gsave;
   beginDraw();
-  setcolor(drawColor);
-  fillrect(0, 0, _img->w(), _img->h());
+  Fl::set_color(drawColor);
+  fillrect(0, 0, _w, _h);
   endDraw();
 }
 
 void Canvas::drawImageRegion(Canvas *dst, const MAPoint2d *dstPoint, const MARect *srcRect) {
-  fltk::Rectangle from = fltk::Rectangle(srcRect->left, srcRect->top, srcRect->width, srcRect->height);
-  fltk::Rectangle to = fltk::Rectangle(dstPoint->x, dstPoint->y, srcRect->width, srcRect->height);
-  GSave gsave;
+  Fl_Rect from = Fl_Rect(srcRect->left, srcRect->top, srcRect->width, srcRect->height);
+  Fl_Rect to = Fl_Rect(dstPoint->x, dstPoint->y, srcRect->width, srcRect->height);
+
   dst->beginDraw();
-  _img->draw(from, to);
+
+  // fl_copy_offscreen(int x, int y, int w, int h, Fl_Offscreen pixmap, int srcx, int srcy)
+  _offscreen->draw(from, to);
   dst->endDraw();
 }
 
 void Canvas::drawLine(int startX, int startY, int endX, int endY) {
   if (_isScreen) {
-    fltk::setcolor(drawColor);
-    fltk::drawline(startX, startY, endX, endY);
+    Fl::set_color(drawColor);
+    Fl_drawline(startX, startY, endX, endY);
   } else {
-    GSave gsave;
     beginDraw();
-    fltk::drawline(startX, startY, endX, endY);
+    Fl_drawline(startX, startY, endX, endY);
     endDraw();
   }
 }
@@ -104,9 +107,8 @@ void Canvas::drawPixel(int posX, int posY) {
   }
 
 #if !defined(_Win32)
-  GSave gsave;
   beginDraw();
-  setcolor(drawColorRaw);
+  Fl::set_color(drawColorRaw);
   drawpoint(posX, posY);
   endDraw();
 #endif
@@ -114,13 +116,12 @@ void Canvas::drawPixel(int posX, int posY) {
 
 void Canvas::drawRectFilled(int left, int top, int width, int height) {
   if (_isScreen) {
-    fltk::setcolor(drawColor);
-    fltk::fillrect(left, top, width, height);
+    Fl::set_color(drawColor);
+    Fl_fillrect(left, top, width, height);
   } else {
 #if !defined(_Win32)
-    GSave gsave;
     beginDraw();
-    fltk::fillrect(left, top, width, height);
+    Fl_fillrect(left, top, width, height);
     endDraw();
 #endif
     int w = _img->buffer_width();
@@ -146,7 +147,6 @@ void Canvas::drawRGB(const MAPoint2d *dstPoint, const void *src,
   size_t scale = 1;
   int w = srcRect->width;
 
-  GSave gsave;
   beginDraw();
 
   for (int y = srcRect->top; y < srcRect->height; y += scale) {
@@ -182,7 +182,7 @@ void Canvas::drawRGB(const MAPoint2d *dstPoint, const void *src,
           row[dX] = (dR << 16) | (dG << 8) | (dB);
 
           Color px = color(dR, dG, dB);
-          setcolor(px);
+          Fl::set_color(px);
           drawpoint(dX, dY);
         }
       }      
@@ -194,17 +194,17 @@ void Canvas::drawRGB(const MAPoint2d *dstPoint, const void *src,
 void Canvas::drawText(int left, int top, const char *str, int length) {
   setFont();
   if (_isScreen) {
-    fltk::setcolor(drawColor);
-    fltk::drawtext(str, length, left, top + (int)getascent());
+    Fl::set_color(drawColor);
+    Fl_drawtext(str, length, left, top + (int)getascent());
   } else {
-    GSave gsave;
     beginDraw();
-    fltk::drawtext(str, length, left, top + (int)getascent());
+    Fl_drawtext(str, length, left, top + (int)getascent());
     endDraw();
   }
 }
 
 void Canvas::endDraw() {
+  fl_end_offscreen();
   if (_clip) {
     pop_clip();
   }
@@ -222,7 +222,6 @@ int Canvas::getPixel(int x, int y) {
     result = 0;
   }
 #else
-  GSave gsave;
   _img->make_current();
   result = ::x_get_pixel(x, y);
 #endif
@@ -232,13 +231,12 @@ int Canvas::getPixel(int x, int y) {
 void Canvas::resize(int w, int h) {
   if (_img) {
     Image *old = _img;
-    GSave gsave;
     _img = new Image(w, h);
     _img->make_current();
     _img->set_forceARGB32();
-    setcolor(DEFAULT_BACKGROUND);
+    Fl::set_color(DEFAULT_BACKGROUND);
     fillrect(0, 0, w, h);
-    old->draw(fltk::Rectangle(old->w(), old->h()));
+    old->draw(Fl_Rect(old->w(), old->h()));
     old->destroy();
     delete old;
   }
@@ -247,14 +245,14 @@ void Canvas::resize(int w, int h) {
 void Canvas::setClip(int x, int y, int w, int h) {
   delete _clip;
   if (x != 0 || y != 0 || _img->w() != w || _img->h() != h) {
-    _clip = new fltk::Rectangle(x, y, w, h);
+    _clip = new Fl_Rect(x, y, w, h);
   } else {
     _clip = NULL;
   }
 }
 
 void Canvas::setFont() {
-  fltk::Font *font = fltk::COURIER;
+  Fl_Font *font = Fl_COURIER;
   if (_size && _style) {
     if (_style & FONT_STYLE_BOLD) {
       font = font->bold();
@@ -333,8 +331,8 @@ void DisplayWidget::draw() {
     _ansiWidget->drawOverlay(mouseActive);
     drawTarget = oldTarget;
   } else {
-    setcolor(drawColor);
-    fillrect(fltk::Rectangle(w(), h()));
+    Fl::set_color(drawColor);
+    fillrect(Fl_Rect(w(), h()));
   }
 }
 
@@ -361,17 +359,17 @@ int DisplayWidget::handle(int e) {
     return 1;
 
   case PUSH:
-    event.point.x = fltk::event_x();
-    event.point.y = fltk::event_y();
+    event.point.x = Fl_event_x();
+    event.point.y = Fl_event_y();
     mouseActive = _ansiWidget->pointerTouchEvent(event);
     return mouseActive;
 
   case DRAG:
   case MOVE:
-    event.point.x = fltk::event_x();
-    event.point.y = fltk::event_y();
+    event.point.x = Fl_event_x();
+    event.point.y = Fl_event_y();
     if (mouseActive && _ansiWidget->pointerMoveEvent(event)) {
-      Widget::cursor(fltk::CURSOR_HAND);
+      Widget::cursor(Fl_CURSOR_HAND);
       return 1;
     }
     break;
@@ -379,9 +377,9 @@ int DisplayWidget::handle(int e) {
   case RELEASE:
     if (mouseActive) {
       mouseActive = false;
-      Widget::cursor(fltk::CURSOR_DEFAULT);
-      event.point.x = fltk::event_x();
-      event.point.y = fltk::event_y();
+      Widget::cursor(Fl_CURSOR_DEFAULT);
+      event.point.x = Fl_event_x();
+      event.point.y = Fl_event_y();
       _ansiWidget->pointerReleaseEvent(event);
     }
     break;
@@ -596,7 +594,7 @@ void maDrawImageRegion(MAHandle maHandle, const MARect *srcRect,
 
 int maCreateDrawableImage(MAHandle maHandle, int width, int height) {
   int result = RES_OK;
-  const fltk::Monitor &monitor = fltk::Monitor::all();
+  const Fl_Monitor &monitor = Fl_Monitor::all();
   if (height > monitor.h() * SIZE_LIMIT) {
     result -= 1;
   } else {
@@ -649,7 +647,7 @@ int maShowVirtualKeyboard(void) {
 int maGetEvent(MAEvent *event) {
   int result = 0;
   if (check()) {
-    switch (fltk::event()) {
+    switch (Fl_event()) {
     case PUSH:
       event->type = EVENT_TYPE_POINTER_PRESSED;
       result = 1;
@@ -668,12 +666,12 @@ int maGetEvent(MAEvent *event) {
 }
 
 void maWait(int timeout) {
-  fltk::wait(timeout);
+  Fl_wait(timeout);
 }
 
 void maAlert(const char *title, const char *message, const char *button1,
              const char *button2, const char *button3) {
-  fltk::alert("%s\n\n%s", title, message);
+  Fl_alert("%s\n\n%s", title, message);
 }
 
 //
@@ -686,7 +684,7 @@ void System::optionsBox(StringList *items) {
   int screenId = widget->_ansiWidget->insetTextScreen(20,20,80,80);
   List_each(String *, it, *items) {
     char *str = (char *)(* it)->c_str();
-    int w = fltk::getwidth(str) + 20;
+    int w = Fl_getwidth(str) + 20;
     FormInput *item = new MenuButton(index, selectedIndex, str, 2, y, w, 22);
     widget->_ansiWidget->addInput(item);
     index++;

@@ -123,14 +123,14 @@ void osd_clear_sound_queue() {
 
 #else
 
-#include <fltk/ask.h>
+#include <FL/Fl_ask.h>
 #if defined(WIN32)
   #include <windows.h>
 #endif
 
 // non SDL based implementation
 void osd_beep() {
-  fltk::beep(fltk::BEEP_MESSAGE);
+  Fl_beep(Fl_BEEP_MESSAGE);
 }
 
 void osd_sound(int frq, int ms, int vol, int bgplay) {

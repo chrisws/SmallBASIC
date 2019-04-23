@@ -13,9 +13,9 @@
 #include <dirent.h>
 #include <unistd.h>
 #include <sys/stat.h>
-#include <fltk/ask.h>
-#include <fltk/events.h>
-#include <fltk/run.h>
+#include <FL/Fl_ask.h>
+#include <FL/Fl_events.h>
+#include <FL/Fl_run.h>
 
 #include "platform/fltk/MainWindow.h"
 #include "platform/fltk/HelpWidget.h"
@@ -85,7 +85,7 @@ void updateSortBy(SORT_BY newSort) {
 }
 
 static void anchorClick_event(void *) {
-  fltk::remove_check(anchorClick_event);
+  Fl_remove_check(anchorClick_event);
   fileWidget->anchorClick();
 }
 
@@ -93,7 +93,7 @@ static void anchorClick_cb(Widget *w, void *v) {
   if (fileWidget) {
     click.empty();
     click.append((char *)v);
-    fltk::add_check(anchorClick_event); // post message
+    Fl_add_check(anchorClick_event); // post message
   }
 }
 
@@ -434,7 +434,7 @@ void FileWidget::displayPath() {
 // open the path
 //
 void FileWidget::enterPath() {
-  const char *newPath = fltk::input("Enter path:", _path);
+  const char *newPath = Fl_input("Enter path:", _path);
   if (newPath != 0) {
     if (chdir(newPath) == 0) {
       strcpy(_path, newPath);
@@ -477,8 +477,8 @@ int FileWidget::handle(int e) {
     break;
 
   case PASTE:
-    strncpy(buffer, fltk::event_text(), fltk::event_length());
-    buffer[fltk::event_length()] = 0;
+    strncpy(buffer, Fl_event_text(), Fl_event_length());
+    buffer[Fl_event_length()] = 0;
     forwardSlash(buffer);
     wnd->editFile(buffer);
     dnd_active = 0;

@@ -1,6 +1,6 @@
 // This file is part of SmallBASIC
 //
-// Copyright(C) 2001-2013 Chris Warren-Smith.
+// Copyright(C) 2001-2019 Chris Warren-Smith.
 //
 // This program is distributed under the terms of the GPL v2.0 or later
 // Download the GNU Public License (GPL) from www.gnu.org
@@ -9,42 +9,17 @@
 #ifndef DISPLAY_WIDGET_H
 #define DISPLAY_WIDGET_H
 
-#include <fltk/Widget.h>
-#include <fltk/Image.h>
-#include <fltk/draw.h>
+#include <FL/Fl_Widget.H>
+#include <FL/Fl_Image.H>
+#include <FL/fl_draw.H>
 
 #include "lib/maapi.h"
 #include "ui/inputs.h"
+#include "ui/canvas.h"
 
 struct AnsiWidget;
 
-struct Canvas {
-  Canvas(int size);
-  ~Canvas();
-
-  void beginDraw();
-  void create(int w, int h);
-  void drawImageRegion(Canvas *dst, const MAPoint2d *dstPoint, const MARect *srcRect);
-  void drawLine(int startX, int startY, int endX, int endY);
-  void drawPixel(int posX, int posY);
-  void drawRectFilled(int left, int top, int width, int height);
-  void drawRGB(const MAPoint2d *dstPoint, const void *src,
-               const MARect *srcRect, int scanlength);
-  void drawText(int left, int top, const char *str, int length);
-  void endDraw();
-  int  getPixel(int x, int y);
-  void resize(int w, int h);
-  void setClip(int x, int y, int w, int h);
-  void setFont();
-
-  fltk::Image *_img;
-  fltk::Rectangle *_clip;
-  int _size;
-  int _style;
-  bool _isScreen;
-};
-
-class DisplayWidget : public fltk::Widget {
+class DisplayWidget : public Fl_Widget {
 public:
   DisplayWidget(int x, int y, int w, int h, int defsize);
   virtual ~DisplayWidget();

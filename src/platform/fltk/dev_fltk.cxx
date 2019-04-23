@@ -11,12 +11,12 @@
 #include "common/smbas.h"
 #include "common/osd.h"
 
-#include <fltk/ask.h>
-#include <fltk/run.h>
-#include <fltk/events.h>
-#include <fltk/FL_VERSION.h>
-#include <fltk/Rectangle.h>
-#include <fltk/damage.h>
+#include <FL/Fl_ask.h>
+#include <FL/Fl_run.h>
+#include <FL/Fl_events.h>
+#include <FL/Fl_Fl_VERSION.h>
+#include <FL/Fl_Rectangle.h>
+#include <FL/Fl_damage.h>
 
 #include "platform/fltk/MainWindow.h"
 #include "platform/fltk/HelpWidget.h"
@@ -157,15 +157,15 @@ int osd_events(int wait_flag) {
   case 1:
     // wait for an event
     wnd->_out->flush(true);
-    fltk::wait();
+    Fl_wait();
     break;
   case 2:
     // pause
-    fltk::wait(EVT_PAUSE_TIME);
+    Fl_wait(EVT_PAUSE_TIME);
     break;
   default:
     // pump messages without pausing
-    fltk::check();
+    Fl_check();
   }
 
   if (wnd->isBreakExec()) {
@@ -186,10 +186,10 @@ void osd_setpenmode(int enable) {
  * sets the current mouse position and returns whether the mouse is within the output window
  */
 bool get_mouse_xy() {
-  fltk::Rectangle rc;
+  Fl_Rect rc;
   int x, y;
 
-  fltk::get_mouse(x, y);
+  Fl_get_mouse(x, y);
   wnd->_out->get_absolute_rect(&rc);
 
   // convert mouse screen rect to out-client rect
@@ -208,14 +208,14 @@ int osd_getpen(int code) {
 
   if (wnd->_penMode == PEN_OFF) {
     wnd->_out->flush(true);
-    fltk::wait();
+    Fl_wait();
   }
 
   switch (code) {
   case 0:
     // UNTIL PEN(0) - wait until click or move
     wnd->_out->flush(true);
-    fltk::wait();               // fallthru to re-test
+    Fl_wait();               // fallthru to re-test
 
   case 3:                      // returns true if the pen is down (and save curpos)
     if (event_state() & ANY_BUTTON) {
@@ -392,7 +392,7 @@ void dev_delay(dword ms) {
     wnd->setModal(true);
     wnd->_out->flush(true);
     while (wnd->isModal()) {
-      fltk::wait(0.1);
+      Fl_wait(0.1);
     }
   }
 }
@@ -431,7 +431,7 @@ char *dev_gets(char *dest, int size) {
   wnd->setModal(true);
 
   while (wnd->isModal()) {
-    fltk::wait();
+    Fl_wait();
   }
 
   if (wnd->isBreakExec()) {
@@ -461,19 +461,19 @@ C_LINKAGE_END
 //--FORM------------------------------------------------------------------------
 
 void System::alert(const char *title, const char *message) {
-  fltk::alert(message);
+  Fl_alert(message);
 }
 
 int System::ask(const char *title, const char *prompt, bool cancel) {
   if (cancel) {
-    return fltk::choice(prompt, "Yes", "No", "Cancel");
+    return Fl_choice(prompt, "Yes", "No", "Cancel");
   } else {
-    return fltk::choice(prompt, "Yes", "No", "");
+    return Fl_choice(prompt, "Yes", "No", "");
   }
 }
 
 void System::setClipboardText(const char *text) {
-  fltk::copy(text, strlen(text), true);
+  Fl_copy(text, strlen(text), true);
 }
 
 char *System::getClipboardText() {

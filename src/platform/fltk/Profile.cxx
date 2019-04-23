@@ -8,7 +8,7 @@
 
 #include <unistd.h>
 #include <ctype.h>
-#include <fltk/Monitor.h>
+#include <FL/Fl_Monitor.h>
 
 #include "platform/fltk/Profile.h"
 #include "platform/fltk/MainWindow.h"
@@ -74,7 +74,7 @@ void Profile::restore(MainWindow *wnd) {
     restoreValue(&profile, lineNumbersKey, &_lineNumbers);
     restoreStyles(&profile);
 
-    fltk::Rectangle rc;
+    Fl_Rect rc;
     rc = restoreRect(&profile, appPositionKey);
     if (!rc.empty()) {
       _appPosition = rc;
@@ -93,7 +93,7 @@ void Profile::restore(MainWindow *wnd) {
 //
 // restore the standalone window position
 //
-void Profile::restoreAppPosition(fltk::Rectangle *wnd) {
+void Profile::restoreAppPosition(Fl_Rect *wnd) {
   if (!_appPosition.empty()) {
     wnd->w(_appPosition.w());
     wnd->h(_appPosition.h());
@@ -142,8 +142,8 @@ int Profile::nextInteger(const char *s, int len, int &index) {
 //
 // restore a rectangle value with the given key
 //
-fltk::Rectangle Profile::restoreRect(Properties *profile, const char *key) {
-  fltk::Rectangle result(0, 0, 0, 0);
+Fl_Rect Profile::restoreRect(Properties *profile, const char *key) {
+  Fl_Rect result(0, 0, 0, 0);
   String *value = profile->get(key);
   if (value != NULL) {
     const char *buffer = value->c_str();
@@ -166,7 +166,7 @@ void Profile::restoreStyles(Properties *profile) {
   restoreValue(profile, fontSizeKey, &_fontSize);
   String *fontName = profile->get(fontNameKey);
   if (fontName) {
-    _font = fltk::font(fontName->c_str());
+    _font = Fl_font(fontName->c_str());
   }
 
   for (int i = 0; i <= st_background; i++) {
@@ -174,7 +174,7 @@ void Profile::restoreStyles(Properties *profile) {
     sprintf(buffer, "%02d", i);
     String *color = profile->get(buffer);
     if (color) {
-      Color c = fltk::color(color->c_str());
+      Color c = Fl_color(color->c_str());
       if (c != NO_COLOR) {
         if (i == st_background) {
           this->_color = c;
@@ -253,7 +253,7 @@ void Profile::restoreValue(Properties *p, const char *key, int *value) {
 //
 // restore the main window position
 //
-void Profile::restoreWindowPos(MainWindow *wnd, fltk::Rectangle &rc) {
+void Profile::restoreWindowPos(MainWindow *wnd, Fl_Rect &rc) {
   int x = rc.x();
   int y = rc.y();
   int w = rc.w();
@@ -270,7 +270,7 @@ void Profile::restoreWindowPos(MainWindow *wnd, fltk::Rectangle &rc) {
 //
 // save the window position
 //
-void Profile::saveRect(FILE *fp, const char *key, fltk::Rectangle *rc) {
+void Profile::saveRect(FILE *fp, const char *key, Fl_Rect *rc) {
   fprintf(fp, "%s=%d;%d;%d;%d\n", key, rc->x(), rc->y(), rc->w(), rc->h());
 }
 

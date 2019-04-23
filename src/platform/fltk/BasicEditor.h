@@ -13,7 +13,7 @@
 #ifndef BASIC_EDITOR_H
 #define BASIC_EDITOR_H
 
-#include <fltk/TextEditor.h>
+#include <FL/Fl_TextEditor.h>
 #include "ui/strlib.h"
 
 using namespace fltk;
@@ -54,8 +54,8 @@ struct BasicEditor : public TextEditor {
   int indentLevel;
   int matchingBrace;
 
-  fltk::TextBuffer *stylebuf;
-  fltk::TextBuffer *textbuf;
+  Fl_TextBuffer *stylebuf;
+  Fl_TextBuffer *textbuf;
   char search[256];
   StatusBar *status;
 };

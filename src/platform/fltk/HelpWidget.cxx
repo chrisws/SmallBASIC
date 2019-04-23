@@ -15,34 +15,34 @@
 #include <unistd.h>
 #include <stdlib.h>
 
-#include <fltk/ask.h>
-#include <fltk/run.h>
-#include <fltk/draw.h>
-#include <fltk/layout.h>
-#include <fltk/Rectangle.h>
-#include <fltk/Font.h>
-#include <fltk/events.h>
-#include <fltk/Cursor.h>
-#include <fltk/damage.h>
-#include <fltk/xpmImage.h>
-#include <fltk/CheckButton.h>
-#include <fltk/RadioButton.h>
-#include <fltk/Choice.h>
-#include <fltk/Item.h>
-#include <fltk/Input.h>
-#include <fltk/Output.h>
-#include <fltk/SharedImage.h>
-#include <fltk/Slider.h>
-#include <fltk/ValueInput.h>
-#include <fltk/ThumbWheel.h>
-#include <fltk/Monitor.h>
+#include <FL/Fl_ask.h>
+#include <FL/Fl_run.h>
+#include <FL/Fl_draw.h>
+#include <FL/Fl_layout.h>
+#include <FL/Fl_Rect.h>
+#include <FL/Fl_Font.h>
+#include <FL/Fl_events.h>
+#include <FL/Fl_Cursor.h>
+#include <FL/Fl_damage.h>
+#include <FL/Fl_xpmImage.h>
+#include <FL/Fl_CheckButton.h>
+#include <FL/Fl_RadioButton.h>
+#include <FL/Fl_Choice.h>
+#include <FL/Fl_Item.h>
+#include <FL/Fl_Input.h>
+#include <FL/Fl_Output.h>
+#include <FL/Fl_SharedImage.h>
+#include <FL/Fl_Slider.h>
+#include <FL/Fl_ValueInput.h>
+#include <FL/Fl_ThumbWheel.h>
+#include <FL/Fl_Monitor.h>
 
-#define FL_HELP_WIDGET_RESOURCES
+#define Fl_HELP_WIDGET_RESOURCES
 #include "platform/fltk/HelpWidget.h"
 
 #define FOREGROUND_COLOR Widget::default_style->textcolor()
 #define BACKGROUND_COLOR Widget::default_style->color()
-#define ANCHOR_COLOR fltk::color(0,0,128)
+#define ANCHOR_COLOR Fl_color(0,0,128)
 #define BUTTON_COLOR Widget::default_style->buttoncolor()
 #define DEFAULT_INDENT 2
 #define LI_INDENT 18
@@ -97,9 +97,9 @@ struct Display {
   Group *wnd;
   AnchorNode *anchor;
 
-  void drawBackground(fltk::Rectangle &rc) {
+  void drawBackground(Fl_Rect &rc) {
     if (background != NO_COLOR) {
-      Color oldColor = fltk::getcolor();
+      Color oldColor = Fl_getcolor();
       setcolor(background);
       fillrect(rc);
       setcolor(oldColor);
@@ -127,7 +127,7 @@ struct Display {
     }
 
     if (!measure && background != NO_COLOR && doBackground) {
-      fltk::Rectangle rc(x1, bgY, x2 - x1 + CELL_SPACING, lineHeight);
+      Fl_Rect rc(x1, bgY, x2 - x1 + CELL_SPACING, lineHeight);
       drawBackground(rc);
     }
   }
@@ -458,7 +458,7 @@ struct LiNode : public BaseNode {
         sprintf(t, "%d.", ++ulNode->nextId);
         drawtext(t, 2, x, out->y1);
       } else {
-        dotImage.draw(fltk::Rectangle(x, y, 5, 5));
+        dotImage.draw(Fl_Rect(x, y, 5, 5));
         // draw messes with the current font - restore
         setfont(out->font, out->fontSize);
       }
@@ -575,7 +575,7 @@ void ImageNode::display(Display *out) {
           } else {
             ih = h.value;
           }
-          image->draw(fltk::Rectangle(x1, y1, iw, ih));
+          image->draw(Fl_Rect(x1, y1, iw, ih));
           x1 += w.value;
         }
         y1 += h.value;
@@ -596,7 +596,7 @@ void ImageNode::display(Display *out) {
         x += 1;
         y += 1;
       }
-      image->draw(fltk::Rectangle(x, y, iw, ih));
+      image->draw(Fl_Rect(x, y, iw, ih));
     }
   }
   if (background == 0) {
@@ -653,7 +653,7 @@ void TextNode::drawSelection(const char *s, U16 len, U16 width, Display *out) {
     return;                     // selection below text
   }
 
-  fltk::Rectangle rc(out->x1, out_y, width, out->lineHeight);
+  Fl_Rect rc(out->x1, out_y, width, out->lineHeight);
   int selBegin = 0;             // selection index into the draw string
   int selEnd = len;
 
@@ -1119,7 +1119,7 @@ void TrNode::display(Display *out) {
   table->nextRow++;
 
   if (background && out->measure == false) {
-    fltk::Rectangle rc(table->initX, y1 - (int)getascent(), table->width, out->lineHeight);
+    Fl_Rect rc(table->initX, y1 - (int)getascent(), table->width, out->lineHeight);
     out->drawBackground(rc);
   }
 }
@@ -1186,7 +1186,7 @@ void TdNode::display(Display *out) {
   table->nextCol++;
 
   if (out->measure == false) {
-    fltk::Rectangle rc(out->indent - CELL_SPACING,
+    Fl_Rect rc(out->indent - CELL_SPACING,
                        tr->y1 - (int)getascent(), out->x2 - out->indent + (CELL_SPACING * 2), out->lineHeight);
     out->drawBackground(rc);
     if (table->border > 0) {
@@ -1234,8 +1234,8 @@ static void onclick_callback(Widget *button, void *buttonId) {
 static void def_button_callback(Widget *button, void *buttonId) {
   // supply "onclick=fff" to make it do something useful
   // check for parent of HelpWidget
-  if (fltk::modal() == button->parent()->parent()) {
-    fltk::exit_modal();
+  if (Fl_modal() == button->parent()->parent()) {
+    Fl_exit_modal();
   }
 }
 
@@ -1359,7 +1359,7 @@ void InputNode::update(strlib::List<NamedInput *> *names, Properties *env, Attri
     rows = a->getRows();
     cols = a->getCols();
     if (rows > 1) {
-      button->type(fltk::Input::MULTILINE);
+      button->type(Fl_Input::MULTILINE);
     }
     break;
   case ID_RANGEVAL:
@@ -1805,17 +1805,17 @@ void HelpWidget::draw() {
   out.lineHeight = out.y1 + (int)getdescent();
   out.y1 += vscroll;
 
-  push_clip(fltk::Rectangle(w(), h()));
+  push_clip(Fl_Rect(w(), h()));
   bool havePushedAnchor = false;
   if (pushedAnchor && (damage() == DAMAGE_PUSHED)) {
     // just draw the anchor-push
     int h = (pushedAnchor->y2 - pushedAnchor->y1) + pushedAnchor->lineHeight;
-    push_clip(fltk::Rectangle(0, pushedAnchor->y1, out.x2, h));
+    push_clip(Fl_Rect(0, pushedAnchor->y1, out.x2, h));
     havePushedAnchor = true;
   }
   // draw the background
   setcolor(out.background);
-  fillrect(fltk::Rectangle(0, 0, w() - SCROLL_W, out.y2));
+  fillrect(Fl_Rect(0, 0, w() - SCROLL_W, out.y2));
   setcolor(out.color);
 
   out.background = NO_COLOR;
@@ -1883,7 +1883,7 @@ void HelpWidget::draw() {
   draw_child(*scrollbar);
 
   // prevent other child controls from drawing over the scrollbar
-  push_clip(fltk::Rectangle(0, 0, w() - SCROLL_W, h()));
+  push_clip(Fl_Rect(0, 0, w() - SCROLL_W, h()));
   int numchildren = children();
   for (int n = 0; n < numchildren; n++) {
     Widget & w = *child(n);
@@ -1907,7 +1907,7 @@ void HelpWidget::compile() {
   U8 uline = false;
 
   Color color = 0;
-  Font *font = fltk::HELVETICA;
+  Font *font = Fl_HELVETICA;
   int fontSize = (int)labelsize();
   int taglen = 0;
   int textlen = 0;
@@ -2094,7 +2094,7 @@ void HelpWidget::compile() {
             padlines = false;
           }
           color = (0 == strncasecmp(tag, "f", 1) ? (Color) - 1 : 0);
-          font = fltk::HELVETICA;
+          font = Fl_HELVETICA;
           node = new FontNode(font, fontSize, color, bold, italic);
           nodeList.add(node);
         } else if (0 == strncasecmp(tag, "pre", 3)) {
@@ -2240,7 +2240,7 @@ void HelpWidget::compile() {
           prop = p.get("font-size");
           if (prop != NULL) {
             // convert from points to pixels
-            const fltk::Monitor &monitor = fltk::Monitor::all();
+            const Fl_Monitor &monitor = Fl_Monitor::all();
             fontSize = (int)(prop->toInteger() * monitor.dpi_y() / 72.0);
           } else {
             prop = p.get("size");
@@ -2250,7 +2250,7 @@ void HelpWidget::compile() {
           }
           prop = p.get("face");
           if (prop != NULL) {
-            font = fltk::font(*prop->c_str());
+            font = Fl_font(*prop->c_str());
           }
           node = new FontNode(font, fontSize, color, bold, italic);
           nodeList.add(node);
@@ -2344,13 +2344,13 @@ void HelpWidget::onclick(Widget *button) {
 }
 
 int HelpWidget::onMove(int event) {
-  int ex = fltk::event_x();
-  int ey = fltk::event_y();
+  int ex = Fl_event_x();
+  int ey = Fl_event_y();
 
-  if (pushedAnchor && event == fltk::DRAG) {
+  if (pushedAnchor && event == Fl_DRAG) {
     bool pushed = pushedAnchor->ptInSegment(ex, ey);
     if (pushedAnchor->pushed != pushed) {
-      Widget::cursor(fltk::CURSOR_HAND);
+      Widget::cursor(Fl_CURSOR_HAND);
       pushedAnchor->pushed = pushed;
       redraw(DAMAGE_PUSHED);
     }
@@ -2359,14 +2359,14 @@ int HelpWidget::onMove(int event) {
     List_each(AnchorNode*, it, anchors) {
       AnchorNode *p = (*it);
       if (p->ptInSegment(ex, ey)) {
-        Widget::cursor(fltk::CURSOR_HAND);
+        Widget::cursor(Fl_CURSOR_HAND);
         return 1;
       }
     }
-    Widget::cursor(fltk::CURSOR_DEFAULT);
+    Widget::cursor(Fl_CURSOR_DEFAULT);
   }
 
-  if (event == fltk::DRAG) {
+  if (event == Fl_DRAG) {
     switch (mouseMode) {
     case mm_select:
       // drag text selection
@@ -2402,8 +2402,8 @@ int HelpWidget::onMove(int event) {
 
 int HelpWidget::onPush(int event) {
   pushedAnchor = 0;
-  int ex = fltk::event_x();
-  int ey = fltk::event_y();
+  int ex = Fl_event_x();
+  int ey = Fl_event_y();
   S16 scroll = vscroll;
 
   List_each(AnchorNode*, it, anchors) {
@@ -2411,7 +2411,7 @@ int HelpWidget::onPush(int event) {
     if (p->ptInSegment(ex, ey)) {
       pushedAnchor = p;
       pushedAnchor->pushed = true;
-      Widget::cursor(fltk::CURSOR_HAND);
+      Widget::cursor(Fl_CURSOR_HAND);
       redraw(DAMAGE_PUSHED);
       return 1;
     }
@@ -2458,7 +2458,7 @@ int HelpWidget::onPush(int event) {
 
 int HelpWidget::handle(int event) {
   int handled = Group::handle(event);
-  if (handled && event != fltk::MOVE) {
+  if (handled && event != Fl_MOVE) {
     return handled;
   }
 
@@ -2484,7 +2484,7 @@ int HelpWidget::handle(int event) {
     return 1;
 
   case EVENT_FIND:
-    find(fltk::input("Find:"), false);
+    find(Fl_input("Find:"), false);
     return 1;
 
   case EVENT_PG_DOWN:
@@ -2499,20 +2499,20 @@ int HelpWidget::handle(int event) {
     }
     return 1;
 
-  case fltk::SHOW:
+  case Fl_SHOW:
     focus(this);
     break;
 
-  case fltk::FOCUS:
+  case Fl_FOCUS:
     return 1;                   // aquire focus
 
-  case fltk::PUSH:
+  case Fl_PUSH:
     return onPush(event);
 
-  case fltk::ENTER:
+  case Fl_ENTER:
     return 1;
 
-  case fltk::KEY:
+  case Fl_KEY:
     if (event_key_state(RightKey) && -hscroll < w() / 2) {
       hscroll -= HSCROLL_STEP;
       redraw();
@@ -2533,7 +2533,7 @@ int HelpWidget::handle(int event) {
         reloadPage();
         return 1;
       case 'f':                // find
-        find(fltk::input("Find:"), false);
+        find(Fl_input("Find:"), false);
         return 1;
       case 'a':                // select-all
         selectAll();
@@ -2544,21 +2544,21 @@ int HelpWidget::handle(int event) {
         return 1;
       case 'b':                // break popup
       case 'q':
-        if (fltk::modal() == parent()) {
-          fltk::exit_modal();
+        if (Fl_modal() == parent()) {
+          Fl_exit_modal();
         }
         break;                  // handle in default
       }
     }
     break;
 
-  case fltk::DRAG:
-  case fltk::MOVE:
+  case Fl_DRAG:
+  case Fl_MOVE:
     return onMove(event);
 
-  case fltk::RELEASE:
+  case Fl_RELEASE:
     if (pushedAnchor) {
-      Widget::cursor(fltk::CURSOR_DEFAULT);
+      Widget::cursor(Fl_CURSOR_DEFAULT);
       bool pushed = pushedAnchor->pushed;
       pushedAnchor->pushed = false;
       redraw(DAMAGE_PUSHED);
@@ -2612,7 +2612,7 @@ bool HelpWidget::find(const char *s, bool matchCase) {
 }
 
 void HelpWidget::copySelection() {
-  fltk::copy(selection.c_str(), selection.length(), true);
+  Fl_copy(selection.c_str(), selection.length(), true);
 }
 
 void HelpWidget::selectAll() {
@@ -2702,7 +2702,7 @@ void HelpWidget::loadFile(const char *f, bool useDocHome) {
   reloadPage();
   if (target) {
     // draw to obtain dimensions
-    fltk::flush();
+    Fl_flush();
     scrollTo(target + 1);
   }
 }
@@ -2871,13 +2871,13 @@ Color getColor(strlib::String *s, Color def) {
     int r = rgb >> 16;
     int g = (rgb >> 8) & 255;
     int b = rgb & 255;
-    return fltk::color((uchar) r, (uchar) g, (uchar) b);
+    return Fl_color((uchar) r, (uchar) g, (uchar) b);
   } else if (strcasecmp(n, "black") == 0) {
     return BLACK;
   } else if (strcasecmp(n, "red") == 0) {
     return RED;
   } else if (strcasecmp(n, "green") == 0) {
-    return fltk::color(0, 0x80, 0);
+    return Fl_color(0, 0x80, 0);
   } else if (strcasecmp(n, "yellow") == 0) {
     return YELLOW;
   } else if (strcasecmp(n, "blue") == 0) {
@@ -2892,21 +2892,21 @@ Color getColor(strlib::String *s, Color def) {
     return WHITE;
   } else if (strcasecmp(n, "gray") == 0 || 
              strcasecmp(n, "grey") == 0) {
-    return fltk::color(0x80, 0x80, 0x80);
+    return Fl_color(0x80, 0x80, 0x80);
   } else if (strcasecmp(n, "lime") == 0) {
     return GREEN;
   } else if (strcasecmp(n, "maroon") == 0) {
-    return fltk::color(0x80, 0, 0);
+    return Fl_color(0x80, 0, 0);
   } else if (strcasecmp(n, "navy") == 0) {
-    return fltk::color(0, 0, 0x80);
+    return Fl_color(0, 0, 0x80);
   } else if (strcasecmp(n, "olive") == 0) {
-    return fltk::color(0x80, 0x80, 0);
+    return Fl_color(0x80, 0x80, 0);
   } else if (strcasecmp(n, "purple") == 0) {
-    return fltk::color(0x80, 0, 0x80);
+    return Fl_color(0x80, 0, 0x80);
   } else if (strcasecmp(n, "silver") == 0) {
-    return fltk::color(0xc0, 0xc0, 0xc0);
+    return Fl_color(0xc0, 0xc0, 0xc0);
   } else if (strcasecmp(n, "teal") == 0) {
-    return fltk::color(0, 0x80, 0x80);
+    return Fl_color(0, 0x80, 0x80);
   }
   return def;
 }
@@ -2942,8 +2942,8 @@ Image *loadImage(const char *imgSrc) {
 
 #if defined(WIN32)
 #include <windows.h>
-#include <fltk/Window.h>
-#include <fltk/win32.h>
+#include <FL/Fl_Window.h>
+#include <FL/Fl_win32.h>
 #endif
 
 void browseFile(const char *url) {

@@ -36,6 +36,38 @@ struct Canvas {
   bool _ownerSurface;
 };
 
+#elif defined(_FLTK)
+#include <FL/Fl.H>
+#include <FL/Fl_Rect.H>
+
+struct Canvas {
+  Canvas(int size);
+  ~Canvas();
+
+  void beginDraw();
+  void create(int w, int h);
+  void drawImageRegion(Canvas *dst, const MAPoint2d *dstPoint, const MARect *srcRect);
+  void drawLine(int startX, int startY, int endX, int endY);
+  void drawPixel(int posX, int posY);
+  void drawRectFilled(int left, int top, int width, int height);
+  void drawRGB(const MAPoint2d *dstPoint, const void *src,
+               const MARect *srcRect, int scanlength);
+  void drawText(int left, int top, const char *str, int length);
+  void endDraw();
+  int  getPixel(int x, int y);
+  void resize(int w, int h);
+  void setClip(int x, int y, int w, int h);
+  void setFont();
+
+  Fl_Offscreen _offscreen;
+  Fl_Rect *_clip;
+  int _w;
+  int _h;
+  int _size;
+  int _style;
+  bool _isScreen;
+};
+
 #else
 #include <android/rect.h>
 #define MAX_CANVAS_SIZE 20

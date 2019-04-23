@@ -364,8 +364,6 @@ function buildFLTK() {
    dnl preconfigured values for FLTK build
    AC_DEFINE(_UnixOS, 1, [Building under Unix like systems.])
    AC_DEFINE(_FLTK, 1, [Defined for FLTK build.])
-   AC_DEFINE(USE_CLIB, 1, [Implements clibmgr.])
-   AC_DEFINE(DEV_EVENTS_OSD, 1, [dev_events() implemented using osd_events().])
    AC_DEFINE(IMPL_DEV_DELAY, 1, [Driver implements dev_delay()])
    AC_DEFINE(IMPL_DEV_ENV, 1, [Driver implements dev_env funcs])
    AC_DEFINE(IMPL_LOG_WRITE, 1, [Driver implements lwrite()])

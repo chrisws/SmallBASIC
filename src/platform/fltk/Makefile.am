@@ -13,10 +13,6 @@ AM_CPPFLAGS =                                                 \
   @PACKAGE_CFLAGS@ @FLTK_CXXFLAGS@
 
 EXTRA_DIST =                      \
-  README.TXT                      \
-  sbfltk.rc                       \
-  sbasic.nsi                      \
-  build_kwp.cxx                   \
   $(desktopentry_DATA)
 
 bin_PROGRAMS = sbasici

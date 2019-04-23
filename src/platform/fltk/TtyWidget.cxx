@@ -6,10 +6,10 @@
 // Download the GNU Public License (GPL) from www.gnu.org
 // 
 
-#include <fltk/damage.h>
-#include <fltk/events.h>
-#include <fltk/run.h>
-#include <fltk/CheckButton.h>
+#include <FL/Fl_damage.h>
+#include <FL/Fl_events.h>
+#include <FL/Fl_run.h>
+#include <FL/Fl_CheckButton.h>
 
 #include "platform/fltk/TtyWidget.h"
 
@@ -324,7 +324,7 @@ bool TtyWidget::copySelection() {
   bool result = selection.length() > 0;
   if (result) {
     const char *copy = selection.c_str();
-    fltk::copy(copy, strlen(copy), true);
+    Fl_copy(copy, strlen(copy), true);
   }
   return result;
 }
@@ -352,7 +352,7 @@ void TtyWidget::print(const char *str) {
   TtyRow *line = getLine(head);    // pointer to current line
 
   // need the current font set to calculate text widths
-  fltk::setfont(labelfont(), labelsize());
+  Fl_setfont(labelfont(), labelsize());
 
   // scan the text, handle any special characters, and display the rest.
   for (int i = 0; i < strLength; i++) {
@@ -589,7 +589,7 @@ void TtyWidget::setfont(bool bold, bool italic) {
   if (italic) {
     font = font->italic();
   }
-  fltk::setfont(font, labelsize());
+  Fl_setfont(font, labelsize());
 }
 
 //
@@ -602,7 +602,7 @@ void TtyWidget::setfont(Font *font, int size) {
   if (size) {
     labelsize(size);
   }
-  fltk::setfont(labelfont(), labelsize());
+  Fl_setfont(labelfont(), labelsize());
   lineHeight = (int)(getascent() + getdescent());
 }
 
