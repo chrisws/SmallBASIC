@@ -350,13 +350,6 @@ function buildFLTK() {
      ;;
 
      *)
-     dnl check for sdl2-config for sound output
-     AC_CHECK_PROG(have_sdl, sdl2-config, [yes], [no])
-     if test "${have_sdl}" = "yes" ; then
-       FLTK_CXXFLAGS="${FLTK_CXXFLAGS} `sdl2-config --cflags`"
-       PACKAGE_LIBS="${PACKAGE_LIBS} `sdl2-config --libs`"
-       AC_DEFINE(HAVE_SDL, 1, [Windows build])
-     fi
    esac
 
    defaultConditionals

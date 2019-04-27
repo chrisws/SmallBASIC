@@ -9,12 +9,12 @@
 #ifndef Fl_HELP_WIDGET
 #define Fl_HELP_WIDGET
 
-#include <FL/Fl_Widget.h>
-#include <FL/Fl_draw.h>
-#include <FL/Fl_Image.h>
-#include <FL/Fl_SharedImage.h>
-#include <FL/Fl_Group.h>
-#include <FL/Fl_Scrollbar.h>
+#include <FL/fl_draw.H>
+#include <FL/Fl_Widget.H>
+#include <FL/Fl_Image.H>
+#include <FL/Fl_Shared_Image.H>
+#include <FL/Fl_Group.H>
+#include <FL/Fl_Scrollbar.H>
 
 #include "ui/strlib.h"
 #include "platform/fltk/utils.h"
@@ -39,7 +39,6 @@
 #define EVENT_PG_DOWN       105
 #define EVENT_PG_UP         106
 
-using namespace fltk;
 using namespace strlib;
 
 SharedImage *loadImage(const char *name, uchar *buff);

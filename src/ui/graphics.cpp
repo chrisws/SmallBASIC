@@ -679,7 +679,7 @@ MAHandle maFontLoadDefault(int type, int style, int size) {
 
 MAHandle maFontSetCurrent(MAHandle maHandle) {
   if (graphics) {
-    graphics->setFont((Font *) maHandle);
+    graphics->setFont((Font *)maHandle);
   }
   return maHandle;
 }

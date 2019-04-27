@@ -19,6 +19,7 @@ bin_PROGRAMS = sbasici
 
 sbasici_SOURCES =                 \
   ../../ui/ansiwidget.cpp         \
+  ../../ui/graphics.cpp           \
   ../../ui/window.cpp             \
   ../../ui/screen.cpp             \
   ../../ui/form.cpp               \
@@ -27,6 +28,7 @@ sbasici_SOURCES =                 \
   ../../ui/strlib.cpp             \
   ../../ui/textedit.cpp           \
   display.cxx display.h           \
+  system.cxx system.h             \
   HelpWidget.cxx HelpWidget.h     \
   TtyWidget.cxx TtyWidget.h       \
   MainWindow.cxx MainWindow.h     \
@@ -34,7 +36,6 @@ sbasici_SOURCES =                 \
   EditorWidget.cxx EditorWidget.h \
   FileWidget.cxx FileWidget.h     \
   Profile.cxx Profile.h           \
-  dev_fltk.cxx audio.cxx          \
   utils.cxx utils.h
 
 sbasici_LDADD = -L$(top_srcdir)/src/common -lsb_common @PACKAGE_LIBS@
