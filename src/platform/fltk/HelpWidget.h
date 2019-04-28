@@ -109,10 +109,10 @@ protected:
 private:
   Fl_Color background, foreground;
   Fl_Scrollbar *scrollbar;
-  S16 vscroll, hscroll;
-  U16 scrollHeight;
-  S16 markX, markY, pointX, pointY;
-  S16 scrollY;
+  int16_t vscroll, hscroll;
+  u_int16_t scrollHeight;
+  int16_t markX, markY, pointX, pointY;
+  int16_t scrollY;
   enum { mm_select, mm_page, mm_scroll } mouseMode;
   strlib::List<BaseNode *> nodeList;
   strlib::List<NamedInput *> namedInputs;

@@ -32,8 +32,8 @@
 #define Fl_HELP_WIDGET_RESOURCES
 #include "platform/fltk/HelpWidget.h"
 
-#define FOREGROUND_COLOR Widget::default_style->textcolor()
-#define BACKGROUND_COLOR Widget::default_style->color()
+#define FOREGROUND_COLOR Fl_Widget::default_style->textcolor()
+#define BACKGROUND_COLOR Fl_Widget::default_style->color()
 #define ANCHOR_COLOR fl_rgb_color(0,0,128)
 #define BUTTON_COLOR Widget::default_style->buttoncolor()
 #define DEFAULT_INDENT 2
@@ -66,23 +66,23 @@ char rangeValue[20];
 //--Display---------------------------------------------------------------------
 
 struct Display {
-  S16 x1, x2, y1, y2;
-  U16 tabW, tabH;
-  U16 lineHeight;
-  U16 indent;
-  U16 fontSize;
-  U16 tableLevel;
-  U16 nodeId;
-  S16 imgY;
-  U16 imgIndent;
-  U8 uline;
-  U8 center;
-  U8 content;
-  U8 exposed;
-  U8 measure;
-  U8 selected;
-  U8 invertedSel;
-  S16 markX, markY, pointX, pointY;
+  int16_t x1, x2, y1, y2;
+  u_int16_t tabW, tabH;
+  u_int16_t lineHeight;
+  u_int16_t indent;
+  u_int16_t fontSize;
+  u_int16_t tableLevel;
+  u_int16_t nodeId;
+  int16_t imgY;
+  u_int16_t imgIndent;
+  u_int8_t uline;
+  u_int8_t center;
+  u_int8_t content;
+  u_int8_t exposed;
+  u_int8_t measure;
+  u_int8_t selected;
+  u_int8_t invertedSel;
+  int16_t markX, markY, pointX, pointY;
   strlib::String *selection;
   Fl_Font *font;
   Fl_Color color;
@@ -108,7 +108,7 @@ struct Display {
     }
   }
 
-  void newRow(U16 nrows = 1, bool doBackground = true) {
+  void newRow(u_int16_t nrows = 1, bool doBackground = true) {
     int bgY = y1;
 
     x1 = indent;
@@ -256,7 +256,7 @@ Value Attributes::getValue(const char *attr, int def) {
 struct BaseNode {
   virtual ~BaseNode() {}
   virtual void display(Display *out) {} 
-  virtual int indexOf(const char *sFind, U8 matchCase) { return -1; }
+  virtual int indexOf(const char *sFind, u_int8_t matchCase) { return -1; }
   virtual void getText(strlib::String *s) {}
   virtual int getY() { return -1; }
 };
@@ -268,7 +268,7 @@ struct FontNode : public BaseNode {
   void display(Display *out);
 
   Fl_Font *font; // includes face,bold,italic
-  U16 fontSize;
+  u_int16_t fontSize;
   Fl_Color color;
 };
 
@@ -277,6 +277,7 @@ FontNode::FontNode(Fl_Font *font, int fontSize, Fl_Color color, bool bold, bool 
   font(font),
   fontSize(fontSize),
   color(color) {
+  // TODO: fixme
   if (this->font && bold) {
     // this->font = this->font->bold();
   }
@@ -306,7 +307,7 @@ void FontNode::display(Display *out) {
 //--BrNode----------------------------------------------------------------------
 
 struct BrNode : public BaseNode {
-  BrNode(U8 premode) : 
+  BrNode(u_int8_t premode) : 
     BaseNode(),
     premode(premode) {
   }
@@ -320,7 +321,7 @@ struct BrNode : public BaseNode {
     }
     out->lineHeight = fl_height() + fl_descent();
   }
-  U8 premode;
+  u_int8_t premode;
 };
 
 //--AnchorNode------------------------------------------------------------------
@@ -366,10 +367,10 @@ struct AnchorNode : public BaseNode {
 
   strlib::String name;
   strlib::String href;
-  S16 x1, x2, y1, y2;
-  U16 lineHeight;
-  U8 wrapxy;  // begin on page boundary
-  U8 pushed;
+  int16_t x1, x2, y1, y2;
+  u_int16_t lineHeight;
+  u_int8_t wrapxy;  // begin on page boundary
+  u_int8_t pushed;
 };
 
 AnchorNode *pushedAnchor = 0;
@@ -395,7 +396,7 @@ struct AnchorEndNode : public BaseNode {
 //--StyleNode-------------------------------------------------------------------
 
 struct StyleNode : public BaseNode {
-  StyleNode(U8 uline, U8 center) : 
+  StyleNode(u_int8_t uline, u_int8_t center) : 
     BaseNode(),
     uline(uline), center(center) {
   }
@@ -404,8 +405,8 @@ struct StyleNode : public BaseNode {
     out->uline = uline;
     out->center = center;
   }
-  U8 uline;     // 2
-  U8 center;    // 2
+  u_int8_t uline;     // 2
+  u_int8_t center;    // 2
 };
 
 //--LiNode----------------------------------------------------------------------
@@ -465,15 +466,15 @@ struct LiNode : public BaseNode {
 struct ImageNode : public BaseNode {
   ImageNode(strlib::String *docHome, Attributes *a);
   ImageNode(strlib::String *docHome, strlib::String *src, bool fixed);
-  ImageNode(const Fl_Image *image);
+  ImageNode(Fl_Image *image);
   void makePath(strlib::String *src, strlib::String *docHome);
   void reload();
   void display(Display *out);
-  const Fl_Image *image;
+  Fl_Image *image;
   strlib::String path, url;
   Value w, h;
-  U8 background, fixed;
-  U8 valign; // 0=top, 1=center, 2=bottom
+  u_int8_t background, fixed;
+  u_int8_t valign; // 0=top, 1=center, 2=bottom
 };
 
 ImageNode::ImageNode(strlib::String *docHome, Attributes *a) : 
@@ -494,18 +495,20 @@ ImageNode::ImageNode(strlib::String *docHome, strlib::String *src, bool fixed) :
   valign(0) {
   makePath(src, docHome);
   image = loadImage(path.c_str());
-  image->measure(w.value, h.value);
+  w.value = image->w();
+  h.value = image->h();
   w.relative = 0;
   h.relative = 0;
 }
 
-ImageNode::ImageNode(const Fl_Image *image) :
+ImageNode::ImageNode(Fl_Image *image) :
   BaseNode(), 
   image(image), 
   background(false),
   fixed(false),
   valign(2) {
-  image->measure(w.value, h.value);
+  w.value = image->w();
+  h.value = image->h();
   w.relative = 0;
   h.relative = 0;
   valign = 2;
@@ -525,9 +528,9 @@ void ImageNode::makePath(strlib::String *src, strlib::String *docHome) {
 }
 
 void ImageNode::reload() {
-  int iw, ih;
   image = loadImage(path.c_str());
-  image->measure(iw, ih);
+  int iw = image->w();
+  int ih = image->h();
   if (w.relative == 0) {
     w.value = iw;
   }
@@ -564,7 +567,7 @@ void ImageNode::display(Display *out) {
           } else {
             ih = h.value;
           }
-          image->draw(Fl_Rect(x1, y1, iw, ih));
+          image->draw(x1, y1, iw, ih);
           x1 += w.value;
         }
         y1 += h.value;
@@ -585,7 +588,7 @@ void ImageNode::display(Display *out) {
         x += 1;
         y += 1;
       }
-      image->draw(Fl_Rect(x, y, iw, ih));
+      image->draw(x, y, iw, ih);
     }
   }
   if (background == 0) {
@@ -607,21 +610,21 @@ void ImageNode::display(Display *out) {
 //--TextNode--------------------------------------------------------------------
 
 struct TextNode : public BaseNode {
-  TextNode(const char *s, U16 textlen);
+  TextNode(const char *s, u_int16_t textlen);
   void display(Display *out);
-  void drawSelection(const char *s, U16 len, U16 width, Display *out);
-  int indexOf(const char *sFind, U8 matchCase);
+  void drawSelection(const char *s, u_int16_t len, u_int16_t width, Display *out);
+  int indexOf(const char *sFind, u_int8_t matchCase);
   void getText(strlib::String *s);
 
   int getY();
 
   const char *s;                // 4
-  U16 textlen;                  // 4
-  U16 width;                    // 4
-  S16 ybegin;                   // 4
+  u_int16_t textlen;                  // 4
+  u_int16_t width;                    // 4
+  int16_t ybegin;                   // 4
 };
 
-TextNode::TextNode(const char *s, U16 textlen) : 
+TextNode::TextNode(const char *s, u_int16_t textlen) : 
   BaseNode(),
   s(s),
   textlen(textlen),
@@ -633,7 +636,7 @@ void TextNode::getText(strlib::String *s) {
   s->append(this->s, this->textlen);
 }
 
-void TextNode::drawSelection(const char *s, U16 len, U16 width, Display *out) {
+void TextNode::drawSelection(const char *s, u_int16_t len, u_int16_t width, Display *out) {
   int out_y = out->y1 - fl_height();
   if (out->pointY < out_y) {
     return;                     // selection above text
@@ -649,7 +652,7 @@ void TextNode::drawSelection(const char *s, U16 len, U16 width, Display *out) {
   if (out->markY > out_y) {
     if (out->pointY < out_y + out->lineHeight) {
       // paint single row selection
-      S16 leftX, rightX;
+      int16_t leftX, rightX;
       if (out->markX < out->pointX) {
         leftX = out->markX;
         rightX = out->pointX;
@@ -672,7 +675,7 @@ void TextNode::drawSelection(const char *s, U16 len, U16 width, Display *out) {
           x += width;
           if (left) {
             if (s[i] == ' ') {
-              rc.set_x(x);
+              rc.x(x);
               selBegin = i + 1;
             }
             if (x > leftX) {
@@ -690,7 +693,7 @@ void TextNode::drawSelection(const char *s, U16 len, U16 width, Display *out) {
           x += fl_width(s + i, 1);
           if (left) {
             if (x < leftX) {
-              rc.set_x(x);
+              rc.x(x);
               selBegin = i + 1;
             } else {
               left = false;
@@ -704,7 +707,7 @@ void TextNode::drawSelection(const char *s, U16 len, U16 width, Display *out) {
       }
     } else {
       // top row multiline - find the left margin
-      S16 leftX = out->invertedSel ? out->pointX : out->markX;
+      int16_t leftX = out->invertedSel ? out->pointX : out->markX;
       if (leftX > out->x1 + width) {
         return;                 // selection left of text
       }
@@ -712,7 +715,7 @@ void TextNode::drawSelection(const char *s, U16 len, U16 width, Display *out) {
       for (int i = 0; i < len; i++) {
         x += fl_width(s + i, 1);
         if (x < leftX) {
-          rc.set_x(x);
+          rc.x(x);
           selBegin = i;
         } else {
           break;
@@ -722,7 +725,7 @@ void TextNode::drawSelection(const char *s, U16 len, U16 width, Display *out) {
   } else {
     if (out->pointY < out_y + out->lineHeight) {
       // bottom row multiline - find the right margin
-      S16 rightX = out->invertedSel ? out->markX : out->pointX;
+      int16_t rightX = out->invertedSel ? out->markX : out->pointX;
       if (rightX < out->x1) {
         return;
       }
@@ -743,7 +746,7 @@ void TextNode::drawSelection(const char *s, U16 len, U16 width, Display *out) {
     // capture the selected text
     out->selection->append(s + selBegin, selEnd - selBegin);
   }
-  fl_color(GRAY80);
+  fl_color(FL_GRAY0);
   fl_rectf(rc.x(), rc.y(), rc.w(), rc.h());
   fl_color(out->color);
 }
@@ -812,9 +815,9 @@ void TextNode::display(Display *out) {
           fl_line(out->x1, out->y1 + 1, out->x1 + linepx, out->y1 + 1);
         }
         if (cliplen != linelen) {
-          drawpoint(out->x1 + linepx, out->y1);
-          drawpoint(out->x1 + linepx + 2, out->y1);
-          drawpoint(out->x1 + linepx + 4, out->y1);
+          fl_point(out->x1 + linepx, out->y1);
+          fl_point(out->x1 + linepx + 2, out->y1);
+          fl_point(out->x1 + linepx + 4, out->y1);
         }
       }
       p += linelen;
@@ -832,11 +835,11 @@ void TextNode::display(Display *out) {
   }
 }
 
-int TextNode::indexOf(const char *sFind, U8 matchCase) {
+int TextNode::indexOf(const char *sFind, u_int8_t matchCase) {
   int numMatch = 0;
   int findLen = strlen(sFind);
   for (int i = 0; i < textlen; i++) {
-    U8 equals = matchCase ? s[i] == sFind[numMatch] : toupper(s[i]) == toupper(sFind[numMatch]);
+    u_int8_t equals = matchCase ? s[i] == sFind[numMatch] : toupper(s[i]) == toupper(sFind[numMatch]);
     numMatch = (equals ? numMatch + 1 : 0);
     if (numMatch == findLen) {
       return i + 1;
@@ -863,9 +866,9 @@ struct HrNode : public BaseNode {
     out->y1 += 4;
     out->x1 = out->indent;
     if (out->measure == false) {
-      fl_color(GRAY45);
+      fl_color(FL_DARK1);
       fl_line(out->x1, out->y1 + 1, out->x2 - 6, out->y1 + 1);
-      fl_color(GRAY99);
+      fl_color(FL_DARK2);
       fl_line(out->x1, out->y1 + 2, out->x2 - 6, out->y1 + 2);
       fl_color(out->color);
     }
@@ -882,8 +885,8 @@ struct TrNode : public BaseNode {
   void display(Display *out);
 
   TableNode *table;
-  U16 cols;
-  S16 y1, height;
+  u_int16_t cols;
+  int16_t y1, height;
   Fl_Color background, foreground;
 };
 
@@ -901,7 +904,7 @@ struct TdNode : public BaseNode {
   TrNode *tr;
   Fl_Color background, foreground;
   Value width;
-  U16 colspan;
+  u_int16_t colspan;
 };
 
 struct TdEndNode : public BaseNode {
@@ -920,16 +923,16 @@ struct TableNode : public BaseNode {
   void setColWidth(Value *width);
   void cleanup();
 
-  U16 *columns;
-  S16 *sizes;
-  U16 rows, cols;
-  U16 nextCol;
-  U16 nextRow;
-  U16 width;
-  U16 nodeId;
-  U16 initX, initY;             // start of table
-  S16 maxY;                     // end of table
-  S16 border;
+  u_int16_t *columns;
+  int16_t *sizes;
+  u_int16_t rows, cols;
+  u_int16_t nextCol;
+  u_int16_t nextRow;
+  u_int16_t width;
+  u_int16_t nodeId;
+  u_int16_t initX, initY;             // start of table
+  int16_t maxY;                     // end of table
+  int16_t border;
 };
 
 struct TableEndNode : public BaseNode {
@@ -978,8 +981,8 @@ void TableNode::display(Display *out) {
       out->measure = true;
     }
     cleanup();
-    columns = (U16 *) malloc(sizeof(U16) *cols);
-    sizes = (S16 *) malloc(sizeof(S16) *cols);
+    columns = (u_int16_t *) malloc(sizeof(u_int16_t) *cols);
+    sizes = (int16_t *) malloc(sizeof(int16_t) *cols);
     int cellW = width / cols;
     for (int i = 0; i < cols; i++) {
       columns[i] = cellW * (i + 1);
@@ -1179,9 +1182,9 @@ void TdNode::display(Display *out) {
                        tr->y1 - fl_height(), out->x2 - out->indent + (CELL_SPACING * 2), out->lineHeight);
     out->drawBackground(rc);
     if (table->border > 0) {
-      Fl_Color oldColor = getcolor();
+      Fl_Color oldColor = fl_color();
       fl_color(FL_BLACK);
-      strokerect(rc);
+      fl_overlay_rect(rc.x(), rc.y(), rc.w(), rc.h());
       fl_color(oldColor);
     }
   }
@@ -1223,8 +1226,9 @@ static void onclick_callback(Fl_Widget *button, void *buttonId) {
 static void def_button_callback(Fl_Widget *button, void *buttonId) {
   // supply "onclick=fff" to make it do something useful
   // check for parent of HelpWidget
-  if (Fl_modal() == button->parent()->parent()) {
-    Fl_exit_modal();
+  if (Fl::modal() == (Fl_Window *)button->parent()->parent()) {
+    // TODO: fixme
+    //Fl_exit_modal();
   }
 }
 
@@ -1237,7 +1241,7 @@ struct InputNode : public BaseNode {
 
   Fl_Widget *button;
   strlib::String onclick;
-  U16 rows, cols;
+  u_int16_t rows, cols;
 };
 
 // creates either a text, checkbox, radio, hidden or button control
@@ -1246,31 +1250,28 @@ InputNode::InputNode(Fl_Group *parent, Attributes *a) :
   parent->begin();
   strlib::String *type = a->getType();
   if (type != NULL && type->equals("text")) {
-    button = new Input(0, 0, INPUT_WIDTH, 0);
+    button = new Fl_Input(0, 0, INPUT_WIDTH, 0);
     button->argument(ID_TEXTBOX);
   } else if (type != NULL && type->equals("readonly")) {
-    button = new Fl_Widget(0, 0, INPUT_WIDTH, 0);
+    button = new Fl_Input(0, 0, INPUT_WIDTH, 0);
     button->argument(ID_READONLY);
   } else if (type != NULL && type->equals("checkbox")) {
-    button = new CheckButton(0, 0, BUTTON_WIDTH, 0);
+    button = new Fl_Check_Button(0, 0, BUTTON_WIDTH, 0);
     button->argument(ID_CHKBOX);
   } else if (type != NULL && type->equals("radio")) {
-    button = new RadioButton(0, 0, BUTTON_WIDTH, 0);
+    button = new Fl_Radio_Button(0, 0, BUTTON_WIDTH, 0);
     button->argument(ID_RADIO);
   } else if (type != NULL && type->equals("slider")) {
-    button = new Slider(0, 0, BUTTON_WIDTH, 0);
+    button = new Fl_Slider(0, 0, BUTTON_WIDTH, 0);
     button->argument(ID_RANGEVAL);
   } else if (type != NULL && type->equals("valueinput")) {
-    button = new ValueInput(0, 0, BUTTON_WIDTH, 0);
-    button->argument(ID_RANGEVAL);
-  } else if (type != NULL && type->equals("thumbwheel")) {
-    button = new ThumbWheel(0, 0, BUTTON_WIDTH, 0);
+    button = new Fl_Value_Input(0, 0, BUTTON_WIDTH, 0);
     button->argument(ID_RANGEVAL);
   } else if (type != NULL && type->equals("hidden")) {
-    button = new Widget(0, 0, 0, 0);
+    button = new Fl_Input(0, 0, 0, 0);
     button->argument(ID_HIDDEN);
   } else {
-    button = new Button(0, 0, 0, 0);
+    button = new Fl_Button(0, 0, 0, 0);
     button->argument(ID_BUTTON);
     button->callback(def_button_callback);
   }
@@ -1284,13 +1285,13 @@ InputNode::InputNode(Fl_Group *parent, Attributes *a, const char *s, int len) :
   if (a->isReadonly()) {
     strlib::String str;
     str.append(s, len);
-    button = new Widget(0, 0, INPUT_WIDTH, 0);
+    button = new Fl_Input(0, 0, INPUT_WIDTH, 0);
     button->argument(ID_READONLY);
     button->copy_label(str.c_str());
   } else {
-    button = new Input(0, 0, INPUT_WIDTH, 0);
+    button = new Fl_Input(0, 0, INPUT_WIDTH, 0);
     button->argument(ID_TEXTAREA);
-    ((Input *) button)->value(s, len);
+    ((Fl_Input *) button)->value(s, len);
   }
   parent->end();
 }
@@ -1299,26 +1300,22 @@ InputNode::InputNode(Fl_Group *parent) :
   BaseNode() {
   // creates a select control
   parent->begin();
-  button = new Choice(0, 0, INPUT_WIDTH, 0);
+  button = new Fl_Choice(0, 0, INPUT_WIDTH, 0);
   button->argument(ID_SELECT);
   parent->end();
 }
 
 void createDropList(InputNode *node, strlib::List<String *> *options) {
-  Choice *menu = (Choice *) node->button;
-  menu->begin();
-
+  Fl_Choice *menu = (Fl_Choice *)node->button;
   List_each(String *, it, *options) {
     String *s = (*it);
-    Item *item = new Item();
-    item->copy_label(s->c_str());
+    menu->add(s->c_str());
   }
-  menu->end();
 }
 
 void InputNode::update(strlib::List<NamedInput *> *names, Properties<String *> *env, Attributes *a) {
-  Valuator *valuator;
-  Input *input;
+  Fl_Valuator *valuator;
+  Fl_Input *input;
   Fl_Color color;
   strlib::String *name = a->getName();
   strlib::String *value = a->getValue();
@@ -1338,32 +1335,32 @@ void InputNode::update(strlib::List<NamedInput *> *names, Properties<String *> *
 
   switch (button->argument()) {
   case ID_READONLY:
-    button->align(ALIGN_INSIDE_LEFT | ALIGN_CLIP);
+    button->align(FL_ALIGN_LEFT | FL_ALIGN_CLIP);
     if (value && value->length()) {
       button->copy_label(value->c_str());
     }
     // fallthru
   case ID_TEXTAREA:
-    button->box(NO_BOX);
+    button->box(FL_NO_BOX);
     rows = a->getRows();
     cols = a->getCols();
     if (rows > 1) {
-      button->type(Fl_Input::MULTILINE);
+      button->type(FL_MULTILINE_INPUT);
     }
     break;
   case ID_RANGEVAL:
-    valuator = (Valuator *) button;
+    valuator = (Fl_Valuator *) button;
     valuator->minimum(a->getMin());
     valuator->maximum(a->getMax());
     valuator->step(1);
-    valuator->align(ALIGN_LEFT);
+    valuator->align(FL_ALIGN_LEFT);
     if (value && value->length()) {
       valuator->value(value->toInteger());
     }
     break;
   case ID_TEXTBOX:
-    button->box(NO_BOX);
-    input = (Input *) button;
+    button->box(FL_NO_BOX);
+    input = (Fl_Input *) button;
     if (value && value->length()) {
       input->value(value->c_str());
     }
@@ -1385,7 +1382,7 @@ void InputNode::update(strlib::List<NamedInput *> *names, Properties<String *> *
   // size
   int size = a->getSize();
   if (size != -1) {
-    button->w(size);
+    button->size(size, button->h());
   }
   // set callback
   onclick.append(a->getOnclick());
@@ -1411,30 +1408,30 @@ void InputNode::update(strlib::List<NamedInput *> *names, Properties<String *> *
   // set alignment
   if (align != 0) {
     if (align->equals("right")) {
-      button->align(ALIGN_INSIDE_RIGHT | ALIGN_CLIP);
+      button->align(FL_ALIGN_RIGHT | FL_ALIGN_CLIP);
     } else if (align->equals("center")) {
-      button->align(ALIGN_CENTER | ALIGN_CLIP);
+      button->align(FL_ALIGN_CENTER | FL_ALIGN_CLIP);
     } else if (align->equals("top")) {
-      button->align(ALIGN_INSIDE_TOP | ALIGN_CLIP);
+      button->align(FL_ALIGN_TOP | FL_ALIGN_CLIP);
     } else if (align->equals("bottom")) {
-      button->align(ALIGN_INSIDE_BOTTOM | ALIGN_CLIP);
+      button->align(FL_ALIGN_BOTTOM | FL_ALIGN_CLIP);
     } else {
-      button->align(ALIGN_INSIDE_LEFT | ALIGN_CLIP);
+      button->align(FL_ALIGN_LEFT | FL_ALIGN_CLIP);
     }
   }
   // set border
   switch (a->getBorder(0)) {
   case 1:
-    button->box(BORDER_BOX);
+    button->box(FL_BORDER_BOX);
     break;
   case 2:
-    button->box(SHADOW_BOX);
+    button->box(FL_SHADOW_BOX);
     break;
   case 3:
-    button->box(ENGRAVED_BOX);
+    button->box(FL_ENGRAVED_BOX);
     break;
   case 4:
-    button->box(THIN_DOWN_BOX);
+    button->box(FL_THIN_DOWN_BOX);
     break;
   }
 }
@@ -1451,12 +1448,12 @@ void InputNode::display(Display *out) {
     break;
   case ID_BUTTON:
     if (button->w() == 0 && button->label()) {
-      button->w(12 + fl_width(button->label()));
+      button->size(12 + fl_width(button->label()), button->h());
     }
     break;
   case ID_TEXTAREA:
   case ID_READONLY:
-    button->w(4 + (fl_width("$") * cols));
+    button->size(4 + (fl_width("$") * cols), button->h());
     height = 4 + (fl_height() + fl_descent() * rows);
     break;
   default:
@@ -1488,7 +1485,7 @@ void InputNode::display(Display *out) {
 //--EnvNode---------------------------------------------------------------------
 
 struct EnvNode : public TextNode {
-  EnvNode(Properties<String *> *p, const char *s, U16 textlen) : 
+  EnvNode(Properties<String *> *p, const char *s, u_int16_t textlen) : 
     TextNode(0, 0) {
     strlib::String var;
     var.append(s, textlen);
@@ -1606,15 +1603,15 @@ const char *HelpWidget::getInputValue(Widget *widget) {
   switch (widget->argument()) {
   case ID_TEXTBOX:
   case ID_TEXTAREA:
-    return ((Input *) widget)->value();
+    return ((Fl_Input *) widget)->value();
   case ID_RADIO:
   case ID_CHKBOX:
-    return ((RadioButton *) widget)->value()? truestr : falsestr;
+    return ((Fl_Radio_Button *) widget)->value()? truestr : falsestr;
   case ID_SELECT:
-    widget = ((Choice *) widget)->item();
+    widget = ((Fl_Choice *) widget)->item();
     return widget ? widget->label() : NULL;
   case ID_RANGEVAL:
-    sprintf(rangeValue, "%f", ((Valuator *) widget)->value());
+    sprintf(rangeValue, "%f", ((Fl_Valuator *) widget)->value());
     return rangeValue;
   case ID_HIDDEN:
   case ID_READONLY:
@@ -1663,8 +1660,8 @@ bool HelpWidget::setInputValue(const char *assignment) {
   strlib::String s = assignment;
   strlib::String name = s.leftOf('=');
   strlib::String value = s.rightOf('=');
-  Choice *choice;
-  Widget *item;
+  Fl_Choice *choice;
+  Fl_Widget *item;
 
   if (value.length() == 0) {
     return false;
@@ -1678,21 +1675,21 @@ bool HelpWidget::setInputValue(const char *assignment) {
       switch (button->argument()) {
       case ID_TEXTBOX:
       case ID_TEXTAREA:
-        ((Input *) button)->value(value.c_str());
+        ((Fl_Input *) button)->value(value.c_str());
         break;
       case ID_RADIO:
       case ID_CHKBOX:
-        ((RadioButton *) button)->value(value.equals(truestr) || value.equals("1"));
+        ((Fl_Radio_Button *) button)->value(value.equals(truestr) || value.equals("1"));
         break;
       case ID_SELECT:
-        choice = (Choice *) button;
+        choice = (Fl_Choice *) button;
         item = choice->find(value.c_str());
         if (item) {
           choice->set_focus(item);
         }
         break;
       case ID_RANGEVAL:
-        ((Valuator *) button)->value(value.toNumber());
+        ((Fl_Valuator *) button)->value(value.toNumber());
         break;
       case ID_READONLY:
         button->copy_label(value.c_str());
@@ -1875,7 +1872,7 @@ void HelpWidget::draw() {
   push_clip(Fl_Rect(0, 0, w() - SCROLL_W, h()));
   int numchildren = children();
   for (int n = 0; n < numchildren; n++) {
-    Widget & w = *child(n);
+    Fl_Widget &w = *child(n);
     if (&w != scrollbar) {
       draw_child(w);
     }
@@ -1889,18 +1886,17 @@ void HelpWidget::draw() {
 }
 
 void HelpWidget::compile() {
-  U8 pre = !isHtmlFile();
-  U8 bold = false;
-  U8 italic = false;
-  U8 center = false;
-  U8 uline = false;
-
+  u_int8_t pre = !isHtmlFile();
+  u_int8_t bold = false;
+  u_int8_t italic = false;
+  u_int8_t center = false;
+  u_int8_t uline = false;
   Fl_Color color = 0;
   Fl_Font *font = Fl_HELVETICA;
   int fontSize = (int)labelsize();
   int taglen = 0;
   int textlen = 0;
-  U8 padlines = false;          // padding between line-breaks
+  u_int8_t padlines = false;          // padding between line-breaks
 
   strlib::Stack<TableNode *> tableStack(5);
   strlib::Stack<TrNode *> trStack(5);
@@ -2339,7 +2335,7 @@ int HelpWidget::onMove(int event) {
   if (pushedAnchor && event == Fl_DRAG) {
     bool pushed = pushedAnchor->ptInSegment(ex, ey);
     if (pushedAnchor->pushed != pushed) {
-      Widget::cursor(Fl_CURSOR_HAND);
+      Fl_Widget::cursor(Fl_CURSOR_HAND);
       pushedAnchor->pushed = pushed;
       redraw(DAMAGE_PUSHED);
     }
@@ -2348,11 +2344,11 @@ int HelpWidget::onMove(int event) {
     List_each(AnchorNode *, it, anchors) {
       AnchorNode *p = (*it);
       if (p->ptInSegment(ex, ey)) {
-        Widget::cursor(Fl_CURSOR_HAND);
+        Fl_Widget::cursor(Fl_CURSOR_HAND);
         return 1;
       }
     }
-    Widget::cursor(Fl_CURSOR_DEFAULT);
+    Fl_Widget::cursor(Fl_CURSOR_DEFAULT);
   }
 
   if (event == Fl_DRAG) {
@@ -2367,7 +2363,7 @@ int HelpWidget::onMove(int event) {
       // follow the mouse navigation
       if (scrollY != ey) {
         // scroll up (less -ve) when draged down
-        S16 scroll = vscroll + (ey - scrollY);
+        int16_t int16_t scroll = vscroll + (ey - scrollY);
         scrollY = ey;
         if (scroll > 0) {
           scroll = 0;           // too far up
@@ -2393,14 +2389,14 @@ int HelpWidget::onPush(int event) {
   pushedAnchor = 0;
   int ex = Fl_event_x();
   int ey = Fl_event_y();
-  S16 scroll = vscroll;
+  int16_t scroll = vscroll;
 
   List_each(AnchorNode *, it, anchors) {
     AnchorNode *p = (*it);
     if (p->ptInSegment(ex, ey)) {
       pushedAnchor = p;
       pushedAnchor->pushed = true;
-      Widget::cursor(Fl_CURSOR_HAND);
+      Fl_Widget::cursor(Fl_CURSOR_HAND);
       redraw(DAMAGE_PUSHED);
       return 1;
     }
@@ -2533,8 +2529,9 @@ int HelpWidget::handle(int event) {
         return 1;
       case 'b':                // break popup
       case 'q':
-        if (Fl_modal() == parent()) {
-          Fl_exit_modal();
+        if (Fl::modal() == parent()) {
+          // TODO: fixme
+          //Fl_exit_modal();
         }
         break;                  // handle in default
       }
@@ -2547,7 +2544,7 @@ int HelpWidget::handle(int event) {
 
   case Fl_RELEASE:
     if (pushedAnchor) {
-      Widget::cursor(Fl_CURSOR_DEFAULT);
+      Fl_Widget::cursor(Fl_CURSOR_DEFAULT);
       bool pushed = pushedAnchor->pushed;
       pushedAnchor->pushed = false;
       redraw(DAMAGE_PUSHED);
@@ -2860,13 +2857,13 @@ Fl_Color getColor(strlib::String *s, Fl_Color def) {
     int r = rgb >> 16;
     int g = (rgb >> 8) & 255;
     int b = rgb & 255;
-    return Fl_color((uchar) r, (uchar) g, (uchar) b);
+    return fl_rgb_color((uchar) r, (uchar) g, (uchar) b);
   } else if (strcasecmp(n, "black") == 0) {
     return FL_BLACK;
   } else if (strcasecmp(n, "red") == 0) {
     return FL_RED;
   } else if (strcasecmp(n, "green") == 0) {
-    return Fl_color(0, 0x80, 0);
+    return fl_rgb_color(0, 0x80, 0);
   } else if (strcasecmp(n, "yellow") == 0) {
     return FL_YELLOW;
   } else if (strcasecmp(n, "blue") == 0) {
@@ -2881,21 +2878,21 @@ Fl_Color getColor(strlib::String *s, Fl_Color def) {
     return FL_WHITE;
   } else if (strcasecmp(n, "gray") == 0 || 
              strcasecmp(n, "grey") == 0) {
-    return Fl_color(0x80, 0x80, 0x80);
+    return fl_rgb_color(0x80, 0x80, 0x80);
   } else if (strcasecmp(n, "lime") == 0) {
     return FL_GREEN;
   } else if (strcasecmp(n, "maroon") == 0) {
-    return fl_color(0x80, 0, 0);
+    return fl_rgb_color(0x80, 0, 0);
   } else if (strcasecmp(n, "navy") == 0) {
-    return fl_color(0, 0, 0x80);
+    return fl_rgb_color(0, 0, 0x80);
   } else if (strcasecmp(n, "olive") == 0) {
-    return fl_color(0x80, 0x80, 0);
+    return fl_rgb_color(0x80, 0x80, 0);
   } else if (strcasecmp(n, "purple") == 0) {
-    return fl_color(0x80, 0, 0x80);
+    return fl_rgb_color(0x80, 0, 0x80);
   } else if (strcasecmp(n, "silver") == 0) {
-    return fl_color(0xc0, 0xc0, 0xc0);
+    return fl_rgb_color(0xc0, 0xc0, 0xc0);
   } else if (strcasecmp(n, "teal") == 0) {
-    return Fl_color(0, 0x80, 0x80);
+    return fl_rgb_color(0, 0x80, 0x80);
   }
   return def;
 }
@@ -2916,7 +2913,7 @@ Fl_Shared_Image *loadImage(const char *name, uchar *buff) {
   }
   if (result) {
     // load the image
-    ((Image *) result)->fetch();
+    ((Fl_Image *) result)->fetch();
   }
   return result;
 }

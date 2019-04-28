@@ -166,8 +166,8 @@ struct MainWindow : public BaseWindow {
   strlib::String _exportFile;
 
   // main output
-  DisplayWidget *_out;
-  Group *_outputGroup;
+  GraphicsWidget *_out;
+  Fl_Group *_outputGroup;
 
   EditorWidget *_runEditWidget;
 
