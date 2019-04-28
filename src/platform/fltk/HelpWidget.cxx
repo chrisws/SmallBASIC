@@ -4,7 +4,7 @@
 //
 // This program is distributed under the terms of the GPL v2.0 or later
 // Download the GNU Public License (GPL) from www.gnu.org
-// 
+//
 
 #ifdef HAVE_CONFIG_H
 #include <config.h>
@@ -32,10 +32,10 @@
 #define Fl_HELP_WIDGET_RESOURCES
 #include "platform/fltk/HelpWidget.h"
 
-#define FOREGROUND_COLOR Fl_Widget::default_style->textcolor()
-#define BACKGROUND_COLOR Fl_Widget::default_style->color()
+#define FOREGROUND_COLOR fl_rgb_color(0,0,128)
+#define BACKGROUND_COLOR fl_rgb_color(0,0,128)
 #define ANCHOR_COLOR fl_rgb_color(0,0,128)
-#define BUTTON_COLOR Widget::default_style->buttoncolor()
+#define BUTTON_COLOR fl_rgb_color(0,0,128)
 #define DEFAULT_INDENT 2
 #define LI_INDENT 18
 #define FONT_SIZE_H1 23
@@ -97,7 +97,7 @@ struct Display {
       fl_rectf(rc.x(), rc.y(), rc.w(), rc.h());
       fl_color(oldColor);
     }
-  } 
+  }
   void endImageFlow() {
     // end text flow around images
     if (imgY != -1) {
@@ -255,7 +255,7 @@ Value Attributes::getValue(const char *attr, int def) {
 
 struct BaseNode {
   virtual ~BaseNode() {}
-  virtual void display(Display *out) {} 
+  virtual void display(Display *out) {}
   virtual int indexOf(const char *sFind, u_int8_t matchCase) { return -1; }
   virtual void getText(strlib::String *s) {}
   virtual int getY() { return -1; }
@@ -307,7 +307,7 @@ void FontNode::display(Display *out) {
 //--BrNode----------------------------------------------------------------------
 
 struct BrNode : public BaseNode {
-  BrNode(u_int8_t premode) : 
+  BrNode(u_int8_t premode) :
     BaseNode(),
     premode(premode) {
   }
@@ -327,9 +327,9 @@ struct BrNode : public BaseNode {
 //--AnchorNode------------------------------------------------------------------
 
 struct AnchorNode : public BaseNode {
-  AnchorNode(Attributes &p) : 
-    BaseNode(), 
-    wrapxy(0), 
+  AnchorNode(Attributes &p) :
+    BaseNode(),
+    wrapxy(0),
     pushed(0) {
     p.getName(name);
     p.getHref(href);
@@ -351,7 +351,7 @@ struct AnchorNode : public BaseNode {
   bool ptInSegment(int x, int y) {
     if (y > y1 && y < y2) {
       // found row
-      if ((x < x1 && y < y1 + lineHeight) || 
+      if ((x < x1 && y < y1 + lineHeight) ||
           (x > x2 && y > y2 - lineHeight)) {
         // outside row start or end
         return false;
@@ -376,7 +376,7 @@ struct AnchorNode : public BaseNode {
 AnchorNode *pushedAnchor = 0;
 
 struct AnchorEndNode : public BaseNode {
-  AnchorEndNode() : 
+  AnchorEndNode() :
     BaseNode() {
   }
 
@@ -396,7 +396,7 @@ struct AnchorEndNode : public BaseNode {
 //--StyleNode-------------------------------------------------------------------
 
 struct StyleNode : public BaseNode {
-  StyleNode(u_int8_t uline, u_int8_t center) : 
+  StyleNode(u_int8_t uline, u_int8_t center) :
     BaseNode(),
     uline(uline), center(center) {
   }
@@ -477,8 +477,8 @@ struct ImageNode : public BaseNode {
   u_int8_t valign; // 0=top, 1=center, 2=bottom
 };
 
-ImageNode::ImageNode(strlib::String *docHome, Attributes *a) : 
-  BaseNode(), 
+ImageNode::ImageNode(strlib::String *docHome, Attributes *a) :
+  BaseNode(),
   background(false),
   fixed(false),
   valign(0) {
@@ -488,8 +488,8 @@ ImageNode::ImageNode(strlib::String *docHome, Attributes *a) :
   h = a->getHeight(image->h());
 }
 
-ImageNode::ImageNode(strlib::String *docHome, strlib::String *src, bool fixed) : 
-  BaseNode(), 
+ImageNode::ImageNode(strlib::String *docHome, strlib::String *src, bool fixed) :
+  BaseNode(),
   background(false),
   fixed(false),
   valign(0) {
@@ -502,8 +502,8 @@ ImageNode::ImageNode(strlib::String *docHome, strlib::String *src, bool fixed) :
 }
 
 ImageNode::ImageNode(Fl_Image *image) :
-  BaseNode(), 
-  image(image), 
+  BaseNode(),
+  image(image),
   background(false),
   fixed(false),
   valign(2) {
@@ -624,7 +624,7 @@ struct TextNode : public BaseNode {
   int16_t ybegin;                   // 4
 };
 
-TextNode::TextNode(const char *s, u_int16_t textlen) : 
+TextNode::TextNode(const char *s, u_int16_t textlen) :
   BaseNode(),
   s(s),
   textlen(textlen),
@@ -855,7 +855,7 @@ int TextNode::getY() {
 //--HrNode----------------------------------------------------------------------
 
 struct HrNode : public BaseNode {
-  HrNode() : 
+  HrNode() :
     BaseNode() {
   }
   void display(Display *out) {
@@ -944,7 +944,7 @@ struct TableEndNode : public BaseNode {
 
 //--TableNode-------------------------------------------------------------------
 
-TableNode::TableNode(Attributes *a) : 
+TableNode::TableNode(Attributes *a) :
   BaseNode(),
   columns(0),
   sizes(0),
@@ -1068,7 +1068,7 @@ void TableNode::cleanup() {
   }
 }
 
-TableEndNode::TableEndNode(TableNode *tableNode) : 
+TableEndNode::TableEndNode(TableNode *tableNode) :
   BaseNode(),
   table(tableNode) {
 }
@@ -1081,7 +1081,7 @@ void TableEndNode::display(Display *out) {
 
 //--TrNode----------------------------------------------------------------------
 
-TrNode::TrNode(TableNode *tableNode, Attributes *a) : 
+TrNode::TrNode(TableNode *tableNode, Attributes *a) :
   BaseNode(),
   table(tableNode),
   cols(0),
@@ -1116,7 +1116,7 @@ void TrNode::display(Display *out) {
   }
 }
 
-TrEndNode::TrEndNode(TrNode *trNode) : 
+TrEndNode::TrEndNode(TrNode *trNode) :
   BaseNode(),
   tr(trNode) {
   if (tr && tr->table && tr->cols > tr->table->cols) {
@@ -1134,7 +1134,7 @@ void TrEndNode::display(Display *out) {
 
 //--TdNode----------------------------------------------------------------------
 
-TdNode::TdNode(TrNode *trNode, Attributes *a) : 
+TdNode::TdNode(TrNode *trNode, Attributes *a) :
   BaseNode(),
   tr(trNode) {
   if (tr) {
@@ -1191,7 +1191,7 @@ void TdNode::display(Display *out) {
 
 }
 
-TdEndNode::TdEndNode(TdNode *tdNode) : 
+TdEndNode::TdEndNode(TdNode *tdNode) :
   BaseNode(),
   td(tdNode) {
 }
@@ -1245,7 +1245,7 @@ struct InputNode : public BaseNode {
 };
 
 // creates either a text, checkbox, radio, hidden or button control
-InputNode::InputNode(Fl_Group *parent, Attributes *a) : 
+InputNode::InputNode(Fl_Group *parent, Attributes *a) :
   BaseNode() {
   parent->begin();
   strlib::String *type = a->getType();
@@ -1278,7 +1278,7 @@ InputNode::InputNode(Fl_Group *parent, Attributes *a) :
   parent->end();
 }
 
-InputNode::InputNode(Fl_Group *parent, Attributes *a, const char *s, int len) : 
+InputNode::InputNode(Fl_Group *parent, Attributes *a, const char *s, int len) :
   BaseNode() {
   // creates a textarea control
   parent->begin();
@@ -1296,7 +1296,7 @@ InputNode::InputNode(Fl_Group *parent, Attributes *a, const char *s, int len) :
   parent->end();
 }
 
-InputNode::InputNode(Fl_Group *parent) : 
+InputNode::InputNode(Fl_Group *parent) :
   BaseNode() {
   // creates a select control
   parent->begin();
@@ -1399,10 +1399,10 @@ void InputNode::update(strlib::List<NamedInput *> *names, Properties<String *> *
   color = getColor(a->getFgColor(), 0);
   if (color) {
     button->labelcolor(color);  // foreground
-    button->textcolor(color);
+    button->color(color);
   } else {
     button->labelcolor(ANCHOR_COLOR);
-    button->textcolor(ANCHOR_COLOR);
+    button->color(ANCHOR_COLOR);
   }
 
   // set alignment
@@ -1463,15 +1463,11 @@ void InputNode::display(Display *out) {
     out->newRow();
   }
   out->lineHeight = height;
-  button->x(out->x1);
-  button->y(out->y1 - fl_height());
-  button->h(out->lineHeight - 2);
-  button->labelfont(out->font);
-  button->textfont(out->font);
-  button->textsize(out->fontSize);
+  button->resize(out->x1, out->y1 - fl_height(), button->w(), out->lineHeight - 2);
+  button->labelfont(*out->font);
   button->labelsize(out->fontSize);
   if (button->y() + button->h() < out->y2 && button->y() >= 0) {
-    button->clear_flag(INVISIBLE);
+    button->clear_visible();
   } else {
     // draw a fake control in case partially visible
     fl_color(button->color());
@@ -1485,7 +1481,7 @@ void InputNode::display(Display *out) {
 //--EnvNode---------------------------------------------------------------------
 
 struct EnvNode : public TextNode {
-  EnvNode(Properties<String *> *p, const char *s, u_int16_t textlen) : 
+  EnvNode(Properties<String *> *p, const char *s, u_int16_t textlen) :
     TextNode(0, 0) {
     strlib::String var;
     var.append(s, textlen);
@@ -1506,11 +1502,11 @@ struct EnvNode : public TextNode {
 
 //--HelpWidget------------------------------------------------------------------
 
-static void scrollbar_callback(Widget *scrollBar, void *helpWidget) {
-  ((HelpWidget *) helpWidget)->scrollTo(((Scrollbar *) scrollBar)->value());
+static void scrollbar_callback(Fl_Widget *scrollBar, void *helpWidget) {
+  ((HelpWidget *) helpWidget)->scrollTo(((Fl_Scrollbar *) scrollBar)->value());
 }
 
-static void anchor_callback(Widget *helpWidget, void *target) {
+static void anchor_callback(Fl_Widget *helpWidget, void *target) {
   ((HelpWidget *) helpWidget)->navigateTo((const char *)target);
 }
 
@@ -1518,8 +1514,8 @@ HelpWidget::HelpWidget(int x, int y, int width, int height, int defsize) :
   Fl_Group(x, y, width, height),
   nodeList(100), namedInputs(5), inputs(5), anchors(5), images(5) {
   begin();
-  scrollbar = new Scrollbar(width - SCROLL_W, 0, SCROLL_W, height);
-  scrollbar->set_vertical();
+  scrollbar = new Fl_Scrollbar(width - SCROLL_W, 0, SCROLL_W, height);
+  scrollbar->type(FL_VERTICAL);
   scrollbar->value(0, 1, 0, SCROLL_SIZE);
   scrollbar->user_data(this);
   scrollbar->callback(scrollbar_callback);
@@ -1568,9 +1564,9 @@ void HelpWidget::cleanup() {
   }
 
   // button/anchor items destroyed in nodeList
-  inputs.emptyList();
-  anchors.emptyList();
-  images.emptyList();
+  inputs.clear();
+  anchors.clear();
+  images.clear();
   nodeList.removeAll();
   namedInputs.removeAll();
   title.empty();
@@ -1580,12 +1576,12 @@ void HelpWidget::reloadPage() {
   cleanup();
   init();
   compile();
-  redraw(DAMAGE_ALL | DAMAGE_CONTENTS);
+  damage(FL_DAMAGE_ALL | FL_DAMAGE_CHILD);
   pushedAnchor = 0;
 }
 
 // returns the control with the given name
-Widget *HelpWidget::getInput(const char *name) {
+Fl_Widget *HelpWidget::getInput(const char *name) {
   List_each(NamedInput *, it, namedInputs) {
     NamedInput *ni = (*it);
     if (ni->name.equals(name)) {
@@ -1596,7 +1592,7 @@ Widget *HelpWidget::getInput(const char *name) {
 }
 
 // return the value of the given control
-const char *HelpWidget::getInputValue(Widget *widget) {
+const char *HelpWidget::getInputValue(Fl_Widget *widget) {
   if (widget == 0) {
     return NULL;
   }
@@ -1631,7 +1627,7 @@ const char *HelpWidget::getInputValue(int i) {
 }
 
 // return the name of the given button control
-const char *HelpWidget::getInputName(Widget *button) {
+const char *HelpWidget::getInputName(Fl_Widget *button) {
   List_each(NamedInput *, it, namedInputs) {
     NamedInput *ni = (*it);
     if (ni->input->button == button) {
@@ -1670,7 +1666,7 @@ bool HelpWidget::setInputValue(const char *assignment) {
   List_each(NamedInput *, it, namedInputs) {
     NamedInput *ni = (*it);
     if (ni->name.equals(name)) {
-      Widget *button = ni->input->button;
+      Fl_Widget *button = ni->input->button;
 
       switch (button->argument()) {
       case ID_TEXTBOX:
@@ -1710,7 +1706,7 @@ void HelpWidget::scrollTo(const char *anchorName) {
       } else {
         vscroll = -p->getY();
       }
-      redraw(DAMAGE_ALL | DAMAGE_CONTENTS);
+      damage(FL_DAMAGE_ALL | FL_DAMAGE_CHILD);
       return;
     }
   }
@@ -1720,7 +1716,7 @@ void HelpWidget::scrollTo(int scroll) {
   // called from the scrollbar using scrollbar units
   if (vscroll != scroll) {
     vscroll = -(scroll * scrollHeight / SCROLL_SIZE);
-    redraw(DAMAGE_ALL);
+    damage(FL_DAMAGE_ALL);
   }
 }
 
@@ -1730,7 +1726,7 @@ void HelpWidget::layout() {
 }
 
 void HelpWidget::draw() {
-  if (damage() == DAMAGE_CHILD) {
+  if (damage() == FL_DAMAGE_CHILD) {
     Fl_Group::draw();
     return;
   }
@@ -1740,7 +1736,7 @@ void HelpWidget::draw() {
   out.center = false;
   out.wnd = this;
   out.anchor = 0;
-  out.font = HELVETICA;
+  out.font = &FL_HELVETICA;
   out.fontSize = (int)labelsize();
   out.color = foreground;
   out.background = background;
@@ -1750,7 +1746,7 @@ void HelpWidget::draw() {
   out.x2 = w() - (DEFAULT_INDENT + SCROLL_W) + hscroll;
   out.content = false;
   out.measure = false;
-  out.exposed = (damage() & DAMAGE_EXPOSE) ? 1 : 0;
+  out.exposed = (damage() & FL_DAMAGE_EXPOSE) ? 1 : 0;
   out.tableLevel = 0;
   out.imgY = -1;
   out.imgIndent = out.indent;
@@ -1758,7 +1754,7 @@ void HelpWidget::draw() {
   out.tabH = out.y2;
   out.selection = 0;
   out.selected = (markX != pointX || markY != pointY);
-  if (event_clicks() == 1 && damage() == DAMAGE_HIGHLIGHT) {
+  if (event_clicks() == 1 && damage() == FL_DAMAGE_USER1) {
     // double click
     out.selected = true;
   }
@@ -1779,7 +1775,7 @@ void HelpWidget::draw() {
     out.pointX += hscroll;
     out.pointY += vscroll;
 
-    if (damage() == DAMAGE_HIGHLIGHT) {
+    if (damage() == FL_DAMAGE_USER1) {
       // capture new selection text
       out.selection = &selection;
       out.selection->empty();
@@ -1791,12 +1787,12 @@ void HelpWidget::draw() {
   out.lineHeight = out.y1 + fl_descent();
   out.y1 += vscroll;
 
-  push_clip(Fl_Rect(w(), h()));
+  fl_push_clip(0, 0, w(), h());
   bool havePushedAnchor = false;
-  if (pushedAnchor && (damage() == DAMAGE_PUSHED)) {
+  if (pushedAnchor && (damage() == FL_DAMAGE_USER2)) {
     // just draw the anchor-push
     int h = (pushedAnchor->y2 - pushedAnchor->y1) + pushedAnchor->lineHeight;
-    push_clip(Fl_Rect(0, pushedAnchor->y1, out.x2, h));
+    fl_push_clip(0, pushedAnchor->y1, out.x2, h);
     havePushedAnchor = true;
   }
   // draw the background
@@ -1830,7 +1826,7 @@ void HelpWidget::draw() {
         out.nodeId = j;
         p->display(&out);
       }
-      out.exposed = (damage() & DAMAGE_EXPOSE) ? 1 : 0;
+      out.exposed = (damage() & FL_DAMAGE_EXPOSE) ? 1 : 0;
     }
     if (out.exposed == false && out.tableLevel == 0 && out.y1 - out.lineHeight > out.y2) {
       // clip remaining content
@@ -1869,7 +1865,7 @@ void HelpWidget::draw() {
   draw_child(*scrollbar);
 
   // prevent other child controls from drawing over the scrollbar
-  push_clip(Fl_Rect(0, 0, w() - SCROLL_W, h()));
+  fl_push_clip(0, 0, w() - SCROLL_W, h)));
   int numchildren = children();
   for (int n = 0; n < numchildren; n++) {
     Fl_Widget &w = *child(n);
@@ -1877,12 +1873,12 @@ void HelpWidget::draw() {
       draw_child(w);
     }
   }
-  pop_clip();
+  fl_pop_clip();
 
   if (havePushedAnchor) {
-    pop_clip();
+    fl_pop_clip();
   }
-  pop_clip();
+  fl_pop_clip();
 }
 
 void HelpWidget::compile() {
@@ -1892,7 +1888,7 @@ void HelpWidget::compile() {
   u_int8_t center = false;
   u_int8_t uline = false;
   Fl_Color color = 0;
-  Fl_Font *font = Fl_HELVETICA;
+  Fl_Font *font = FL_HELVETICA;
   int fontSize = (int)labelsize();
   int taglen = 0;
   int textlen = 0;
@@ -2068,8 +2064,8 @@ void HelpWidget::compile() {
         } else if (0 == strncasecmp(tag, "center", 6)) {
           center = false;
           nodeList.add(new StyleNode(uline, center));
-        } else if (0 == strncasecmp(tag, "font", 4) || 
-                   0 == strncasecmp(tag, "code", 4) || 
+        } else if (0 == strncasecmp(tag, "font", 4) ||
+                   0 == strncasecmp(tag, "code", 4) ||
                    0 == strncasecmp(tag, "h", 1)) {     // </h1>
           if (0 == strncasecmp(tag, "h", 1)) {
             if (bold > 0) {
@@ -2079,7 +2075,7 @@ void HelpWidget::compile() {
             padlines = false;
           }
           color = (0 == strncasecmp(tag, "f", 1) ? (Fl_Color) - 1 : 0);
-          font = Fl_HELVETICA;
+          font = FL_HELVETICA;
           node = new FontNode(font, fontSize, color, bold, italic);
           nodeList.add(node);
         } else if (0 == strncasecmp(tag, "pre", 3)) {
@@ -2132,13 +2128,13 @@ void HelpWidget::compile() {
           title.empty();
           title.append(tagPair, tagBegin - tagPair);
           tagPair = 0;
-        } else if (0 == strncasecmp(tag, "script", 6) || 
+        } else if (0 == strncasecmp(tag, "script", 6) ||
                    0 == strncasecmp(tag, "style", 5)) {
           tagPair = 0;
         }
       } else if (isalpha(tag[0]) || tag[0] == '!') {
         // process the start of the tag
-        if (0 == strncasecmp(tag, "br", 2) || 
+        if (0 == strncasecmp(tag, "br", 2) ||
             0 == strncasecmp(tag, "p>", 2)) {
           nodeList.add(new BrNode(pre));
           padlines = false;
@@ -2198,7 +2194,7 @@ void HelpWidget::compile() {
             nodeList.add(node);
             images.add((ImageNode *)node);
           }
-        } else if (0 == strncasecmp(tag, "ul>", 3) || 
+        } else if (0 == strncasecmp(tag, "ul>", 3) ||
                    0 == strncasecmp(tag, "ol>", 3)) {
           node = new UlNode(tag[0] == 'o' || tag[0] == 'O');
           olStack.push((UlNode *)node);
@@ -2285,7 +2281,7 @@ void HelpWidget::compile() {
             nodeList.add(node);
             images.add((ImageNode *)node);
           }
-        } else if (0 == strncasecmp(tag, "script", 6) || 
+        } else if (0 == strncasecmp(tag, "script", 6) ||
                    0 == strncasecmp(tag, "style", 5)) {
           tagPair = text;
         } else {
@@ -2305,9 +2301,9 @@ void HelpWidget::compile() {
   }
 
   // prevent nodes from being auto-deleted
-  olStack.emptyList();
-  tdStack.emptyList();
-  trStack.emptyList();
+  olStack.clear();
+  tdStack.clear();
+  trStack.clear();
   while (tableStack.peek()) {
     node = new TableEndNode((TableNode *) tableStack.pop());
     nodeList.add(node);
@@ -2315,7 +2311,7 @@ void HelpWidget::compile() {
 }
 
 // handle click from form button
-void HelpWidget::onclick(Widget *button) {
+void HelpWidget::onclick(Fl_Widget *button) {
   List_each(InputNode *, it, inputs) {
     InputNode *p = (*it);
     if (p->button == button) {
@@ -2332,38 +2328,38 @@ int HelpWidget::onMove(int event) {
   int ex = Fl_event_x();
   int ey = Fl_event_y();
 
-  if (pushedAnchor && event == Fl_DRAG) {
+  if (pushedAnchor && event == FL_DRAG) {
     bool pushed = pushedAnchor->ptInSegment(ex, ey);
     if (pushedAnchor->pushed != pushed) {
-      Fl_Widget::cursor(Fl_CURSOR_HAND);
+      Fl_Widget::cursor(FL_CURSOR_HAND);
       pushedAnchor->pushed = pushed;
-      redraw(DAMAGE_PUSHED);
+      damage(FL_DAMAGE_USER2);
     }
     return 1;
   } else {
     List_each(AnchorNode *, it, anchors) {
       AnchorNode *p = (*it);
       if (p->ptInSegment(ex, ey)) {
-        Fl_Widget::cursor(Fl_CURSOR_HAND);
+        Fl_Widget::cursor(FL_CURSOR_HAND);
         return 1;
       }
     }
-    Fl_Widget::cursor(Fl_CURSOR_DEFAULT);
+    Fl_Widget::cursor(FL_CURSOR_DEFAULT);
   }
 
-  if (event == Fl_DRAG) {
+  if (event == FL_DRAG) {
     switch (mouseMode) {
     case mm_select:
       // drag text selection
       pointX = ex - hscroll;
       pointY = ey - vscroll;
-      redraw(DAMAGE_HIGHLIGHT);
+      damage(FL_DAMAGE_USER1);
       break;
     case mm_scroll:
       // follow the mouse navigation
       if (scrollY != ey) {
         // scroll up (less -ve) when draged down
-        int16_t int16_t scroll = vscroll + (ey - scrollY);
+        int16_t scroll = vscroll + (ey - scrollY);
         scrollY = ey;
         if (scroll > 0) {
           scroll = 0;           // too far up
@@ -2372,7 +2368,7 @@ int HelpWidget::onMove(int event) {
         }
         if (scroll != vscroll) {
           vscroll = scroll;
-          redraw(DAMAGE_EXPOSE);
+          damage(FL_DAMAGE_EXPOSE);
         }
       }
       break;
@@ -2396,8 +2392,8 @@ int HelpWidget::onPush(int event) {
     if (p->ptInSegment(ex, ey)) {
       pushedAnchor = p;
       pushedAnchor->pushed = true;
-      Fl_Widget::cursor(Fl_CURSOR_HAND);
-      redraw(DAMAGE_PUSHED);
+      Fl_Widget::cursor(FL_CURSOR_HAND);
+      damage(FL_DAMAGE_USER2);
       return 1;
     }
   }
@@ -2412,7 +2408,7 @@ int HelpWidget::onPush(int event) {
       markX = pointX = (ex - hscroll);
       markY = pointY = (ey - vscroll);
     }
-    redraw(DAMAGE_HIGHLIGHT);
+    damage(FL_DAMAGE_USER1);
     break;
 
   case mm_scroll:
@@ -2434,7 +2430,7 @@ int HelpWidget::onPush(int event) {
     }
     if (scroll != vscroll) {
       vscroll = scroll;
-      redraw(DAMAGE_EXPOSE);
+      damage(FL_DAMAGE_EXPOSE);
     }
     break;
   }
@@ -2484,20 +2480,20 @@ int HelpWidget::handle(int event) {
     }
     return 1;
 
-  case Fl_SHOW:
+  case FL_SHOW:
     focus(this);
     break;
 
-  case Fl_FOCUS:
+  case FL_FOCUS:
     return 1;                   // aquire focus
 
-  case Fl_PUSH:
+  case FL_PUSH:
     return onPush(event);
 
-  case Fl_ENTER:
+  case FL_ENTER:
     return 1;
 
-  case Fl_KEY:
+  case FL_KEY:
     if (event_key_state(RightKey) && -hscroll < w() / 2) {
       hscroll -= HSCROLL_STEP;
       redraw();
@@ -2538,16 +2534,16 @@ int HelpWidget::handle(int event) {
     }
     break;
 
-  case Fl_DRAG:
-  case Fl_MOVE:
+  case FL_DRAG:
+  case FL_MOVE:
     return onMove(event);
 
-  case Fl_RELEASE:
+  case FL_RELEASE:
     if (pushedAnchor) {
-      Fl_Widget::cursor(Fl_CURSOR_DEFAULT);
+      Fl_Widget::cursor(FL_CURSOR_DEFAULT);
       bool pushed = pushedAnchor->pushed;
       pushedAnchor->pushed = false;
-      redraw(DAMAGE_PUSHED);
+      damage(FL_DAMAGE_USER2);
       if (pushed) {
         this->event.empty();
         this->event.append(pushedAnchor->href.c_str());
@@ -2593,7 +2589,7 @@ bool HelpWidget::find(const char *s, bool matchCase) {
     vscroll = -scrollHeight;
   }
 
-  redraw(DAMAGE_ALL | DAMAGE_CONTENTS);
+  damage(FL_DAMAGE_ALL | FL_DAMAGE_USER1);
   return true;
 }
 
@@ -2688,7 +2684,7 @@ void HelpWidget::loadFile(const char *f, bool useDocHome) {
   reloadPage();
   if (target) {
     // draw to obtain dimensions
-    Fl_flush();
+    Fl::flush();
     scrollTo(target + 1);
   }
 }
@@ -2733,7 +2729,7 @@ bool HelpWidget::isHtmlFile() {
     return false;
   }
   int len = strlen(filename);
-  return (strcasecmp(filename + len - 4, ".htm") == 0 || 
+  return (strcasecmp(filename + len - 4, ".htm") == 0 ||
           strcasecmp(filename + len - 5, ".html") == 0);
 }
 
@@ -2868,15 +2864,15 @@ Fl_Color getColor(strlib::String *s, Fl_Color def) {
     return FL_YELLOW;
   } else if (strcasecmp(n, "blue") == 0) {
     return FL_BLUE;
-  } else if (strcasecmp(n, "magenta") == 0 || 
+  } else if (strcasecmp(n, "magenta") == 0 ||
              strcasecmp(n, "fuchsia") == 0) {
     return FL_MAGENTA;
-  } else if (strcasecmp(n, "cyan") == 0 || 
+  } else if (strcasecmp(n, "cyan") == 0 ||
              strcasecmp(n, "aqua") == 0) {
     return FL_CYAN;
   } else if (strcasecmp(n, "white") == 0) {
     return FL_WHITE;
-  } else if (strcasecmp(n, "gray") == 0 || 
+  } else if (strcasecmp(n, "gray") == 0 ||
              strcasecmp(n, "grey") == 0) {
     return fl_rgb_color(0x80, 0x80, 0x80);
   } else if (strcasecmp(n, "lime") == 0) {
@@ -2901,7 +2897,7 @@ Fl_Color getColor(strlib::String *s, Fl_Color def) {
 Fl_Shared_Image *loadImage(const char *name, uchar *buff) {
   int len = strlen(name);
   Fl_Shared_Image *result = 0;
-  if (strcasecmp(name + (len - 4), ".jpg") == 0 || 
+  if (strcasecmp(name + (len - 4), ".jpg") == 0 ||
       strcasecmp(name + (len - 5), ".jpeg") == 0) {
     result = jpegImage::get(name, buff);
   } else if (strcasecmp(name + (len - 4), ".gif") == 0) {
