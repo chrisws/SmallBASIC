@@ -1,6 +1,6 @@
 // This file is part of SmallBASIC
 //
-// Copyright(C) 2001-2013 Chris Warren-Smith.
+// Copyright(C) 2001-2019 Chris Warren-Smith.
 //
 // This program is distributed under the terms of the GPL v2.0 or later
 // Download the GNU Public License (GPL) from www.gnu.org
@@ -12,6 +12,7 @@
 #include <FL/fl_draw.H>
 #include <FL/Fl_Widget.H>
 #include <FL/Fl_Image.H>
+#include <FL/Fl_Pixmap.H>
 #include <FL/Fl_Shared_Image.H>
 #include <FL/Fl_Group.H>
 #include <FL/Fl_Scrollbar.H>
@@ -41,7 +42,7 @@
 
 using namespace strlib;
 
-SharedImage *loadImage(const char *name, uchar *buff);
+Fl_Shared_Image *loadImage(const char *name, uchar *buff);
 void browseFile(const char *s);
 
 struct BaseNode;
@@ -50,7 +51,7 @@ struct InputNode;
 struct AnchorNode;
 struct ImageNode;
 
-class HelpWidget : public Group {
+class HelpWidget : public Fl_Group {
 public:
   HelpWidget(int x, int y, int width, int height, int defsize = MIN_FONT_SIZE);
   virtual ~HelpWidget();
@@ -63,22 +64,22 @@ public:
   int getVScroll() { return vscroll; }
   int getHScroll() { return hscroll; }
   bool find(const char *s, bool matchCase);
-  Widget *getInput(const char *name);
-  const char *getInputValue(Widget *button);
+  Fl_Widget *getInput(const char *name);
+  const char *getInputValue(Fl_Widget *button);
   const char *getInputValue(int i);
-  const char *getInputName(Widget *button);
+  const char *getInputName(Fl_Widget *button);
   const char *getTitle() { return title; }
   const char *getFileName() { return fileName; }
   const char *getDocHome() { return docHome; }
   const char *getSelection() { return selection; }
   const strlib::String getEventName() { return event; }
   void getText(strlib::String *s);
-  void getInputProperties(Properties *p);
-  void setCookies(Properties *p) { cookies = p; }
+  void getInputProperties(Properties<String *> *p);
+  void setCookies(Properties<String *> *p) { cookies = p; }
   bool setInputValue(const char *assignment);
   void selectAll();
   void copySelection();
-  void onclick(Widget *button);        // private
+  void onclick(Fl_Widget *button);
   void setDocHome(const char *home);
   void reloadImages();
   void setFontSize(int i);
@@ -106,19 +107,19 @@ protected:
   int handle(int event);
 
 private:
-  Color background, foreground;
-  Scrollbar *scrollbar;
+  Fl_Color background, foreground;
+  Fl_Scrollbar *scrollbar;
   S16 vscroll, hscroll;
   U16 scrollHeight;
   S16 markX, markY, pointX, pointY;
-  S16 scrollY;                  // nm_scroll
+  S16 scrollY;
   enum { mm_select, mm_page, mm_scroll } mouseMode;
   strlib::List<BaseNode *> nodeList;
   strlib::List<NamedInput *> namedInputs;
   strlib::List<InputNode *> inputs;
   strlib::List<AnchorNode *> anchors;
   strlib::List<ImageNode *> images;
-  strlib::Properties *cookies;
+  strlib::Properties<String *> *cookies;
   strlib::String htmlStr;
   strlib::String event;
   strlib::String fileName;
@@ -142,7 +143,7 @@ static const char *dot_xpm[] = {
   ".+++."
 };
 
-static xpmImage dotImage(dot_xpm);
+static Fl_Pixmap dotImage(dot_xpm);
 
 static const char *ellipse_xpm[] = {
   "6 1 2 1",
@@ -151,7 +152,7 @@ static const char *ellipse_xpm[] = {
   " . . ."
 };
 
-static xpmImage ellipseImage(ellipse_xpm);
+static Fl_Pixmap ellipseImage(ellipse_xpm);
 
 static const char *broken_xpm[] = {
   "16 18 4 1",
@@ -181,7 +182,7 @@ static const char *broken_xpm[] = {
   NULL
 };
 
-static xpmImage brokenImage(broken_xpm);
+static Fl_Pixmap brokenImage(broken_xpm);
 
 #pragma GCC diagnostic ignored "-Wnarrowing"
 struct ENTITY_MAP {
