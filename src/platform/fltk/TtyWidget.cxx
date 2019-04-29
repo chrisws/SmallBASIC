@@ -6,6 +6,11 @@
 // Download the GNU Public License (GPL) from www.gnu.org
 // 
 
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
+
+#include <FL/Fl_Rect.H>
 #include "platform/fltk/TtyWidget.h"
 
 //
@@ -21,24 +26,24 @@ TtyWidget::TtyWidget(int x, int y, int w, int h, int numRows) :
   head = tail = 0;
   markX = markY = pointX = pointY = 0;
 
-  setfont(COURIER, 12);
+  setfont(FL_COURIER, 12);
   scrollLock = false;
 
   begin();
   // vertical scrollbar scrolls in row units
-  vscrollbar = new Scrollbar(w - SCROLL_W, 1, SCROLL_W, h);
+  vscrollbar = new Fl_Scrollbar(w - SCROLL_W, 1, SCROLL_W, h);
   vscrollbar->set_vertical();
   vscrollbar->user_data(this);
 
   // horizontal scrollbar scrolls in pixel units
-  hscrollbar = new Scrollbar(w - HSCROLL_W - SCROLL_W, 1, HSCROLL_W, SCROLL_H);
+  hscrollbar = new Fl_Scrollbar(w - HSCROLL_W - SCROLL_W, 1, HSCROLL_W, SCROLL_H);
   vscrollbar->user_data(this);
 
   end();
 }
 
 TtyWidget::~TtyWidget() {
-  delete[]buffer;
+  delete [] buffer;
 }
 
 //
@@ -46,7 +51,7 @@ TtyWidget::~TtyWidget() {
 //
 void TtyWidget::draw() {
   // get the text drawing rectangle
-  Rectangle rc = Rectangle(0, 0, w(), h() + 1);
+  Fl_Rect rc = Fl_Rect(0, 0, w(), h() + 1);
   if (vscrollbar->visible()) {
     rc.move_r(-vscrollbar->w());
   }
@@ -65,13 +70,13 @@ void TtyWidget::draw() {
   int firstRow = tail + vscroll;        // from start plus scroll offset
 
   // setup the background colour
-  setcolor(color());
-  fillrect(rc);
-  push_clip(rc);
-  setcolor(BLACK);
-  drawline(0, 0, w(), 0);
-  setcolor(labelcolor());
-  setfont(labelfont(), (int)labelsize());
+  fl_color(color());
+  fl_rectf(rc.x(), rc.y(), rc.w(), rc.h());
+  fl_push_clip(rc.x(), rc.y(), rc.w(), rc.h());
+  fl_color(BLACK);
+  fl_line(0, 0, w(), 0);
+  fl_color(labelcolor());
+  fl_font(labelfont(), (int)labelsize());
 
   int pageWidth = 0;
   for (int row = firstRow, rows = 0, y = rc.y() + lineHeight; rows < numRows; row++, rows++, y += lineHeight) {
@@ -86,17 +91,17 @@ void TtyWidget::draw() {
       int width = seg->width();
       if (seg->str) {
         if (invert) {
-          setcolor(labelcolor());
-          fillrect(x, (y - lineHeight) + (int)getdescent(), width, lineHeight);
-          setcolor(color());
-          drawtext(seg->str, x, y);
-          setcolor(labelcolor());
+          fl_color(labelcolor());
+          fl_rectf(x, (y - lineHeight) + (int)getdescent(), width, lineHeight);
+          fl_color(color());
+          fl_text(seg->str, x, y);
+          fl_color(labelcolor());
         } else {
-          drawtext(seg->str, x, y);
+          fl_text(seg->str, x, y);
         }
       }
       if (underline) {
-        drawline(x, y + 1, x + width, y + 1);
+        fl_line(x, y + 1, x + width, y + 1);
       }
       x += width;
       seg = seg->next;
@@ -111,7 +116,7 @@ void TtyWidget::draw() {
   if (pageWidth > w()) {
     draw_child(*hscrollbar);
   }
-  pop_clip();
+  fl_pop_clip();
   draw_child(*vscrollbar);
 }
 
@@ -120,7 +125,7 @@ void TtyWidget::draw() {
 //
 void TtyWidget::drawSelection(TtyTextSeg *seg, strlib::String *s, int row, int x, int y) {
   if (markX != pointX || markY != pointY) {
-    Rectangle rc(0, y - (int)getascent(), 0, lineHeight);
+    Fl_Rect rc(0, y - fl_height(), 0, lineHeight);
     int r1 = markY;
     int r2 = pointY;
     int x1 = markX;
@@ -150,7 +155,7 @@ void TtyWidget::drawSelection(TtyTextSeg *seg, strlib::String *s, int row, int x
 
       // find start of selection
       while (x < x1 && i < len) {
-        x += (int)getwidth(seg->str + (i++), 1);
+        x += fl_width(seg->str + (i++), 1);
       }
       rc.x(x);
 
@@ -159,7 +164,7 @@ void TtyWidget::drawSelection(TtyTextSeg *seg, strlib::String *s, int row, int x
         if (s) {
           s->append(seg->str[i]);
         }
-        x += (int)getwidth(seg->str + (i++), 1);
+        x += fl_width(seg->str + (i++), 1);
       }
       rc.set_r(x);
     } else if (row == r2) {
@@ -173,15 +178,15 @@ void TtyWidget::drawSelection(TtyTextSeg *seg, strlib::String *s, int row, int x
         if (s) {
           s->append(seg->str[i]);
         }
-        x += (int)getwidth(seg->str + (i++), 1);
+        x += fl_width(seg->str + (i++), 1);
       }
       rc.set_r(x);
     }
 
     if (!s && !rc.empty()) {
-      setcolor(YELLOW);
-      fillrect(rc);
-      setcolor(labelcolor());
+      fl_color(FL_YELLOW);
+      fl_rectf(rc.x(), rc.y(), rc.w(), rc.h());
+      fl_color(labelcolor());
     }
   }
 }
@@ -192,7 +197,7 @@ void TtyWidget::drawSelection(TtyTextSeg *seg, strlib::String *s, int row, int x
 int TtyWidget::handle(int e) {
   static bool leftButtonDown = false;
   switch (e) {
-  case PUSH:
+  case FL_PUSH:
     if ((!vscrollbar->visible() || !event_inside(*vscrollbar)) &&
         (!hscrollbar->visible() || !event_inside(*hscrollbar))) {
       bool selected = (markX != pointX || markY != pointY);
@@ -211,8 +216,8 @@ int TtyWidget::handle(int e) {
     }
     break;
 
-  case DRAG:
-  case MOVE:
+  case FL_DRAG:
+  case FL_MOVE:
     if (leftButtonDown) {
       pointX = event_x();
       pointY = rowEvent();
@@ -229,18 +234,18 @@ int TtyWidget::handle(int e) {
     }
     return 1;
 
-  case RELEASE:
+  case FL_RELEASE:
     leftButtonDown = false;
     return 1;
 
-  case MOUSEWHEEL:
+  case FL_MOUSEWHEEL:
     if (vscrollbar->visible()) {
       return vscrollbar->handle(e);
     }
     break;
   }
 
-  return Group::handle(e);
+  return Fl_Group::handle(e);
 }
 
 //
@@ -319,7 +324,7 @@ bool TtyWidget::copySelection() {
   bool result = selection.length() > 0;
   if (result) {
     const char *copy = selection.c_str();
-    Fl_copy(copy, strlen(copy), true);
+    Fl::copy(copy, strlen(copy), true);
   }
   return result;
 }
@@ -347,7 +352,7 @@ void TtyWidget::print(const char *str) {
   TtyRow *line = getLine(head);    // pointer to current line
 
   // need the current font set to calculate text widths
-  Fl_setfont(labelfont(), labelsize());
+  fl_font(labelfont(), labelsize());
 
   // scan the text, handle any special characters, and display the rest.
   for (int i = 0; i < strLength; i++) {
@@ -540,35 +545,35 @@ void TtyWidget::setGraphicsRendition(TtyTextSeg *segment, int c) {
     break;
 
   case 30:                     // Black
-    segment->color = BLACK;
+    segment->color = FL_BLACK;
     break;
 
   case 31:                     // Red
-    segment->color = RED;
+    segment->color = FL_RED;
     break;
 
   case 32:                     // Green
-    segment->color = GREEN;
+    segment->color = FL_GREEN;
     break;
 
   case 33:                     // Yellow
-    segment->color = YELLOW;
+    segment->color = FL_YELLOW;
     break;
 
   case 34:                     // Blue
-    segment->color = BLUE;
+    segment->color = FL_BLUE;
     break;
 
   case 35:                     // Magenta
-    segment->color = MAGENTA;
+    segment->color = FL_MAGENTA;
     break;
 
   case 36:                     // Cyan
-    segment->color = CYAN;
+    segment->color = FL_CYAN;
     break;
 
   case 37:                     // White
-    segment->color = WHITE;
+    segment->color = FL_WHITE;
     break;
   }
 }
@@ -577,27 +582,27 @@ void TtyWidget::setGraphicsRendition(TtyTextSeg *segment, int c) {
 // update the current drawing font
 //
 void TtyWidget::setfont(bool bold, bool italic) {
-  Font *font = labelfont();
+  Fl_Font font = labelfont();
   if (bold) {
-    font = font->bold();
+    //font = font->bold();
   }
   if (italic) {
-    font = font->italic();
+    //font = font->italic();
   }
-  Fl_setfont(font, labelsize());
+  fl_font(font, labelsize());
 }
 
 //
 // update the current drawing font and remember the face/size
 //
-void TtyWidget::setfont(Font *font, int size) {
+void TtyWidget::setfont(Fl_Font font, int size) {
   if (font) {
     labelfont(font);
   }
   if (size) {
-    labelsize(size);
+    //labelsize(size);
   }
-  Fl_setfont(labelfont(), labelsize());
+  fl_font(labelfont(), labelsize());
   lineHeight = (int)(getascent() + getdescent());
 }
 

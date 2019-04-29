@@ -11,19 +11,18 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include <FL/Fl_events.h>
-#include <FL/Fl_Font.h>
-#include <FL/Fl_draw.h>
-#include <FL/Fl_Group.h>
-#include <FL/Fl_Scrollbar.h>
+#include <FL/fl_draw.H>
+#include <FL/Fl_Widget.H>
+#include <FL/Fl_Group.H>
+#include <FL/Fl_Scrollbar.H>
 
 #include "ui/strlib.h"
 
 #define SCROLL_W 15
 #define SCROLL_H 15
 #define HSCROLL_W 80
+const Fl_Color NO_COLOR = 0;
 
-using namespace fltk;
 using namespace strlib;
 
 struct Point {
@@ -104,7 +103,7 @@ struct TtyTextSeg {
 
   // width of this segment in pixels
   int width() {
-    return !str ? 0 : (int)getwidth(str);
+    return !str ? 0 : fl_width(str);
   }
 
   // number of chars in this segment
@@ -119,8 +118,8 @@ struct TtyTextSeg {
     *underline = get(UNDERLINE, underline);
     *invert = get(INVERT, invert);
 
-    if (this->color != (Color)NO_COLOR) {
-      Fl_setcolor(this->color);
+    if (this->color != NO_COLOR) {
+      fl_color(this->color);
     }
 
     return set(BOLD) || set(ITALIC);
@@ -128,7 +127,7 @@ struct TtyTextSeg {
 
   char *str;
   int flags;
-  Color color;
+  Fl_Color color;
   TtyTextSeg *next;
 };
 
@@ -206,7 +205,7 @@ struct TtyRow {
   TtyTextSeg *head;
 };
 
-struct TtyWidget:public Group {
+struct TtyWidget : public Fl_Group {
   TtyWidget(int x, int y, int w, int h, int numRows);
   virtual ~TtyWidget();
 
@@ -219,12 +218,12 @@ struct TtyWidget:public Group {
   void clearScreen();
   bool copySelection();
   void print(const char *str);
-  void setFont(Font *font) {
-    setfont(font, 0);
+  void setFont(Fl_Font font) {
+    fl_font(font, 0);
     redraw();
   };
   void setFontSize(int size) {
-    setfont(0, size);
+    fl_font(0, size);
     redraw();
   };
   void setScrollLock(bool b) {
@@ -236,7 +235,7 @@ private:
   TtyRow *getLine(int ndx);
   int processLine(TtyRow *line, const char *linePtr);
   void setfont(bool bold, bool italic);
-  void setfont(Font *font, int size);
+  void setfont(Fl_Font font, int size);
   void setGraphicsRendition(TtyTextSeg *segment, int c);
 
   // returns the number of display text rows held in the buffer
@@ -251,7 +250,7 @@ private:
 
   // returns the selected row within the circular buffer
   int rowEvent() {
-    return (event_y() / lineHeight) + tail + vscrollbar->value();
+    return (Fl::event_y() / lineHeight) + tail + vscrollbar->value();
   }
 
   // buffer management
@@ -263,8 +262,8 @@ private:
   int width;                    // the maximum width of the buffer text in pixels
 
   // scrollbars
-  Scrollbar *vscrollbar;
-  Scrollbar *hscrollbar;
+  Fl_Scrollbar *vscrollbar;
+  Fl_Scrollbar *hscrollbar;
   int lineHeight;
   bool scrollLock;
 
