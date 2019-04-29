@@ -48,6 +48,8 @@
 #define ELIPSE_LEN 10
 #define IMG_TEXT_BORDER 25
 #define NO_COLOR 0
+#define DAMAGE_HIGHLIGHT FL_DAMAGE_USER1
+#define DAMAGE_PUSHED    FL_DAMAGE_USER2
 
 extern "C" void trace(const char *format, ...);
 Fl_Color getColor(strlib::String *s, Fl_Color def);
@@ -84,7 +86,7 @@ struct Display {
   u_int8_t invertedSel;
   int16_t markX, markY, pointX, pointY;
   strlib::String *selection;
-  Fl_Font *font;
+  Fl_Font font;
   Fl_Color color;
   Fl_Color background;
   Fl_Group *wnd;
@@ -264,15 +266,15 @@ struct BaseNode {
 //--FontNode--------------------------------------------------------------------
 
 struct FontNode : public BaseNode {
-  FontNode(Fl_Font *font, int fontSize, Fl_Color color, bool bold, bool italic);
+  FontNode(Fl_Font font, int fontSize, Fl_Color color, bool bold, bool italic);
   void display(Display *out);
 
-  Fl_Font *font; // includes face,bold,italic
+  Fl_Font font; // includes face,bold,italic
   u_int16_t fontSize;
   Fl_Color color;
 };
 
-FontNode::FontNode(Fl_Font *font, int fontSize, Fl_Color color, bool bold, bool italic) :
+FontNode::FontNode(Fl_Font font, int fontSize, Fl_Color color, bool bold, bool italic) :
   BaseNode(),
   font(font),
   fontSize(fontSize),
@@ -288,7 +290,7 @@ FontNode::FontNode(Fl_Font *font, int fontSize, Fl_Color color, bool bold, bool 
 
 void FontNode::display(Display *out) {
   if (font) {
-    fl_font(*font, fontSize);
+    fl_font(font, fontSize);
   }
   if (color == (Fl_Color) - 1) {
     fl_color(out->color);       // </font> restores color
@@ -454,7 +456,7 @@ struct LiNode : public BaseNode {
       } else {
         dotImage.draw(x, y, 5, 5);
         // draw messes with the current font - restore
-        fl_font(*out->font, out->fontSize);
+        fl_font(out->font, out->fontSize);
       }
     }
   }
@@ -604,7 +606,7 @@ void ImageNode::display(Display *out) {
       out->indent = out->x1;
     }
   }
-  fl_font(*out->font, out->fontSize);    // restore font
+  fl_font(out->font, out->fontSize);    // restore font
 }
 
 //--TextNode--------------------------------------------------------------------
@@ -1464,7 +1466,7 @@ void InputNode::display(Display *out) {
   }
   out->lineHeight = height;
   button->resize(out->x1, out->y1 - fl_height(), button->w(), out->lineHeight - 2);
-  button->labelfont(*out->font);
+  button->labelfont(out->font);
   button->labelsize(out->fontSize);
   if (button->y() + button->h() < out->y2 && button->y() >= 0) {
     button->clear_visible();
@@ -1604,8 +1606,10 @@ const char *HelpWidget::getInputValue(Fl_Widget *widget) {
   case ID_CHKBOX:
     return ((Fl_Radio_Button *) widget)->value()? truestr : falsestr;
   case ID_SELECT:
-    widget = ((Fl_Choice *) widget)->item();
-    return widget ? widget->label() : NULL;
+    // TODO: fixme
+    //widget = ((Fl_Choice *) widget)->item();
+    //return widget ? widget->label() : NULL;
+    return NULL;
   case ID_RANGEVAL:
     sprintf(rangeValue, "%f", ((Fl_Valuator *) widget)->value());
     return rangeValue;
@@ -1656,8 +1660,8 @@ bool HelpWidget::setInputValue(const char *assignment) {
   strlib::String s = assignment;
   strlib::String name = s.leftOf('=');
   strlib::String value = s.rightOf('=');
-  Fl_Choice *choice;
-  Fl_Widget *item;
+  //Fl_Choice *choice;
+  //Fl_Widget *item;
 
   if (value.length() == 0) {
     return false;
@@ -1678,11 +1682,12 @@ bool HelpWidget::setInputValue(const char *assignment) {
         ((Fl_Radio_Button *) button)->value(value.equals(truestr) || value.equals("1"));
         break;
       case ID_SELECT:
-        choice = (Fl_Choice *) button;
-        item = choice->find(value.c_str());
-        if (item) {
-          choice->set_focus(item);
-        }
+        // TODO: fixme
+        //choice = (Fl_Choice *) button;
+        //item = choice->find(value.c_str());
+        //if (item) {
+        //choice->set_focus(item);
+        //}
         break;
       case ID_RANGEVAL:
         ((Fl_Valuator *) button)->value(value.toNumber());
@@ -1736,7 +1741,7 @@ void HelpWidget::draw() {
   out.center = false;
   out.wnd = this;
   out.anchor = 0;
-  out.font = &FL_HELVETICA;
+  out.font = FL_HELVETICA;
   out.fontSize = (int)labelsize();
   out.color = foreground;
   out.background = background;
@@ -1754,7 +1759,7 @@ void HelpWidget::draw() {
   out.tabH = out.y2;
   out.selection = 0;
   out.selected = (markX != pointX || markY != pointY);
-  if (event_clicks() == 1 && damage() == FL_DAMAGE_USER1) {
+  if (Fl::event_clicks() == 1 && damage() == DAMAGE_HIGHLIGHT) {
     // double click
     out.selected = true;
   }
@@ -1775,21 +1780,21 @@ void HelpWidget::draw() {
     out.pointX += hscroll;
     out.pointY += vscroll;
 
-    if (damage() == FL_DAMAGE_USER1) {
+    if (damage() == DAMAGE_HIGHLIGHT) {
       // capture new selection text
       out.selection = &selection;
       out.selection->empty();
     }
   }
   // must call setfont() before getascent() etc
-  fl_font(*out.font, out.fontSize);
+  fl_font(out.font, out.fontSize);
   out.y1 = fl_height();
   out.lineHeight = out.y1 + fl_descent();
   out.y1 += vscroll;
 
   fl_push_clip(0, 0, w(), h());
   bool havePushedAnchor = false;
-  if (pushedAnchor && (damage() == FL_DAMAGE_USER2)) {
+  if (pushedAnchor && (damage() == DAMAGE_PUSHED)) {
     // just draw the anchor-push
     int h = (pushedAnchor->y2 - pushedAnchor->y1) + pushedAnchor->lineHeight;
     fl_push_clip(0, pushedAnchor->y1, out.x2, h);
@@ -1806,7 +1811,7 @@ void HelpWidget::draw() {
   List_each(InputNode *, it, inputs) {
     InputNode *p = (*it);
     if (p->button) {
-      p->button->set_flag(INVISIBLE);
+      p->button->clear_visible();
     }
   }
 
@@ -1853,7 +1858,6 @@ void HelpWidget::draw() {
       scrollHeight = scrollH;
       scrollbar->activate();
       scrollbar->value(value, 1, 0, SCROLL_SIZE);
-      scrollbar->pagesize(SCROLL_SIZE * height / scrollH);
       scrollbar->linesize(SCROLL_SIZE * out.lineHeight / scrollH);
       scrollbar->slider_size(MAX(10, MIN(sliderH, height - 40)));
       if (height - vscroll > pageHeight) {
@@ -1865,7 +1869,7 @@ void HelpWidget::draw() {
   draw_child(*scrollbar);
 
   // prevent other child controls from drawing over the scrollbar
-  fl_push_clip(0, 0, w() - SCROLL_W, h)));
+  fl_push_clip(0, 0, w() - SCROLL_W, h());
   int numchildren = children();
   for (int n = 0; n < numchildren; n++) {
     Fl_Widget &w = *child(n);
@@ -1888,7 +1892,7 @@ void HelpWidget::compile() {
   u_int8_t center = false;
   u_int8_t uline = false;
   Fl_Color color = 0;
-  Fl_Font *font = FL_HELVETICA;
+  Fl_Font font = FL_HELVETICA;
   int fontSize = (int)labelsize();
   int taglen = 0;
   int textlen = 0;
@@ -2157,11 +2161,11 @@ void HelpWidget::compile() {
           tagPair = text = skipWhite(tagEnd + 1);
         } else if (0 == strncasecmp(tag, "pre", 3)) {
           pre = true;
-          node = new FontNode(COURIER, fontSize, 0, bold, italic);
+          node = new FontNode(FL_COURIER, fontSize, 0, bold, italic);
           nodeList.add(node);
           nodeList.add(new BrNode(pre));
         } else if (0 == strncasecmp(tag, "code", 4)) {
-          node = new FontNode(COURIER, fontSize, 0, bold, italic);
+          node = new FontNode(FL_COURIER, fontSize, 0, bold, italic);
           nodeList.add(node);
         } else if (0 == strncasecmp(tag, "td", 2)) {
           p.removeAll();
@@ -2220,19 +2224,21 @@ void HelpWidget::compile() {
           color = getColor(p.get("color"), 0);
           prop = p.get("font-size");
           if (prop != NULL) {
+            // TODO: fixme
             // convert from points to pixels
-            const Fl_Monitor &monitor = Fl_Monitor::all();
-            fontSize = (int)(prop->toInteger() * monitor.dpi_y() / 72.0);
+            //const Fl_Monitor &monitor = Fl_Monitor::all();
+            //fontSize = (int)(prop->toInteger() * monitor.dpi_y() / 72.0);
           } else {
             prop = p.get("size");
             if (prop != NULL) {
               fontSize = 7 + (prop->toInteger() * 2);
             }
           }
-          prop = p.get("face");
-          if (prop != NULL) {
-            font = fl_font(*prop->c_str());
-          }
+          // TODO: fixme
+          //prop = p.get("face");
+          //if (prop != NULL) {
+          //font = fl_font(prop->c_str());
+          //}
           node = new FontNode(font, fontSize, color, bold, italic);
           nodeList.add(node);
         } else if (taglen == 2 && 0 == strncasecmp(tag, "h", 1)) {
@@ -2325,26 +2331,26 @@ void HelpWidget::onclick(Fl_Widget *button) {
 }
 
 int HelpWidget::onMove(int event) {
-  int ex = Fl_event_x();
-  int ey = Fl_event_y();
+  int ex = Fl::event_x();
+  int ey = Fl::event_y();
 
   if (pushedAnchor && event == FL_DRAG) {
     bool pushed = pushedAnchor->ptInSegment(ex, ey);
     if (pushedAnchor->pushed != pushed) {
-      Fl_Widget::cursor(FL_CURSOR_HAND);
+      fl_cursor(FL_CURSOR_HAND);
       pushedAnchor->pushed = pushed;
-      damage(FL_DAMAGE_USER2);
+      damage(DAMAGE_PUSHED);
     }
     return 1;
   } else {
     List_each(AnchorNode *, it, anchors) {
       AnchorNode *p = (*it);
       if (p->ptInSegment(ex, ey)) {
-        Fl_Widget::cursor(FL_CURSOR_HAND);
+        fl_cursor(FL_CURSOR_HAND);
         return 1;
       }
     }
-    Fl_Widget::cursor(FL_CURSOR_DEFAULT);
+    fl_cursor(FL_CURSOR_DEFAULT);
   }
 
   if (event == FL_DRAG) {
@@ -2353,7 +2359,7 @@ int HelpWidget::onMove(int event) {
       // drag text selection
       pointX = ex - hscroll;
       pointY = ey - vscroll;
-      damage(FL_DAMAGE_USER1);
+      damage(DAMAGE_HIGHLIGHT);
       break;
     case mm_scroll:
       // follow the mouse navigation
@@ -2383,8 +2389,8 @@ int HelpWidget::onMove(int event) {
 
 int HelpWidget::onPush(int event) {
   pushedAnchor = 0;
-  int ex = Fl_event_x();
-  int ey = Fl_event_y();
+  int ex = Fl::event_x();
+  int ey = Fl::event_y();
   int16_t scroll = vscroll;
 
   List_each(AnchorNode *, it, anchors) {
@@ -2392,8 +2398,8 @@ int HelpWidget::onPush(int event) {
     if (p->ptInSegment(ex, ey)) {
       pushedAnchor = p;
       pushedAnchor->pushed = true;
-      Fl_Widget::cursor(FL_CURSOR_HAND);
-      damage(FL_DAMAGE_USER2);
+      fl_cursor(FL_CURSOR_HAND);
+      damage(DAMAGE_PUSHED);
       return 1;
     }
   }
@@ -2401,14 +2407,14 @@ int HelpWidget::onPush(int event) {
   switch (mouseMode) {
   case mm_select:
     // begin/continue text selection
-    if (event_state(SHIFT)) {
+    if (Fl::event_state(FL_SHIFT)) {
       pointX = (ex - hscroll);
       pointY = (ey - vscroll);
     } else {
       markX = pointX = (ex - hscroll);
       markY = pointY = (ey - vscroll);
     }
-    damage(FL_DAMAGE_USER1);
+    damage(DAMAGE_HIGHLIGHT);
     break;
 
   case mm_scroll:
@@ -2439,7 +2445,7 @@ int HelpWidget::onPush(int event) {
 
 int HelpWidget::handle(int event) {
   int handled = Fl_Group::handle(event);
-  if (handled && event != Fl_MOVE) {
+  if (handled && event != FL_MOVE) {
     return handled;
   }
 
@@ -2465,18 +2471,20 @@ int HelpWidget::handle(int event) {
     return 1;
 
   case EVENT_FIND:
-    find(Fl_input("Find:"), false);
+    find(fl_input("Find:"), false);
     return 1;
 
   case EVENT_PG_DOWN:
     if (scrollbar->active()) {
-      scrollbar->handle_drag(scrollbar->value() + scrollbar->pagesize());
+      // TODO: fixme
+      //scrollbar->handle_drag(scrollbar->value() + scrollbar->pagesize());
     }
     return 1;
 
   case EVENT_PG_UP:
     if (scrollbar->active()) {
-      scrollbar->handle_drag(scrollbar->value() - scrollbar->pagesize());
+      // TODO: fixme
+      //scrollbar->handle_drag(scrollbar->value() - scrollbar->pagesize());
     }
     return 1;
 
@@ -2493,19 +2501,20 @@ int HelpWidget::handle(int event) {
   case FL_ENTER:
     return 1;
 
-  case FL_KEY:
-    if (event_key_state(RightKey) && -hscroll < w() / 2) {
+  case FL_KEYDOWN:
+    if (Fl::event_key(FL_Right) && -hscroll < w() / 2) {
       hscroll -= HSCROLL_STEP;
       redraw();
       return 1;
     }
-    if (event_key_state(LeftKey) && hscroll < 0) {
+    if (Fl::event_key(FL_Left) && hscroll < 0) {
       hscroll += HSCROLL_STEP;
       redraw();
       return 1;
     }
-    if (event_key_state(RightCtrlKey) || event_key_state(LeftCtrlKey)) {
-      switch (event_key()) {
+    if ((Fl::event_key(FL_Left) || Fl::event_key(FL_Right))
+        && Fl::event_state(FL_CTRL)) {
+      switch (Fl::event_key()) {
       case 'u':
         return handle(EVENT_PG_UP);
       case 'd':
@@ -2514,21 +2523,21 @@ int HelpWidget::handle(int event) {
         reloadPage();
         return 1;
       case 'f':                // find
-        find(Fl_input("Find:"), false);
+        find(fl_input("Find:"), false);
         return 1;
       case 'a':                // select-all
         selectAll();
         return 1;
-      case InsertKey:
+      case FL_Insert:
       case 'c':                // copy
         copySelection();
         return 1;
       case 'b':                // break popup
       case 'q':
-        if (Fl::modal() == parent()) {
-          // TODO: fixme
+        // TODO: fixme
+        //if (Fl::modal() == parent()) {
           //Fl_exit_modal();
-        }
+        //}
         break;                  // handle in default
       }
     }
@@ -2540,10 +2549,10 @@ int HelpWidget::handle(int event) {
 
   case FL_RELEASE:
     if (pushedAnchor) {
-      Fl_Widget::cursor(FL_CURSOR_DEFAULT);
+      fl_cursor(FL_CURSOR_DEFAULT);
       bool pushed = pushedAnchor->pushed;
       pushedAnchor->pushed = false;
-      damage(FL_DAMAGE_USER2);
+      damage(DAMAGE_PUSHED);
       if (pushed) {
         this->event.empty();
         this->event.append(pushedAnchor->href.c_str());
@@ -2589,12 +2598,12 @@ bool HelpWidget::find(const char *s, bool matchCase) {
     vscroll = -scrollHeight;
   }
 
-  damage(FL_DAMAGE_ALL | FL_DAMAGE_USER1);
+  damage(FL_DAMAGE_ALL | FL_DAMAGE_CHILD);
   return true;
 }
 
 void HelpWidget::copySelection() {
-  Fl_copy(selection.c_str(), selection.length(), true);
+  Fl::copy(selection.c_str(), selection.length(), true);
 }
 
 void HelpWidget::selectAll() {
@@ -2895,23 +2904,7 @@ Fl_Color getColor(strlib::String *s, Fl_Color def) {
 
 // image factory based on file extension
 Fl_Shared_Image *loadImage(const char *name, uchar *buff) {
-  int len = strlen(name);
-  Fl_Shared_Image *result = 0;
-  if (strcasecmp(name + (len - 4), ".jpg") == 0 ||
-      strcasecmp(name + (len - 5), ".jpeg") == 0) {
-    result = jpegImage::get(name, buff);
-  } else if (strcasecmp(name + (len - 4), ".gif") == 0) {
-    result = gifImage::get(name, buff);
-  } else if (strcasecmp(name + (len - 4), ".png") == 0) {
-    result = pngImage::get(name, buff);
-  } else if (strcasecmp(name + (len - 4), ".xpm") == 0) {
-    result = xpmFileImage::get(name, buff);
-  }
-  if (result) {
-    // load the image
-    ((Fl_Image *) result)->fetch();
-  }
-  return result;
+  return Fl_Shared_Image::get(name);
 }
 
 Fl_Image *loadImage(const char *imgSrc) {
