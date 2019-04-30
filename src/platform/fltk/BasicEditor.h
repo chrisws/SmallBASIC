@@ -1,10 +1,6 @@
+// This file is part of SmallBASIC
 //
-// Based on test/editor.cxx - A simple text editor program for the Fast
-// Light Tool Kit (FLTK). This program is described in Chapter 4 of the FLTK
-// Programmer's Guide.
-// Copyright 1998-2003 by Bill Spitzak and others.
-//
-// Copyright(C) 2001-2013 Chris Warren-Smith.
+// Copyright(C) 2001-2019 Chris Warren-Smith.
 //
 // This program is distributed under the terms of the GPL v2.0 or later
 // Download the GNU Public License (GPL) from www.gnu.org
@@ -13,10 +9,8 @@
 #ifndef BASIC_EDITOR_H
 #define BASIC_EDITOR_H
 
-#include <FL/Fl_TextEditor.h>
+#include <FL/Fl_Text_Editor.H>
 #include "ui/strlib.h"
-
-using namespace fltk;
 
 bool isvar(int c);
 
@@ -25,7 +19,7 @@ struct StatusBar {
   virtual void setRowCol(int row, int col) = 0;
 };
 
-struct BasicEditor : public TextEditor {
+struct BasicEditor : public Fl_Text_Editor {
   BasicEditor(int x, int y, int w, int h, StatusBar *status);
   ~BasicEditor();
 
@@ -39,10 +33,10 @@ struct BasicEditor : public TextEditor {
   void getRowCol(int *row, int *col);
   void getSelEndRowCol(int *row, int *col);
   void getSelStartRowCol(int *row, int *col);
-  char *getSelection(Rectangle *rc);
+  char *getSelection(Fl_Rect *rc);
   void gotoLine(int line);
   void handleTab();
-  void setFont(Font *font);
+  void setFont(Fl_Font font);
   void setFontSize(int size);
   void showFindText(const char *text);
   void showMatchingBrace();
@@ -54,8 +48,8 @@ struct BasicEditor : public TextEditor {
   int indentLevel;
   int matchingBrace;
 
-  Fl_TextBuffer *stylebuf;
-  Fl_TextBuffer *textbuf;
+  Fl_Text_Buffer *stylebuf;
+  Fl_Text_Buffer *textbuf;
   char search[256];
   StatusBar *status;
 };

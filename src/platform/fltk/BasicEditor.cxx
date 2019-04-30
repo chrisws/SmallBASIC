@@ -703,7 +703,7 @@ void BasicEditor::getSelEndRowCol(int *row, int *col) {
 /**
  * return the selected text and its coordinate rectangle
  */
-char *BasicEditor::getSelection(Rectangle *rc) {
+char *BasicEditor::getSelection(Fl_Rect *rc) {
   char *result = 0;
   if (!readonly) {
     int x1, y1, x2, y2, start, end;

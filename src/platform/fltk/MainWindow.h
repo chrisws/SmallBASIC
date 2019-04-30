@@ -4,7 +4,7 @@
 //
 // This program is distributed under the terms of the GPL v2.0 or later
 // Download the GNU Public License (GPL) from www.gnu.org
-// 
+//
 
 #ifndef MAIN_WINDOW_H
 #define MAIN_WINDOW_H
@@ -39,7 +39,7 @@ enum ExecState {
   quit_state
 };
 
-enum GroupWidget {
+enum GroupWidgetEnum {
   gw_editor,
   gw_output,
   gw_help,
@@ -64,14 +64,14 @@ extern ExecState runMode;
 #undef CALLBACK_METHOD
 #endif
 
-#define CALLBACK_METHOD(FN)                     \
-  void FN(Widget *w=0, void *v=0);              \
-  static void FN ## _cb(Widget *w, void *v) {   \
-    wnd->FN(w, v);                              \
+#define CALLBACK_METHOD(FN)                      \
+  void FN(Fl_Widget *w=0, void *v=0);            \
+  static void FN ## _cb(Fl_Widget *w, void *v) { \
+    wnd->FN(w, v);                               \
   }
 
 struct BaseWindow : public Fl_Window {
-  BaseWindow(int w, int h) : Fl_Window(w, h, "SmallBASIC") {} 
+  BaseWindow(int w, int h) : Fl_Window(w, h, "SmallBASIC") {}
   virtual ~BaseWindow() {};
   int handle(int e);
   bool handleKeyEvent();
@@ -88,11 +88,11 @@ struct MainWindow : public BaseWindow {
   bool basicMain(EditorWidget *editWidget, const char *filename, bool toolExec);
   bool isBreakExec(void);       // whether BREAK mode has been entered
   bool isRunning(void);         // whether a program is running
-  bool isEdit();                // whether a program is currently being edited 
+  bool isEdit();                // whether a program is currently being edited
   bool isIdeHidden();           // whether to run without the IDE displayed
   bool isInteractive();         // whether to run without an interface
   bool isModal();               // whether a modal gui loop is active
-  void addPlugin(Menu *menu, const char *label, const char *filename);
+  void addPlugin(Fl_Menu *menu, const char *label, const char *filename);
   void busyMessage();
   bool execHelp();
   void execLink(strlib::String &file);
@@ -100,30 +100,30 @@ struct MainWindow : public BaseWindow {
   void pathMessage(const char *file);
   void resetPen();
   void saveEditConfig(EditorWidget *editWidget);
-  void scanPlugIns(Menu *menu);
-  void scanRecentFiles(Menu *menu);
+  void scanPlugIns(Fl_Menu *menu);
+  void scanRecentFiles(Fl_Menu *menu);
   void setBreak();
   void setModal(bool modal);
-  void setTitle(Window *widget, const char *filename);
+  void setTitle(Fl_Window *widget, const char *filename);
   void showEditTab(EditorWidget *editWidget);
   void showHelpPage();
   void statusMsg(RunMessage runMessage, const char *filename);
   void updateConfig(EditorWidget *current);
   void updateEditTabName(EditorWidget *editWidget);
 
-  Group *createEditor(const char *title);
-  EditorWidget *getEditor(Group *group);
+  Fl_Group *createEditor(const char *title);
+  EditorWidget *getEditor(Fl_Group *group);
   EditorWidget *getEditor(const char *fullPath);
   EditorWidget *getEditor(bool select = false);
   void editFile(const char *filePath);
   Fl_Group *getSelectedTab();
-  Fl_Group *getNextTab(Group *current);
-  Fl_Group *getPrevTab(Group *current);
+  Fl_Group *getNextTab(Fl_Group *current);
+  Fl_Group *getPrevTab(Fl_Group *current);
   Fl_Group *selectTab(const char *label);
   Fl_Group *findTab(const char *label);
-  Fl_Group *findTab(GroupWidget groupWidget);
-  GroupWidget getGroupWidget(Fl_Group *group) {
-    return (GroupWidget) (intptr_t) group->user_data();
+  Fl_Group *findTab(GroupWidgetEnum groupWidget);
+  GroupWidgetEnum getGroupWidget(Fl_Group *group) {
+    return (GroupWidgetEnum) (intptr_t) group->user_data();
   }
   bool logPrint();
   FILE *openConfig(const char *fileName, const char *flags = "w");
@@ -172,7 +172,7 @@ struct MainWindow : public BaseWindow {
   EditorWidget *_runEditWidget;
 
   // tab parent
-  Fl_TabGroup *_tabGroup;
+  Fl_Group *_tabGroup;
 
   // configuration
   Profile *_profile;

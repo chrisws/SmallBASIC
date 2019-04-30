@@ -502,7 +502,7 @@ void EditorWidget::rename_word(Widget *w, void *eventData) {
   if (rename_active) {
     rename_active = false;
   } else {
-    Rectangle rc;
+    Fl_Rect rc;
     char *selection = getSelection(&rc);
     if (selection) {
       showFindText(selection);
@@ -991,7 +991,7 @@ void EditorWidget::runState(RunMessage runMessage) {
 void EditorWidget::saveSelection(const char *path) {
   FILE *fp = fopen(path, "w");
   if (fp) {
-    Rectangle rc;
+    Fl_Rect rc;
     char *selection = getSelection(&rc);
     if (selection) {
       fwrite(selection, strlen(selection), 1, fp);
@@ -1263,16 +1263,16 @@ void EditorWidget::findFunc(const char *find) {
 /**
  * returns the current selection text
  */
-char *EditorWidget::getSelection(Rectangle *rc) {
+char *EditorWidget::getSelection(Fl_Rect *rc) {
   return ((BasicEditor *)editor)->getSelection(rc);
 }
 
 /**
  * returns the current file modified time
  */
-U32 EditorWidget::getModifiedTime() {
+u_int32_t EditorWidget::getModifiedTime() {
   struct stat st_file;
-  U32 modified = 0;
+  u_int32_t modified = 0;
   if (filename[0] && !stat(filename, &st_file)) {
     modified = st_file.st_mtime;
   }

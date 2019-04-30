@@ -1,6 +1,6 @@
 // This file is part of SmallBASIC
 //
-// Copyright(C) 2001-2013 Chris Warren-Smith.
+// Copyright(C) 2001-2019 Chris Warren-Smith.
 //
 // This program is distributed under the terms of the GPL v2.0 or later
 // Download the GNU Public License (GPL) from www.gnu.org
@@ -22,7 +22,6 @@
 #define SCROLL_W 15
 #define SCROLL_H 15
 #define HSCROLL_W 80
-const Fl_Color NO_COLOR = 0;
 
 using namespace strlib;
 
@@ -43,7 +42,7 @@ struct TtyTextSeg {
   TtyTextSeg() {
     this->str = 0;
     this->flags = 0;
-    this->color = NO_COLOR;
+    this->color = 0;
     this->next = 0;
   } 
   
@@ -119,7 +118,7 @@ struct TtyTextSeg {
     *underline = get(UNDERLINE, underline);
     *invert = get(INVERT, invert);
 
-    if (this->color != NO_COLOR) {
+    if (this->color) {
       fl_color(this->color);
     }
 

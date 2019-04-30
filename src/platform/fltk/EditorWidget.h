@@ -1,33 +1,28 @@
+// This file is part of SmallBASIC
 //
-// Based on test/editor.cxx - A simple text editor program for the Fast
-// Light Tool Kit (FLTK). This program is described in Chapter 4 of the FLTK
-// Programmer's Guide. Copyright 1998-2003 by Bill Spitzak and others.
-//
-// Copyright(C) 2001-2013 Chris Warren-Smith.
+// Copyright(C) 2001-2019 Chris Warren-Smith.
 //
 // This program is distributed under the terms of the GPL v2.0 or later
 // Download the GNU Public License (GPL) from www.gnu.org
-//
+// 
 
 #ifndef EDITOR_WIDGET_H
 #define EDITOR_WIDGET_H
 
-#include <FL/Fl_Browser.h>
-#include <FL/Fl_Window.h>
-#include <FL/Fl_Widget.h>
-#include <FL/Fl_Input.h>
-#include <FL/Fl_ToggleButton.h>
-#include <FL/Fl_Button.h>
-#include <FL/Fl_TextEditor.h>
-#include <FL/Fl_Choice.h>
+#include <FL/Fl_Browser.H>
+#include <FL/Fl_Window.H>
+#include <FL/Fl_Widget.H>
+#include <FL/Fl_Input.H>
+#include <FL/Fl_Toggle_Button.H>
+#include <FL/Fl_Button.H>
+#include <FL/Fl_Text_Editor.H>
+#include <FL/Fl_Choice.H>
 #include <limits.h>
 
 #include "ui/strlib.h"
 #include "platform/fltk/TtyWidget.h"
 #include "platform/fltk/BasicEditor.h"
 #include "platform/fltk/utils.h"
-
-using namespace fltk;
 
 #ifdef CALLBACK_METHOD
 #undef CALLBACK_METHOD
@@ -36,11 +31,11 @@ using namespace fltk;
 struct EditorWidget;
 EditorWidget *get_editor();
 
-#define CALLBACK_METHOD(FN)                     \
-  void FN(Widget*w=0, void *v=0);               \
-  static void FN ## _cb(Widget*w, void *v) {    \
-    EditorWidget*e = get_editor();              \
-    if (e) e->FN(w, v);                         \
+#define CALLBACK_METHOD(FN)                      \
+  void FN(Fl_Widget*w=0, void *v=0);             \
+  static void FN ## _cb(Fl_Widget *w, void *v) { \
+    EditorWidget *e = get_editor();              \
+    if (e) e->FN(w, v);                          \
   }
 
 enum RunMessage {
@@ -73,7 +68,7 @@ enum CommandOpt {
   cmd_input_text,
 };
 
-class EditorWidget : public Group, StatusBar {
+class EditorWidget : public Fl_Group, StatusBar {
 public:
   EditorWidget(int x, int y, int w, int h);
   virtual ~EditorWidget();
@@ -124,8 +119,8 @@ public:
   void runState(RunMessage runMessage);
   void saveSelection(const char *path);
   void setBreakToLine(bool b) { gotoLineBn->value(b); }
-  void setEditorColor(Color c, bool defColor);
-  void setFont(Font *font);
+  void setEditorColor(Fl_Color c, bool defColor);
+  void setFont(Fl_Font font);
   void setFontSize(int i);
   void setHideIde(bool b) { hideIdeBn->value(b); if (b) setLogPrint(!b); }
   void setIndentLevel(int level);
@@ -149,9 +144,9 @@ protected:
   void createFuncList();
   void doChange(int inserted, int deleted);
   void findFunc(const char *find);
-  char *getSelection(Rectangle *rc);
+  char *getSelection(Fl_Rect *rc);
   void getKeywords(strlib::List<String *> &keywords);
-  U32 getModifiedTime();
+  u_int32_t getModifiedTime();
   void handleFileChange();
   void layout();
   void newFile();
@@ -161,27 +156,27 @@ protected:
   void setColor(const char *label, StyleField field);
   void setCommand(CommandOpt command);
   void setModified(bool dirty);
-  void setWidgetColor(Widget *w, Color bg, Color fg);
+  void setWidgetColor(Fl_Widget *w, Fl_Color bg, Fl_Color fg);
   void showFindText(const char *text);
 
 private:
   char filename[PATH_MAX];
   bool dirty;
   bool loading;
-  U32 modifiedTime;
+  u_int32_t modifiedTime;
 
   // tool-bar
-  Input *commandText;
-  Widget *rowStatus;
-  Widget *colStatus;
+  Fl_Input *commandText;
+  Fl_Widget *rowStatus;
+  Fl_Widget *colStatus;
   Fl_Button *runStatus;
   Fl_Button *modStatus;
-  Browser *funcList;
+  Fl_Browser *funcList;
 
-  ToggleButton *logPrintBn;
-  ToggleButton *lockBn;
-  ToggleButton *hideIdeBn;
-  ToggleButton *gotoLineBn;
+  Fl_Toggle_Button *logPrintBn;
+  Fl_Toggle_Button *lockBn;
+  Fl_Toggle_Button *hideIdeBn;
+  Fl_Toggle_Button *gotoLineBn;
 
   // same order as display items
   CommandOpt commandOpt;
