@@ -32,7 +32,7 @@ TtyWidget::TtyWidget(int x, int y, int w, int h, int numRows) :
   begin();
   // vertical scrollbar scrolls in row units
   vscrollbar = new Fl_Scrollbar(w - SCROLL_W, 1, SCROLL_W, h);
-  vscrollbar->set_vertical();
+  vscrollbar->type(FL_VERTICAL);
   vscrollbar->user_data(this);
 
   // horizontal scrollbar scrolls in pixel units
@@ -53,7 +53,7 @@ void TtyWidget::draw() {
   // get the text drawing rectangle
   Fl_Rect rc = Fl_Rect(0, 0, w(), h() + 1);
   if (vscrollbar->visible()) {
-    rc.move_r(-vscrollbar->w());
+    rc.w(rc.w() - vscrollbar->w());
   }
   // prepare escape state variables
   bool bold = false;
@@ -73,7 +73,7 @@ void TtyWidget::draw() {
   fl_color(color());
   fl_rectf(rc.x(), rc.y(), rc.w(), rc.h());
   fl_push_clip(rc.x(), rc.y(), rc.w(), rc.h());
-  fl_color(BLACK);
+  fl_color(FL_BLACK);
   fl_line(0, 0, w(), 0);
   fl_color(labelcolor());
   fl_font(labelfont(), (int)labelsize());
@@ -92,12 +92,12 @@ void TtyWidget::draw() {
       if (seg->str) {
         if (invert) {
           fl_color(labelcolor());
-          fl_rectf(x, (y - lineHeight) + (int)getdescent(), width, lineHeight);
+          fl_rectf(x, (y - lineHeight) + fl_descent(), width, lineHeight);
           fl_color(color());
-          fl_text(seg->str, x, y);
+          fl_draw(seg->str, x, y);
           fl_color(labelcolor());
         } else {
-          fl_text(seg->str, x, y);
+          fl_draw(seg->str, x, y);
         }
       }
       if (underline) {
@@ -166,7 +166,7 @@ void TtyWidget::drawSelection(TtyTextSeg *seg, strlib::String *s, int row, int x
         }
         x += fl_width(seg->str + (i++), 1);
       }
-      rc.set_r(x);
+      rc.w(x - rc.x());
     } else if (row == r2) {
       // bottom selection row
       rc.x(x);
@@ -180,10 +180,10 @@ void TtyWidget::drawSelection(TtyTextSeg *seg, strlib::String *s, int row, int x
         }
         x += fl_width(seg->str + (i++), 1);
       }
-      rc.set_r(x);
+      rc.w(x - rc.x());
     }
 
-    if (!s && !rc.empty()) {
+    if (!s && (rc.w() || rc.h())) {
       fl_color(FL_YELLOW);
       fl_rectf(rc.x(), rc.y(), rc.w(), rc.h());
       fl_color(labelcolor());
@@ -198,18 +198,18 @@ int TtyWidget::handle(int e) {
   static bool leftButtonDown = false;
   switch (e) {
   case FL_PUSH:
-    if ((!vscrollbar->visible() || !event_inside(*vscrollbar)) &&
-        (!hscrollbar->visible() || !event_inside(*hscrollbar))) {
+    if ((!vscrollbar->visible() || !Fl::event_inside(vscrollbar)) &&
+        (!hscrollbar->visible() || !Fl::event_inside(hscrollbar))) {
       bool selected = (markX != pointX || markY != pointY);
-      if (selected && event_button() == RightButton) {
+      if (selected && Fl::event_button() == FL_RIGHT_MOUSE) {
         // right click to copy selection
         copySelection();
       }
-      markX = pointX = event_x();
+      markX = pointX = Fl::event_x();
       markY = pointY = rowEvent();
       if (selected) {
         // draw end selection
-        redraw(DAMAGE_HIGHLIGHT);
+        damage(DAMAGE_HIGHLIGHT);
       }
       leftButtonDown = true;
       return 1;                 // become belowmouse to receive RELEASE event
@@ -219,15 +219,15 @@ int TtyWidget::handle(int e) {
   case FL_DRAG:
   case FL_MOVE:
     if (leftButtonDown) {
-      pointX = event_x();
+      pointX = Fl::event_x();
       pointY = rowEvent();
-      redraw(DAMAGE_HIGHLIGHT);
+      damage(DAMAGE_HIGHLIGHT);
       if (vscrollbar->visible()) {
         // drag to scroll up or down
         int value = vscrollbar->value();
-        if (event_y() < 0 && value > 0) {
+        if (Fl::event_y() < 0 && value > 0) {
           vscrollbar->value(value - 1);
-        } else if ((event_y() > h()) && (value + getPageRows() < getTextRows())) {
+        } else if ((Fl::event_y() > h()) && (value + getPageRows() < getTextRows())) {
           vscrollbar->value(value + 1);
         }
       }
@@ -398,7 +398,6 @@ void TtyWidget::print(const char *str) {
     vscrollbar->value(getTextRows() - getPageRows());
   }
   // schedule a layout and redraw
-  relayout();
   redraw();
 }
 
@@ -603,6 +602,6 @@ void TtyWidget::setfont(Fl_Font font, int size) {
     //labelsize(size);
   }
   fl_font(labelfont(), labelsize());
-  lineHeight = (int)(getascent() + getdescent());
+  lineHeight = fl_height() + fl_descent();
 }
 

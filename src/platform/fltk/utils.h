@@ -11,6 +11,9 @@
 
 int x_get_pixel(int x, int y);
 
+#define DAMAGE_HIGHLIGHT FL_DAMAGE_USER1
+#define DAMAGE_PUSHED    FL_DAMAGE_USER2
+
 #define C_LINKAGE_BEGIN extern "C" {
 #define C_LINKAGE_END }
 

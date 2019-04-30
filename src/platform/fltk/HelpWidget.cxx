@@ -48,8 +48,6 @@
 #define ELIPSE_LEN 10
 #define IMG_TEXT_BORDER 25
 #define NO_COLOR 0
-#define DAMAGE_HIGHLIGHT FL_DAMAGE_USER1
-#define DAMAGE_PUSHED    FL_DAMAGE_USER2
 
 extern "C" void trace(const char *format, ...);
 Fl_Color getColor(strlib::String *s, Fl_Color def);

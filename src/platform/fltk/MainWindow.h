@@ -1,6 +1,6 @@
 // This file is part of SmallBASIC
 //
-// Copyright(C) 2001-2013 Chris Warren-Smith.
+// Copyright(C) 2001-2019 Chris Warren-Smith.
 //
 // This program is distributed under the terms of the GPL v2.0 or later
 // Download the GNU Public License (GPL) from www.gnu.org
@@ -9,9 +9,9 @@
 #ifndef MAIN_WINDOW_H
 #define MAIN_WINDOW_H
 
-#include <FL/Fl_Window.h>
-#include <FL/Fl_TabGroup.h>
-#include <FL/Fl_ValueInput.h>
+#include <FL/Fl_Window.H>
+#include <FL/Fl_Group.H>
+#include <FL/Fl_Value_Input.H>
 
 #include <stdint.h>
 
@@ -70,8 +70,8 @@ extern ExecState runMode;
     wnd->FN(w, v);                              \
   }
 
-struct BaseWindow : public Window {
-  BaseWindow(int w, int h) : Window(w, h, "SmallBASIC") {} 
+struct BaseWindow : public Fl_Window {
+  BaseWindow(int w, int h) : Fl_Window(w, h, "SmallBASIC") {} 
   virtual ~BaseWindow() {};
   int handle(int e);
   bool handleKeyEvent();
@@ -116,13 +116,13 @@ struct MainWindow : public BaseWindow {
   EditorWidget *getEditor(const char *fullPath);
   EditorWidget *getEditor(bool select = false);
   void editFile(const char *filePath);
-  Group *getSelectedTab();
-  Group *getNextTab(Group *current);
-  Group *getPrevTab(Group *current);
-  Group *selectTab(const char *label);
-  Group *findTab(const char *label);
-  Group *findTab(GroupWidget groupWidget);
-  GroupWidget getGroupWidget(Group *group) {
+  Fl_Group *getSelectedTab();
+  Fl_Group *getNextTab(Group *current);
+  Fl_Group *getPrevTab(Group *current);
+  Fl_Group *selectTab(const char *label);
+  Fl_Group *findTab(const char *label);
+  Fl_Group *findTab(GroupWidget groupWidget);
+  GroupWidget getGroupWidget(Fl_Group *group) {
     return (GroupWidget) (intptr_t) group->user_data();
   }
   bool logPrint();
@@ -172,7 +172,7 @@ struct MainWindow : public BaseWindow {
   EditorWidget *_runEditWidget;
 
   // tab parent
-  TabGroup *_tabGroup;
+  Fl_TabGroup *_tabGroup;
 
   // configuration
   Profile *_profile;

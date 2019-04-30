@@ -1,6 +1,6 @@
 // This file is part of SmallBASIC
 //
-// Copyright(C) 2001-2014 Chris Warren-Smith.
+// Copyright(C) 2001-2019 Chris Warren-Smith.
 //
 // This program is distributed under the terms of the GPL v2.0 or later
 // Download the GNU Public License (GPL) from www.gnu.org
@@ -13,13 +13,9 @@
 #include <dirent.h>
 #include <unistd.h>
 
-#include <FL/Fl_Item.h>
-#include <FL/Fl_MenuBar.h>
-#include <FL/Fl_TabGroup.h>
-#include <FL/Fl_ask.H>
-#include <FL/Fl_error.h>
-#include <FL/Fl_events.h>
-#include <FL/Fl_run.h>
+#include <FL/Fl_Menu_Bar.H>
+#include <FL/Fl_Tabs.H>
+#include <FL/fl_ask.H>
 
 #include "platform/fltk/MainWindow.h"
 #include "platform/fltk/EditorWidget.h"
@@ -53,7 +49,7 @@ const char *keywordsFile = "keywords.txt";
 const char *aboutText =
   "<b>About SmallBASIC...</b><br><br>"
   "Version " SB_STR_VER "<br>"
-  "Copyright (c) 2002-2014 Chris Warren-Smith.<br><br>"
+  "Copyright (c) 2002-2019 Chris Warren-Smith.<br><br>"
   "Copyright (c) 2000-2006 Nicholas Christopoulos.<br><br>"
   "<a href=http://smallbasic.sourceforge.net>"
   "http://smallbasic.sourceforge.net</a><br><br>"
@@ -185,7 +181,7 @@ struct ScanFont {
 
   void readNextFont() {
     if (_index < _numfonts) {
-      Font *nextFont = _fonts[_index];
+      Fl_Font nextFont = _fonts[_index];
       if (addFont(nextFont, false)) {
         // update the font cache for selected font
         fprintf(_fp, "%s\n", nextFont->system_name());
@@ -285,8 +281,8 @@ bool MainWindow::basicMain(EditorWidget *editWidget,
   opt_pref_width = 0;
   opt_pref_height = 0;
 
-  Window *fullScreen = NULL;
-  Group *oldOutputGroup = _outputGroup;
+  Fl_Window *fullScreen = NULL;
+  Fl_Group *oldOutputGroup = _outputGroup;
   int old_w = _out->w();
   int old_h = _out->h();
   int interactive = opt_interactive;
@@ -370,7 +366,7 @@ bool MainWindow::basicMain(EditorWidget *editWidget,
 
 void MainWindow::close_tab(Fl_Widget *w, void *eventData) {
   if (_tabGroup->children() > 1) {
-    Group *group = getSelectedTab();
+    Fl_Group *group = getSelectedTab();
     if (group && group != _outputGroup) {
       if (gw_editor == getGroupWidget(group)) {
         EditorWidget *editWidget = (EditorWidget *)group->child(0);
@@ -390,12 +386,12 @@ void MainWindow::close_tab(Fl_Widget *w, void *eventData) {
 }
 
 void MainWindow::close_other_tabs(Fl_Widget *w, void *eventData) {
-  Group *selected = getSelectedTab();
+  Fl_Group *selected = getSelectedTab();
   int n = _tabGroup->children();
-  Group *items[n];
+  Fl_Group *items[n];
   for (int c = 0; c < n; c++) {
     items[c] = NULL;
-    Group *child = (Group *)_tabGroup->child(c);
+    Fl_Group *child = (Group *)_tabGroup->child(c);
     if (child != selected && gw_editor == getGroupWidget(child)) {
       EditorWidget *editWidget = (EditorWidget *)child->child(0);
       if (editWidget != _runEditWidget && editWidget->checkSave(true)) {
@@ -423,7 +419,7 @@ void MainWindow::quit(Fl_Widget *w, void *eventData) {
     // auto-save scratchpad
     int n = _tabGroup->children();
     for (int c = 0; c < n; c++) {
-      Group *group = (Group *)_tabGroup->child(c);
+      Fl_Group *group = (Group *)_tabGroup->child(c);
       char path[MAX_PATH];
       if (gw_editor == getGroupWidget(group)) {
         EditorWidget *editWidget = (EditorWidget *)group->child(0);
@@ -540,7 +536,7 @@ void MainWindow::help_contents(Fl_Widget *w, void *eventData) {
  * displays the program help page in a browser window
  */
 void MainWindow::help_app(Fl_Widget *w, void *eventData) {
-  browseFile("http://smallbasic.sourceforge.net/?q=node/955");
+  browseFile("https://smallbasic.github.io/reference/955.html");
 }
 
 void MainWindow::help_about(Fl_Widget *w, void *eventData) {
