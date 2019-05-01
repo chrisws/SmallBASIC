@@ -26,6 +26,7 @@ public:
   bool construct(const char *font, const char *boldFont);
   void redraw();
   void resize(int w, int h);
+  void setFontSize(int size) { _ansiWidget->setFontSize(size); }
 
   AnsiWidget *_ansiWidget;
   

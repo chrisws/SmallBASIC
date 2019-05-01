@@ -93,7 +93,7 @@ void Profile::restore(MainWindow *wnd) {
 //
 // restore the standalone window position
 //
-void Profile::restoreAppPosition(Fl_Rect *wnd) {
+void Profile::restoreAppPosition(Fl_Window *wnd) {
   if (!_appPosition.empty()) {
     wnd->w(_appPosition.w());
     wnd->h(_appPosition.h());

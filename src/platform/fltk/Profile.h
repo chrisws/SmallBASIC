@@ -23,7 +23,7 @@ struct Profile {
 
   void loadConfig(EditorWidget *editor);
   void restore(MainWindow *wnd);
-  void restoreAppPosition(Fl_Rect *wnd);
+  void restoreAppPosition(Fl_Window *wnd);
   void save(MainWindow *wnd);
 
   Fl_Color _color;

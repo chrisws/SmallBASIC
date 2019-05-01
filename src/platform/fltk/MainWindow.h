@@ -92,7 +92,7 @@ struct MainWindow : public BaseWindow {
   bool isIdeHidden();           // whether to run without the IDE displayed
   bool isInteractive();         // whether to run without an interface
   bool isModal();               // whether a modal gui loop is active
-  void addPlugin(Fl_Menu *menu, const char *label, const char *filename);
+  void addPlugin(Fl_Menu_Bar *menu, const char *label, const char *filename);
   void busyMessage();
   bool execHelp();
   void execLink(strlib::String &file);
@@ -100,8 +100,8 @@ struct MainWindow : public BaseWindow {
   void pathMessage(const char *file);
   void resetPen();
   void saveEditConfig(EditorWidget *editWidget);
-  void scanPlugIns(Fl_Menu *menu);
-  void scanRecentFiles(Fl_Menu *menu);
+  void scanPlugIns(Fl_Menu_Bar *menu);
+  void scanRecentFiles(Fl_Menu_Bar *menu);
   void setBreak();
   void setModal(bool modal);
   void setTitle(Fl_Window *widget, const char *filename);
