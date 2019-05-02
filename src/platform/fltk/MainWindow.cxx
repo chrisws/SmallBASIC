@@ -94,7 +94,7 @@ void MainWindow::pathMessage(const char *file) {
 
 void MainWindow::showEditTab(EditorWidget *editWidget) {
   if (editWidget) {
-    _tabGroup->selected_child(editWidget->parent());
+    _tabGroup->value(editWidget->parent());
     editWidget->take_focus();
   }
 }
@@ -152,7 +152,6 @@ bool MainWindow::basicMain(EditorWidget *editWidget,
       _profile->restoreAppPosition(fullScreen);
 
       fullScreen->callback(quit_cb);
-      fullScreen->shortcut(0);
       fullScreen->add(_out);
       fullScreen->resizable(fullScreen);
       setTitle(fullScreen, filename);
@@ -347,7 +346,7 @@ bool MainWindow::execHelp() {
  * handle click from within help window
  */
 void do_help_contents_anchor(void *){
-  Fl_remove_check(do_help_contents_anchor);
+  Fl::remove_check(do_help_contents_anchor);
   strlib::String eventName = wnd->getHelp()->getEventName();
   if (access(eventName, R_OK) == 0) {
     wnd->editFile(eventName);
@@ -361,7 +360,7 @@ void do_help_contents_anchor(void *){
 
 void MainWindow::help_contents_anchor(Fl_Widget *w, void *eventData) {
   if (runMode == edit_state) {
-    Fl_add_check(do_help_contents_anchor);
+    Fl::add_check(do_help_contents_anchor);
   }
 }
 
@@ -466,7 +465,7 @@ void MainWindow::set_options(Fl_Widget *w, void *eventData) {
 
 void MainWindow::next_tab(Fl_Widget *w, void *eventData) {
   Fl_Group *group = getNextTab(getSelectedTab());
-  _tabGroup->selected_child(group);
+  _tabGroup->value(group);
   EditorWidget *editWidget = getEditor(group);
   if (editWidget) {
     editWidget->take_focus();
@@ -475,7 +474,7 @@ void MainWindow::next_tab(Fl_Widget *w, void *eventData) {
 
 void MainWindow::prev_tab(Fl_Widget *w, void *eventData) {
   Fl_Group *group = getPrevTab(getSelectedTab());
-  _tabGroup->selected_child(group);
+  _tabGroup->value(group);
   EditorWidget *editWidget = getEditor(group);
   if (editWidget) {
     editWidget->take_focus();
@@ -627,7 +626,7 @@ void MainWindow::tool_plugin(Fl_Widget *w, void *eventData) {
     sprintf(opt_command, "%s/%s", packageHome, pluginHome);
     statusMsg(rs_ready, (const char *)eventData);
     sprintf(path, "%s/%s", packageHome, (const char *)eventData);
-    _tabGroup->selected_child(_outputGroup);
+    _tabGroup->value(_outputGroup);
     basicMain(0, path, true);
     statusMsg(rs_ready, 0);
     opt_command[0] = 0;
@@ -949,7 +948,7 @@ bool initialise(int argc, char **argv) {
   case run_state:
     run_wnd = new Fl_Window(0, 0);
     run_wnd->show();
-    add_timeout(0.5f, run_mode_startup, run_wnd);
+    Fl::add_timeout(0.5f, run_mode_startup, run_wnd);
     break;
 
   case edit_state:
@@ -1051,25 +1050,24 @@ MainWindow::MainWindow(int w, int h) :
   m->add("&Help/&About SmallBASIC", F12Key, help_about_cb);
 
   callback(quit_cb);
-  shortcut(0);                  // remove default EscapeKey shortcut
 
   // outer decoration group
   h -= MNU_HEIGHT;
   Fl_Group *outer = new Fl_Group(0, MNU_HEIGHT, w, h);
   outer->begin();
-  outer->box(ENGRAVED_BOX);
+  outer->box(FL_ENGRAVED_BOX);
 
   // group for all tabs
   w -= 8;
 
-  _tabGroup = new TabGroup(4, 4, w, h - 6);
-  _tabGroup->box(NO_BOX);
+  _tabGroup = new Fl_Tabs(4, 4, w, h - 6);
+  _tabGroup->box(FL_NO_BOX);
 
   // create the output tab
   h -= (MNU_HEIGHT + 8);
   _tabGroup->begin();
   _outputGroup = new Fl_Group(0, MNU_HEIGHT, w, h, "Output");
-  _outputGroup->box(THIN_DOWN_BOX);
+  _outputGroup->box(FL_THIN_DOWN_BOX);
   _outputGroup->hide();
   _outputGroup->user_data((void *)gw_output);
   _outputGroup->begin();
@@ -1089,7 +1087,7 @@ MainWindow::MainWindow(int w, int h) :
 /**
  * create a new help widget and add it to the tab group
  */
-Group *MainWindow::createEditor(const char *title) {
+Fl_Group *MainWindow::createEditor(const char *title) {
   int w = _tabGroup->w();
   int h = _tabGroup->h() - MNU_HEIGHT;
 
@@ -1098,14 +1096,14 @@ Group *MainWindow::createEditor(const char *title) {
   const char *slash = strrchr(title, '/');
   editGroup->copy_label(slash ? slash + 1 : title);
   editGroup->begin();
-  editGroup->box(THIN_DOWN_BOX);
+  editGroup->box(FL_THIN_DOWN_BOX);
   editGroup->resizable(new EditorWidget(2, 2, w - 4, h - 2));
 
   editGroup->user_data((void *)gw_editor);
   editGroup->end();
 
   _tabGroup->add(editGroup);
-  _tabGroup->selected_child(editGroup);
+  _tabGroup->value(editGroup);
   _tabGroup->end();
   return editGroup;
 }
@@ -1116,7 +1114,7 @@ void MainWindow::new_file(Fl_Widget *w, void *eventData) {
   char path[MAX_PATH];
 
   if (untitledEditor) {
-    _tabGroup->selected_child(untitledEditor);
+    _tabGroup->value(untitledEditor);
     editWidget = getEditor(untitledEditor);
   }
   if (!editWidget) {
@@ -1144,7 +1142,7 @@ void MainWindow::open_file(Fl_Widget *w, void *eventData) {
     openFileGroup = new Fl_Group(0, MNU_HEIGHT, w, h, fileTabName);
     openFileGroup->begin();
     fileWidget = new FileWidget(2, 2, w - 4, h - 4);
-    openFileGroup->box(THIN_DOWN_BOX);
+    openFileGroup->box(FL_THIN_DOWN_BOX);
     openFileGroup->user_data((void *)gw_file);
     openFileGroup->resizable(fileWidget);
     openFileGroup->end();
@@ -1160,8 +1158,8 @@ void MainWindow::open_file(Fl_Widget *w, void *eventData) {
   if (editWidget) {
     FileWidget::splitPath(editWidget->getFilename(), path);
   } else {
-    Fl_Group *group = (Fl_Group *)_tabGroup->selected_child();
-    GroupWidget gw = getGroupWidget(group);
+    Fl_Group *group = (Fl_Group *)_tabGroup->value();
+    GroupWidgetEnum gw = getGroupWidget(group);
     switch (gw) {
     case gw_output:
       strcpy(path, packageHome);
@@ -1184,7 +1182,7 @@ void MainWindow::open_file(Fl_Widget *w, void *eventData) {
   }
 
   fileWidget->openPath(path, paths);
-  _tabGroup->selected_child(openFileGroup);
+  _tabGroup->value(openFileGroup);
 }
 
 void MainWindow::save_file_as(Fl_Widget *w, void *eventData) {
@@ -1204,7 +1202,7 @@ HelpWidget *MainWindow::getHelp() {
     int h = _tabGroup->h() - MNU_HEIGHT;
     _tabGroup->begin();
     helpGroup = new Fl_Group(0, MNU_HEIGHT, w, h, helpTabName);
-    helpGroup->box(THIN_DOWN_BOX);
+    helpGroup->box(FL_THIN_DOWN_BOX);
     helpGroup->hide();
     helpGroup->user_data((void *)gw_help);
     helpGroup->begin();
@@ -1215,7 +1213,7 @@ HelpWidget *MainWindow::getHelp() {
   } else {
     help = (HelpWidget *)helpGroup->resizable();
   }
-  _tabGroup->selected_child(helpGroup);
+  _tabGroup->value(helpGroup);
   return help;
 }
 
@@ -1227,7 +1225,7 @@ EditorWidget *MainWindow::getEditor(bool select) {
       Fl_Group *group = (Fl_Group *)_tabGroup->child(c);
       if (gw_editor == getGroupWidget(group)) {
         result = (EditorWidget *)group->child(0);
-        _tabGroup->selected_child(group);
+        _tabGroup->value(group);
         break;
       }
     }
@@ -1237,7 +1235,7 @@ EditorWidget *MainWindow::getEditor(bool select) {
   return result;
 }
 
-EditorWidget *MainWindow::getEditor(Group *group) {
+EditorWidget *MainWindow::getEditor(Fl_Group *group) {
   EditorWidget *editWidget = 0;
   if (group != 0 && gw_editor == getGroupWidget(group)) {
     editWidget = (EditorWidget *)group->resizable();
@@ -1275,7 +1273,7 @@ void MainWindow::editFile(const char *filePath) {
 }
 
 Fl_Group *MainWindow::getSelectedTab() {
-  return (Fl_Group *)_tabGroup->selected_child();
+  return (Fl_Group *)_tabGroup->value();
 }
 
 /**
@@ -1292,7 +1290,7 @@ Fl_Group *MainWindow::findTab(const char *label) {
   return 0;
 }
 
-Fl_Group *MainWindow::findTab(GroupWidget groupWidget) {
+Fl_Group *MainWindow::findTab(GroupWidgetEnum groupWidget) {
   int n = _tabGroup->children();
   for (int c = 0; c < n; c++) {
     Fl_Group *child = (Fl_Group *)_tabGroup->child(c);
@@ -1309,7 +1307,7 @@ Fl_Group *MainWindow::findTab(GroupWidget groupWidget) {
 Fl_Group *MainWindow::selectTab(const char *label) {
   Fl_Group *tab = findTab(label);
   if (tab) {
-    _tabGroup->selected_child(tab);
+    _tabGroup->value(tab);
   }
   return tab;
 }
@@ -1589,7 +1587,7 @@ void MainWindow::loadIcon(const char *prefix, int resourceId) {
         if (strncasecmp(buffer, key, strlen(key)) == 0) {
           // found icon spec
           const char *filename = buffer + strlen(key);
-          Image *ico = loadImage(filename, 0);  // in HelpWidget.cxx
+          Fl_Image *ico = loadImage(filename, 0);  // in HelpWidget.cxx
           if (ico) {
             if (sizeof(unsigned) == ico->buffer_depth()) {
               // prefix the buffer with unsigned width and height values
@@ -1600,7 +1598,7 @@ void MainWindow::loadIcon(const char *prefix, int resourceId) {
               memcpy(image + 2, ico->buffer(), size);
               icon(image);
             }
-            SharedImage::remove(filename);
+            Fl_SharedImage::remove(filename);
           }
           break;
         }
@@ -1824,8 +1822,8 @@ LineInput::LineInput(int x, int y, int w, int h) :
   this->orig_w = w;
   this->orig_h = h;
   when(WHEN_ENTER_KEY_ALWAYS);
-  box(BORDER_BOX);
-  color(Fl_color(220, 220, 220));
+  box(FL_BORDER_BOX);
+  fl_color(fl_rgb_color(220, 220, 220));
   take_focus();
 }
 
@@ -1835,7 +1833,7 @@ LineInput::LineInput(int x, int y, int w, int h) :
 bool LineInput::replace(int b, int e, const char *text, int ilen) {
   bool result = Input::replace(b, e, text, ilen);
   if (ilen) {
-    int strw = (int)(getwidth(text) + getwidth(value())) + 4;
+    int strw = fl_width(text) + fl_width(value())) + 4;
     if (strw > w()) {
       w(strw);
       orig_w = strw;

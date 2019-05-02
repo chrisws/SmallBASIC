@@ -172,7 +172,7 @@ struct MainWindow : public BaseWindow {
   EditorWidget *_runEditWidget;
 
   // tab parent
-  Fl_Group *_tabGroup;
+  Fl_Tabs *_tabGroup;
 
   // configuration
   Profile *_profile;
