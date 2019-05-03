@@ -9,6 +9,8 @@
 #ifndef EDITOR_WIDGET_H
 #define EDITOR_WIDGET_H
 
+#include <stdint.h>
+
 #include <FL/Fl_Browser.H>
 #include <FL/Fl_Window.H>
 #include <FL/Fl_Widget.H>
@@ -146,7 +148,7 @@ protected:
   void findFunc(const char *find);
   char *getSelection(Fl_Rect *rc);
   void getKeywords(strlib::List<String *> &keywords);
-  u_int32_t getModifiedTime();
+  uint32_t getModifiedTime();
   void handleFileChange();
   void layout();
   void newFile();
@@ -163,7 +165,7 @@ private:
   char filename[PATH_MAX];
   bool dirty;
   bool loading;
-  u_int32_t modifiedTime;
+  uint32_t modifiedTime;
 
   // tool-bar
   Fl_Input *commandText;

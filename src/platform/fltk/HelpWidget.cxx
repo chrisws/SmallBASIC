@@ -67,21 +67,21 @@ char rangeValue[20];
 
 struct Display {
   int16_t x1, x2, y1, y2;
-  u_int16_t tabW, tabH;
-  u_int16_t lineHeight;
-  u_int16_t indent;
-  u_int16_t fontSize;
-  u_int16_t tableLevel;
-  u_int16_t nodeId;
+  uint16_t tabW, tabH;
+  uint16_t lineHeight;
+  uint16_t indent;
+  uint16_t fontSize;
+  uint16_t tableLevel;
+  uint16_t nodeId;
   int16_t imgY;
-  u_int16_t imgIndent;
-  u_int8_t uline;
-  u_int8_t center;
-  u_int8_t content;
-  u_int8_t exposed;
-  u_int8_t measure;
-  u_int8_t selected;
-  u_int8_t invertedSel;
+  uint16_t imgIndent;
+  uint8_t uline;
+  uint8_t center;
+  uint8_t content;
+  uint8_t exposed;
+  uint8_t measure;
+  uint8_t selected;
+  uint8_t invertedSel;
   int16_t markX, markY, pointX, pointY;
   strlib::String *selection;
   Fl_Font font;
@@ -108,7 +108,7 @@ struct Display {
     }
   }
 
-  void newRow(u_int16_t nrows = 1, bool doBackground = true) {
+  void newRow(uint16_t nrows = 1, bool doBackground = true) {
     int bgY = y1;
 
     x1 = indent;
@@ -256,7 +256,7 @@ Value Attributes::getValue(const char *attr, int def) {
 struct BaseNode {
   virtual ~BaseNode() {}
   virtual void display(Display *out) {}
-  virtual int indexOf(const char *sFind, u_int8_t matchCase) { return -1; }
+  virtual int indexOf(const char *sFind, uint8_t matchCase) { return -1; }
   virtual void getText(strlib::String *s) {}
   virtual int getY() { return -1; }
 };
@@ -268,7 +268,7 @@ struct FontNode : public BaseNode {
   void display(Display *out);
 
   Fl_Font font; // includes face,bold,italic
-  u_int16_t fontSize;
+  uint16_t fontSize;
   Fl_Color color;
 };
 
@@ -307,7 +307,7 @@ void FontNode::display(Display *out) {
 //--BrNode----------------------------------------------------------------------
 
 struct BrNode : public BaseNode {
-  BrNode(u_int8_t premode) :
+  BrNode(uint8_t premode) :
     BaseNode(),
     premode(premode) {
   }
@@ -321,7 +321,7 @@ struct BrNode : public BaseNode {
     }
     out->lineHeight = fl_height() + fl_descent();
   }
-  u_int8_t premode;
+  uint8_t premode;
 };
 
 //--AnchorNode------------------------------------------------------------------
@@ -368,9 +368,9 @@ struct AnchorNode : public BaseNode {
   strlib::String name;
   strlib::String href;
   int16_t x1, x2, y1, y2;
-  u_int16_t lineHeight;
-  u_int8_t wrapxy;  // begin on page boundary
-  u_int8_t pushed;
+  uint16_t lineHeight;
+  uint8_t wrapxy;  // begin on page boundary
+  uint8_t pushed;
 };
 
 AnchorNode *pushedAnchor = 0;
@@ -396,7 +396,7 @@ struct AnchorEndNode : public BaseNode {
 //--StyleNode-------------------------------------------------------------------
 
 struct StyleNode : public BaseNode {
-  StyleNode(u_int8_t uline, u_int8_t center) :
+  StyleNode(uint8_t uline, uint8_t center) :
     BaseNode(),
     uline(uline), center(center) {
   }
@@ -405,8 +405,8 @@ struct StyleNode : public BaseNode {
     out->uline = uline;
     out->center = center;
   }
-  u_int8_t uline;     // 2
-  u_int8_t center;    // 2
+  uint8_t uline;     // 2
+  uint8_t center;    // 2
 };
 
 //--LiNode----------------------------------------------------------------------
@@ -473,8 +473,8 @@ struct ImageNode : public BaseNode {
   Fl_Image *image;
   strlib::String path, url;
   Value w, h;
-  u_int8_t background, fixed;
-  u_int8_t valign; // 0=top, 1=center, 2=bottom
+  uint8_t background, fixed;
+  uint8_t valign; // 0=top, 1=center, 2=bottom
 };
 
 ImageNode::ImageNode(strlib::String *docHome, Attributes *a) :
@@ -610,21 +610,21 @@ void ImageNode::display(Display *out) {
 //--TextNode--------------------------------------------------------------------
 
 struct TextNode : public BaseNode {
-  TextNode(const char *s, u_int16_t textlen);
+  TextNode(const char *s, uint16_t textlen);
   void display(Display *out);
-  void drawSelection(const char *s, u_int16_t len, u_int16_t width, Display *out);
-  int indexOf(const char *sFind, u_int8_t matchCase);
+  void drawSelection(const char *s, uint16_t len, uint16_t width, Display *out);
+  int indexOf(const char *sFind, uint8_t matchCase);
   void getText(strlib::String *s);
 
   int getY();
 
   const char *s;                // 4
-  u_int16_t textlen;                  // 4
-  u_int16_t width;                    // 4
+  uint16_t textlen;                  // 4
+  uint16_t width;                    // 4
   int16_t ybegin;                   // 4
 };
 
-TextNode::TextNode(const char *s, u_int16_t textlen) :
+TextNode::TextNode(const char *s, uint16_t textlen) :
   BaseNode(),
   s(s),
   textlen(textlen),
@@ -636,7 +636,7 @@ void TextNode::getText(strlib::String *s) {
   s->append(this->s, this->textlen);
 }
 
-void TextNode::drawSelection(const char *s, u_int16_t len, u_int16_t width, Display *out) {
+void TextNode::drawSelection(const char *s, uint16_t len, uint16_t width, Display *out) {
   int out_y = out->y1 - fl_height();
   if (out->pointY < out_y) {
     return;                     // selection above text
@@ -835,11 +835,11 @@ void TextNode::display(Display *out) {
   }
 }
 
-int TextNode::indexOf(const char *sFind, u_int8_t matchCase) {
+int TextNode::indexOf(const char *sFind, uint8_t matchCase) {
   int numMatch = 0;
   int findLen = strlen(sFind);
   for (int i = 0; i < textlen; i++) {
-    u_int8_t equals = matchCase ? s[i] == sFind[numMatch] : toupper(s[i]) == toupper(sFind[numMatch]);
+    uint8_t equals = matchCase ? s[i] == sFind[numMatch] : toupper(s[i]) == toupper(sFind[numMatch]);
     numMatch = (equals ? numMatch + 1 : 0);
     if (numMatch == findLen) {
       return i + 1;
@@ -885,7 +885,7 @@ struct TrNode : public BaseNode {
   void display(Display *out);
 
   TableNode *table;
-  u_int16_t cols;
+  uint16_t cols;
   int16_t y1, height;
   Fl_Color background, foreground;
 };
@@ -904,7 +904,7 @@ struct TdNode : public BaseNode {
   TrNode *tr;
   Fl_Color background, foreground;
   Value width;
-  u_int16_t colspan;
+  uint16_t colspan;
 };
 
 struct TdEndNode : public BaseNode {
@@ -923,14 +923,14 @@ struct TableNode : public BaseNode {
   void setColWidth(Value *width);
   void cleanup();
 
-  u_int16_t *columns;
+  uint16_t *columns;
   int16_t *sizes;
-  u_int16_t rows, cols;
-  u_int16_t nextCol;
-  u_int16_t nextRow;
-  u_int16_t width;
-  u_int16_t nodeId;
-  u_int16_t initX, initY;             // start of table
+  uint16_t rows, cols;
+  uint16_t nextCol;
+  uint16_t nextRow;
+  uint16_t width;
+  uint16_t nodeId;
+  uint16_t initX, initY;             // start of table
   int16_t maxY;                     // end of table
   int16_t border;
 };
@@ -981,7 +981,7 @@ void TableNode::display(Display *out) {
       out->measure = true;
     }
     cleanup();
-    columns = (u_int16_t *) malloc(sizeof(u_int16_t) *cols);
+    columns = (uint16_t *) malloc(sizeof(uint16_t) *cols);
     sizes = (int16_t *) malloc(sizeof(int16_t) *cols);
     int cellW = width / cols;
     for (int i = 0; i < cols; i++) {
@@ -1241,7 +1241,7 @@ struct InputNode : public BaseNode {
 
   Fl_Widget *button;
   strlib::String onclick;
-  u_int16_t rows, cols;
+  uint16_t rows, cols;
 };
 
 // creates either a text, checkbox, radio, hidden or button control
@@ -1481,7 +1481,7 @@ void InputNode::display(Display *out) {
 //--EnvNode---------------------------------------------------------------------
 
 struct EnvNode : public TextNode {
-  EnvNode(Properties<String *> *p, const char *s, u_int16_t textlen) :
+  EnvNode(Properties<String *> *p, const char *s, uint16_t textlen) :
     TextNode(0, 0) {
     strlib::String var;
     var.append(s, textlen);
@@ -1884,17 +1884,17 @@ void HelpWidget::draw() {
 }
 
 void HelpWidget::compile() {
-  u_int8_t pre = !isHtmlFile();
-  u_int8_t bold = false;
-  u_int8_t italic = false;
-  u_int8_t center = false;
-  u_int8_t uline = false;
+  uint8_t pre = !isHtmlFile();
+  uint8_t bold = false;
+  uint8_t italic = false;
+  uint8_t center = false;
+  uint8_t uline = false;
   Fl_Color color = 0;
   Fl_Font font = FL_HELVETICA;
   int fontSize = (int)labelsize();
   int taglen = 0;
   int textlen = 0;
-  u_int8_t padlines = false;          // padding between line-breaks
+  uint8_t padlines = false;          // padding between line-breaks
 
   strlib::Stack<TableNode *> tableStack(5);
   strlib::Stack<TrNode *> trStack(5);

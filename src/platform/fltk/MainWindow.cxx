@@ -400,11 +400,6 @@ void MainWindow::help_about(Fl_Widget *w, void *eventData) {
   getHelp()->loadBuffer(aboutText);
 }
 
-void MainWindow::set_flag(Fl_Widget *w, void *eventData) {
-  bool *flag = (bool *)eventData;
-  *flag = (w->flags() & STATE);
-}
-
 void MainWindow::export_file(Fl_Widget *w, void *eventData) {
   EditorWidget *editWidget = getEditor();
   static char token[PATH_MAX];
@@ -702,9 +697,10 @@ void MainWindow::scanRecentFiles(Fl_Menu_Bar *menu) {
           fileLabel++;
         }
         sprintf(label, "&File/Open Recent File/%s", fileLabel);
-        recentMenu[i] = menu->add(label, CTRL + '1' + i, (Callback *)
-                                  load_file_cb, (void *)(intptr_t)(i + 1), RAW_LABEL);
-        recentPath[i].append(buffer);
+        //TODO: fixme
+        //recentMenu[i] = menu->add(label, CTRL + '1' + i, (Fl_Callback *)
+        //load_file_cb, (void *)(intptr_t)(i + 1), RAW_LABEL);
+        //recentPath[i].append(buffer);
         if (++i == NUM_RECENT_ITEMS) {
           break;
         }
@@ -714,9 +710,10 @@ void MainWindow::scanRecentFiles(Fl_Menu_Bar *menu) {
   }
   while (i < NUM_RECENT_ITEMS) {
     sprintf(label, "&File/Open Recent File/%s", untitledFile);
-    recentMenu[i] = menu->add(label, CTRL + '1' + i, (Callback *)
-                              load_file_cb, (void *)(intptr_t)(i + 1));
-    recentPath[i].append(untitledFile);
+    //TODO: fixme
+    //recentMenu[i] = menu->add(label, CTRL + '1' + i, (Fl_Callback *)
+    //load_file_cb, (void *)(intptr_t)(i + 1));
+    //recentPath[i].append(untitledFile);
     i++;
   }
 }
@@ -770,7 +767,7 @@ void MainWindow::scanPlugIns(Fl_Menu_Bar *menu) {
         sprintf(label, (editorTool ? "&Edit/Basic/%s" : "&Basic/%s"), buffer + offs);
         // use an absolute path
         sprintf(path, "%s/%s", pluginHome, filename);
-        menu->add(label, 0, (Callback *)
+        menu->add(label, 0, (Fl_Callback *)
                   (editorTool ? editor_plugin_cb : tool_plugin_cb), strdup(path));
       }
       fclose(file);
@@ -862,7 +859,7 @@ int arg_cb(int argc, char **argv, int &i) {
 void run_mode_startup(void *data) {
   if (data) {
     Fl_Window *w = (Fl_Window *)data;
-    w->destroy();
+    delete w;
   }
 
   EditorWidget *editWidget = wnd->getEditor(true);
@@ -940,7 +937,7 @@ bool initialise(int argc, char **argv) {
   Fl_Window::default_xclass("smallbasic");
 
   wnd->loadIcon(PACKAGE_PREFIX, 101);
-  check();
+  // check();
 
   Fl_Window *run_wnd;
 
@@ -980,7 +977,7 @@ int main(int argc, char **argv) {
   int result;
   if (initialise(argc, argv)) {
     atexit(save_profile);
-    run();
+    Fl::run();
     result = 0;
   } else {
     result = 1;
@@ -999,32 +996,32 @@ MainWindow::MainWindow(int w, int h) :
   FileWidget::forwardSlash(runfile);
   begin();
   Fl_Menu_Bar *m = new Fl_Menu_Bar(0, 0, w, MNU_HEIGHT);
-  m->add("&File/&New File", CTRL + 'n', new_file_cb);
-  m->add("&File/&Open File", CTRL + 'o', open_file_cb);
-  m->add("&File/_Open Recent File/", 0, (Callback *)NULL);
+  m->add("&File/&New File", FL_CTRL + 'n', new_file_cb);
+  m->add("&File/&Open File", FL_CTRL + 'o', open_file_cb);
+  m->add("&File/_Open Recent File/", 0, (Fl_Callback *)NULL);
   scanRecentFiles(m);
-  m->add("&File/&Close", CTRL + F4Key, close_tab_cb);
+  m->add("&File/&Close", FL_CTRL + FL_F+4, close_tab_cb);
   m->add("&File/_&Close Others", 0, close_other_tabs_cb);
-  m->add("&File/&Save File", CTRL + 's', EditorWidget::save_file_cb);
-  m->add("&File/_Save File &As", CTRL + SHIFT + 'S', save_file_as_cb);
+  m->add("&File/&Save File", FL_CTRL + 's', EditorWidget::save_file_cb);
+  m->add("&File/_Save File &As", FL_CTRL + FL_SHIFT + 'S', save_file_as_cb);
   addPlugin(m, "&File/Publish Online", "publish.bas");
-  m->add("&File/_Export", CTRL + F9Key, export_file_cb);
-  m->add("&File/E&xit", CTRL + 'q', quit_cb);
-  m->add("&Edit/_&Undo", CTRL + 'z', EditorWidget::undo_cb);
-  m->add("&Edit/Cu&t", CTRL + 'x', EditorWidget::cut_text_cb);
-  m->add("&Edit/&Copy", CTRL + 'c', copy_text_cb);
-  m->add("&Edit/_&Paste", CTRL + 'v', EditorWidget::paste_text_cb);
-  m->add("&Edit/_&Select All", CTRL + 'a', EditorWidget::select_all_cb);
-  m->add("&Edit/&Change Case", ALT + 'c', EditorWidget::change_case_cb);
-  m->add("&Edit/&Expand Word", ALT + '/', EditorWidget::expand_word_cb);
-  m->add("&Edit/_&Rename Word", CTRL + SHIFT + 'r', EditorWidget::rename_word_cb);
-  m->add("&Edit/&Find", CTRL + 'f', EditorWidget::find_cb);
-  m->add("&Edit/&Replace", CTRL + 'r', EditorWidget::show_replace_cb);
-  m->add("&Edit/_&Goto Line", CTRL + 'g', EditorWidget::goto_line_cb);
-  m->add("&View/&Next Tab", F6Key, next_tab_cb);
-  m->add("&View/_&Prev Tab", CTRL + F6Key, prev_tab_cb);
-  m->add("&View/Text Size/&Increase", CTRL + ']', font_size_incr_cb);
-  m->add("&View/Text Size/&Decrease", CTRL + '[', font_size_decr_cb);
+  m->add("&File/_Export", FL_CTRL + FL_F+9, export_file_cb);
+  m->add("&File/E&xit", FL_CTRL + 'q', quit_cb);
+  m->add("&Edit/_&Undo", FL_CTRL + 'z', EditorWidget::undo_cb);
+  m->add("&Edit/Cu&t", FL_CTRL + 'x', EditorWidget::cut_text_cb);
+  m->add("&Edit/&Copy", FL_CTRL + 'c', copy_text_cb);
+  m->add("&Edit/_&Paste", FL_CTRL + 'v', EditorWidget::paste_text_cb);
+  m->add("&Edit/_&Select All", FL_CTRL + 'a', EditorWidget::select_all_cb);
+  m->add("&Edit/&Change Case", FL_ALT + 'c', EditorWidget::change_case_cb);
+  m->add("&Edit/&Expand Word", FL_ALT + '/', EditorWidget::expand_word_cb);
+  m->add("&Edit/_&Rename Word", FL_CTRL + FL_SHIFT + 'r', EditorWidget::rename_word_cb);
+  m->add("&Edit/&Find", FL_CTRL + 'f', EditorWidget::find_cb);
+  m->add("&Edit/&Replace", FL_CTRL + 'r', EditorWidget::show_replace_cb);
+  m->add("&Edit/_&Goto Line", FL_CTRL + 'g', EditorWidget::goto_line_cb);
+  m->add("&View/&Next Tab", FL_F+6, next_tab_cb);
+  m->add("&View/_&Prev Tab", FL_CTRL + FL_F+6, prev_tab_cb);
+  m->add("&View/Text Size/&Increase", FL_CTRL + ']', font_size_incr_cb);
+  m->add("&View/Text Size/&Decrease", FL_CTRL + '[', font_size_decr_cb);
   m->add("&View/Text Color/Background Def", 0, EditorWidget::set_color_cb, (void *)st_background_def);
   m->add("&View/Text Color/_Background", 0, EditorWidget::set_color_cb, (void *)st_background);
   m->add("&View/Text Color/Text", 0, EditorWidget::set_color_cb, (void *)st_text);
@@ -1039,15 +1036,15 @@ MainWindow::MainWindow(int w, int h) :
 
   scanPlugIns(m);
 
-  m->add("&Program/&Run", F9Key, run_cb);
-  m->add("&Program/_&Run Selection", F8Key, run_selection_cb);
-  m->add("&Program/&Break", CTRL + 'b', run_break_cb);
-  m->add("&Program/_&Restart", CTRL + 'r', restart_run_cb);
-  m->add("&Program/&Command", F10Key, set_options_cb);
-  m->add("&Help/_&Help Contents", F1Key, help_contents_cb);
-  m->add("&Help/&Program Help", F11Key, help_app_cb);
+  m->add("&Program/&Run", FL_F+9, run_cb);
+  m->add("&Program/_&Run Selection", FL_F+8, run_selection_cb);
+  m->add("&Program/&Break", FL_CTRL + 'b', run_break_cb);
+  m->add("&Program/_&Restart", FL_CTRL + 'r', restart_run_cb);
+  m->add("&Program/&Command", FL_F+10, set_options_cb);
+  m->add("&Help/_&Help Contents", FL_F+1, help_contents_cb);
+  m->add("&Help/&Program Help", FL_F+11, help_app_cb);
   m->add("&Help/_&Home Page", 0, help_home_cb);
-  m->add("&Help/&About SmallBASIC", F12Key, help_about_cb);
+  m->add("&Help/&About SmallBASIC", FL_F+12, help_about_cb);
 
   callback(quit_cb);
 
@@ -1176,7 +1173,7 @@ void MainWindow::open_file(Fl_Widget *w, void *eventData) {
   for (int i = 0; i < NUM_RECENT_ITEMS; i++) {
     char nextPath[MAX_PATH];
     FileWidget::splitPath(recentPath[i].c_str(), nextPath);
-    if (nextPath[0] && !paths->exists(nextPath)) {
+    if (nextPath[0] && !paths->contains(nextPath)) {
       paths->add(nextPath);
     }
   }
@@ -1579,7 +1576,7 @@ void MainWindow::loadIcon(const char *prefix, int resourceId) {
     const char *key = "Icon=";
 
     // read the application desktop file, then scan for the Icon file
-    sprintf(path, "%s/share/applications/%s.desktop", prefix, Window::xclass());
+    sprintf(path, "%s/share/applications/%s.desktop", prefix, Fl_Window::xclass());
     FILE *fp = fopen(path, "r");
     if (fp) {
       while (feof(fp) == 0 && fgets(buffer, sizeof(buffer), fp)) {
@@ -1587,18 +1584,19 @@ void MainWindow::loadIcon(const char *prefix, int resourceId) {
         if (strncasecmp(buffer, key, strlen(key)) == 0) {
           // found icon spec
           const char *filename = buffer + strlen(key);
-          Fl_Image *ico = loadImage(filename, 0);  // in HelpWidget.cxx
+          Fl_Image *ico = Fl_Shared_Image::get(filename);
           if (ico) {
-            if (sizeof(unsigned) == ico->buffer_depth()) {
+            if (sizeof(unsigned) == ico->d()) {
               // prefix the buffer with unsigned width and height values
-              unsigned size = ico->buffer_width() * ico->buffer_height() * ico->buffer_depth();
+              unsigned size = ico->w() * ico->h() * ico->d();
               unsigned *image = (unsigned *)malloc(size + sizeof(unsigned) * 2);
-              image[0] = ico->buffer_width();
-              image[1] = ico->buffer_height();
-              memcpy(image + 2, ico->buffer(), size);
+              image[0] = ico->w();
+              image[1] = ico->h();
+              memcpy(image + 2, ico->data(), size);
               icon(image);
             }
-            Fl_SharedImage::remove(filename);
+            // TODO: fixme
+            //Fl_Shared_Image::remove(filename);
           }
           break;
         }
@@ -1643,7 +1641,7 @@ int BaseWindow::handle(int e) {
       }
       break;
     case FL_SHORTCUT:
-    case FL_KEY:
+    case FL_KEYBOARD:
       if (handleKeyEvent()) {
         // no default processing by Window
         return 1;
@@ -1655,12 +1653,12 @@ int BaseWindow::handle(int e) {
   case edit_state:
     switch (e) {
     case FL_SHORTCUT:
-    case FL_KEY:
-      if (Fl::event_key_state(LeftCtrlKey) || Fl::event_key_state(RightCtrlKey)) {
+    case FL_KEYBOARD:
+      if (Fl::event_state(FL_CTRL)) {
         EditorWidget *editWidget = wnd->getEditor();
         if (editWidget) {
-          if (Fl::event_key() == F1Key) {
-            // CTRL + F1 key for brief log mode help
+          if (Fl::event_key() == FL_F+1) {
+            // FL_CTRL + F1 key for brief log mode help
             wnd->help_contents(0, (void *)true);
             return 1;
           }
@@ -1676,7 +1674,7 @@ int BaseWindow::handle(int e) {
     break;
   }
 
-  return Window::handle(e);
+  return Fl_Window::handle(e);
 }
 
 bool BaseWindow::handleKeyEvent() {
@@ -1684,131 +1682,133 @@ bool BaseWindow::handleKeyEvent() {
   bool key_pushed = true;
 
   switch (k) {
-  case TabKey:
+  case FL_Tab:
     dev_pushkey(SB_KEY_TAB);
     break;
-  case HomeKey:
+  case FL_Home:
     dev_pushkey(SB_KEY_KP_HOME);
     break;
-  case EndKey:
+  case FL_End:
     dev_pushkey(SB_KEY_END);
     break;
-  case InsertKey:
+  case FL_Insert:
     dev_pushkey(SB_KEY_INSERT);
     break;
-  case MenuKey:
+  case FL_Menu:
     dev_pushkey(SB_KEY_MENU);
     break;
-  case MultiplyKey:
-    dev_pushkey(SB_KEY_KP_MUL);
-    break;
-  case AddKey:
-    dev_pushkey(SB_KEY_KP_PLUS);
-    break;
-  case SubtractKey:
-    dev_pushkey(SB_KEY_KP_MINUS);
-    break;
-  case DivideKey:
-    dev_pushkey(SB_KEY_KP_DIV);
-    break;
-  case F0Key:
+    //TODO: fixme
+    //case FL_Multiply:
+    //dev_pushkey(SB_KEY_KP_MUL);
+    //break;
+    //case AddKey:
+    //dev_pushkey(SB_KEY_KP_PLUS);
+    //break;
+    //case SubtractKey:
+    //dev_pushkey(SB_KEY_KP_MINUS);
+    //break;
+    //case DivideKey:
+    //dev_pushkey(SB_KEY_KP_DIV);
+    //break;
+  case FL_F:
     dev_pushkey(SB_KEY_F(0));
     break;
-  case F1Key:
+  case FL_F+1:
     dev_pushkey(SB_KEY_F(1));
     break;
-  case F2Key:
+  case FL_F+2:
     dev_pushkey(SB_KEY_F(2));
     break;
-  case F3Key:
+  case FL_F+3:
     dev_pushkey(SB_KEY_F(3));
     break;
-  case F4Key:
+  case FL_F+4:
     dev_pushkey(SB_KEY_F(4));
     break;
-  case F5Key:
+  case FL_F+5:
     dev_pushkey(SB_KEY_F(5));
     break;
-  case F6Key:
+  case FL_F+6:
     dev_pushkey(SB_KEY_F(6));
     break;
-  case F7Key:
+  case FL_F+7:
     dev_pushkey(SB_KEY_F(7));
     break;
-  case F8Key:
+  case FL_F+8:
     dev_pushkey(SB_KEY_F(8));
     break;
-  case F9Key:
+  case FL_F+9:
     dev_pushkey(SB_KEY_F(9));
     break;
-  case F10Key:
+  case FL_F+10:
     dev_pushkey(SB_KEY_F(10));
     break;
-  case F11Key:
+  case FL_F+11:
     dev_pushkey(SB_KEY_F(11));
     break;
-  case F12Key:
+  case FL_F+12:
     dev_pushkey(SB_KEY_F(12));
     break;
-  case PageUpKey:
+  case FL_Page_Up:
     dev_pushkey(SB_KEY_PGUP);
     break;
-  case PageDownKey:
+  case FL_Page_Down:
     dev_pushkey(SB_KEY_PGDN);
     break;
-  case UpKey:
+  case FL_Up:
     dev_pushkey(SB_KEY_UP);
     break;
-  case DownKey:
+  case FL_Down:
     dev_pushkey(SB_KEY_DN);
     break;
-  case LeftKey:
+  case FL_Left:
     dev_pushkey(SB_KEY_LEFT);
     break;
-  case RightKey:
+  case FL_Right:
     dev_pushkey(SB_KEY_RIGHT);
     break;
-  case BackSpaceKey:
+  case FL_BackSpace:
     dev_pushkey(SB_KEY_BACKSPACE);
     break;
-  case DeleteKey:
+  case FL_Delete:
     dev_pushkey(SB_KEY_DELETE);
     break;
-  case ReturnKey:
+  case FL_Enter:
+  case FL_KP_Enter:
     dev_pushkey(13);
     break;
   case 'b':
-    if (Fl::event_key_state(LeftCtrlKey) || Fl::event_key_state(RightCtrlKey)) {
+    if (Fl::event_state(FL_CTRL)) {
       wnd->run_break();
       key_pushed = false;
       break;
     }
-    dev_pushkey(event_text()[0]);
+    dev_pushkey(Fl::event_text()[0]);
     break;
   case 'q':
-    if (Fl::event_key_state(LeftCtrlKey) || Fl::event_key_state(RightCtrlKey)) {
+    if (Fl::event_state(FL_CTRL)) {
       wnd->quit();
       key_pushed = false;
       break;
     }
-    dev_pushkey(event_text()[0]);
+    dev_pushkey(Fl::event_text()[0]);
     break;
 
   default:
-    if (k >= LeftShiftKey && k <= RightAltKey) {
-      // avoid pushing meta-keys
-      key_pushed = false;
-      break;
-    }
-    if ((Fl::event_key_state(LeftCtrlKey) || Fl::event_key_state(RightCtrlKey)) &&
-        (Fl::event_key_state(LeftAltKey) || Fl::event_key_state(RightAltKey))) {
+    //TODO: fixme
+    //if (k >= LeftShiftKey && k <= RightAltKey) {
+    // avoid pushing meta-keys
+    //key_pushed = false;
+    //break;
+    //}
+    if (Fl::event_state(FL_CTRL & FL_ALT)) {
       dev_pushkey(SB_KEY_CTRL_ALT(k));
-    } else if (Fl::event_key_state(LeftCtrlKey) || Fl::event_key_state(RightCtrlKey)) {
+    } else if (Fl::event_state(FL_CTRL)) {
       dev_pushkey(SB_KEY_CTRL(k));
-    } else if (Fl::event_key_state(LeftAltKey) || Fl::event_key_state(RightAltKey)) {
+    } else if (Fl::event_state(FL_ALT)) {
       dev_pushkey(SB_KEY_ALT(k));
     } else {
-      dev_pushkey(event_text()[0]);
+      dev_pushkey(Fl::event_text()[0]);
     }
     break;
   }
@@ -1816,38 +1816,21 @@ bool BaseWindow::handleKeyEvent() {
 }
 
 LineInput::LineInput(int x, int y, int w, int h) :
-  fl_Input(x, y, w, h) {
-  this->orig_x = x;
-  this->orig_y = y;
-  this->orig_w = w;
-  this->orig_h = h;
-  when(WHEN_ENTER_KEY_ALWAYS);
+  Fl_Input(x, y, w, h),
+  orig_x(x),
+  orig_y(y),
+  orig_w(w),
+  orig_h(h) {
+  when(FL_WHEN_ENTER_KEY);
   box(FL_BORDER_BOX);
   fl_color(fl_rgb_color(220, 220, 220));
   take_focus();
 }
 
 /**
- * grow the input box width as text is entered
- */
-bool LineInput::replace(int b, int e, const char *text, int ilen) {
-  bool result = Input::replace(b, e, text, ilen);
-  if (ilen) {
-    int strw = fl_width(text) + fl_width(value())) + 4;
-    if (strw > w()) {
-      w(strw);
-      orig_w = strw;
-      redraw();
-    }
-  }
-  return result;
-}
-
-/**
  * veto the layout changes
  */
 void LineInput::layout() {
-  fl_input::layout();
   x(orig_x);
   y(orig_y);
   w(orig_w);
@@ -1855,15 +1838,27 @@ void LineInput::layout() {
 }
 
 int LineInput::handle(int event) {
-  if (event == Fl_KEY) {
-    if ((Fl::event_key_state(LeftCtrlKey) || Fl::event_key_state(RightCtrlKey)) && Fl::event_key() == 'b') {
+  int result;
+  if (event == FL_KEYBOARD) {
+    if (Fl::event_state(FL_CTRL) && Fl::event_key() == 'b') {
       if (!wnd->isEdit()) {
         wnd->setBreak();
       }
-    }
-    if (Fl::event_key_state(EscapeKey)) {
+    } else if (Fl::event_key(FL_Escape)) {
       do_callback();
+    } else {
+      // grow the input box width as text is entered
+      const char *text = value();
+      int strw = fl_width(text) + fl_width(value()) + 4;
+      if (strw > w()) {
+        w(strw);
+        orig_w = strw;
+        redraw();
+      }
     }
+    result = Fl_Input::handle(event);
+  } else {
+    result = Fl_Input::handle(event);
   }
-  return fl_input::handle(event);
+  return result;
 }

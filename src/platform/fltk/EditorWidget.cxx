@@ -6,6 +6,7 @@
 // Download the GNU Public License (GPL) from www.gnu.org
 //
 
+#include <stdint.h>
 #include <unistd.h>
 #include <errno.h>
 #include <sys/stat.h>
@@ -24,13 +25,11 @@
 #include "platform/fltk/FileWidget.h"
 #include "common/smbas.h"
 
-using namespace fltk;
-
 #define TTY_ROWS 1000
 
 // in MainWindow.cxx
 extern String recentPath[];
-extern Widget *recentMenu[];
+extern Fl_Widget *recentMenu[];
 extern const char *historyFile;
 extern const char *untitledFile;
 
@@ -38,8 +37,8 @@ extern const char *untitledFile;
 void getHomeDir(char *filename, bool appendSlash = true);
 
 // in BasicEditor.cxx
-extern TextDisplay::StyleTableEntry styletable[];
-extern Color defaultColor[];
+extern Fl_Text_Display::StyleTableEntry styletable[];
+extern Fl_Color defaultColor[];
 
 int completionIndex = 0;
 
@@ -57,7 +56,7 @@ EditorWidget *get_editor() {
 //--EditorWidget----------------------------------------------------------------
 
 EditorWidget::EditorWidget(int x, int y, int w, int h) :
-  Group(x, y, w, h),
+  Fl_Group(x, y, w, h),
   editor(NULL),
   tty(NULL),
   dirty(false),
@@ -77,7 +76,7 @@ EditorWidget::EditorWidget(int x, int y, int w, int h) :
   commandChoice(NULL) {
 
   filename[0] = 0;
-  box(NO_BOX);
+  box(FL_NO_BOX);
   begin();
 
   int tileHeight = h - (MNU_HEIGHT + 8);
@@ -85,7 +84,7 @@ EditorWidget::EditorWidget(int x, int y, int w, int h) :
   int editHeight = tileHeight - ttyHeight;
   int browserWidth = w / 8;
 
-  TiledGroup *tile = new TiledGroup(0, 0, w, tileHeight);
+  Fl_Tiled_Group *tile = new Fl_Tiled_Group(0, 0, w, tileHeight);
   tile->begin();
 
   editor = new BasicEditor(0, 0, w - browserWidth, editHeight, this);
@@ -97,7 +96,7 @@ EditorWidget::EditorWidget(int x, int y, int w, int h) :
   editor->take_focus();
 
   // sub-func jump droplist
-  funcList = new Browser(editor->w(), 0, browserWidth, editHeight);
+  funcList = new Fl_Browser(editor->w(), 0, browserWidth, editHeight);
   funcList->labelfont(HELVETICA);
   funcList->indented(1);
   funcList->when(WHEN_RELEASE);
@@ -113,7 +112,7 @@ EditorWidget::EditorWidget(int x, int y, int w, int h) :
   w -= 4;
 
   // editor status bar
-  Group *statusBar = new Group(2, tty->b() + 2, w, MNU_HEIGHT);
+  Fl_Group *statusBar = new Fl_Group(2, tty->b() + 2, w, MNU_HEIGHT);
   statusBar->box(NO_BOX);
   statusBar->begin();
 
@@ -122,10 +121,10 @@ EditorWidget::EditorWidget(int x, int y, int w, int h) :
   int bn_w = 18;
   int st_h = statusBar->h() - 2;
 
-  logPrintBn = new ToggleButton(w - (bn_w + 2), 2, bn_w, st_h);
-  lockBn = new ToggleButton(logPrintBn->x() - (bn_w + 2), 2, bn_w, st_h);
-  hideIdeBn = new ToggleButton(lockBn->x() - (bn_w + 2), 2, bn_w, st_h);
-  gotoLineBn = new ToggleButton(hideIdeBn->x() - (bn_w + 2), 2, bn_w, st_h);
+  logPrintBn = new Fl_Toggle_Button(w - (bn_w + 2), 2, bn_w, st_h);
+  lockBn = new Fl_Toggle_Button(logPrintBn->x() - (bn_w + 2), 2, bn_w, st_h);
+  hideIdeBn = new Fl_Toggle_Button(lockBn->x() - (bn_w + 2), 2, bn_w, st_h);
+  gotoLineBn = new Fl_Toggle_Button(hideIdeBn->x() - (bn_w + 2), 2, bn_w, st_h);
 
 #ifdef __MINGW32__
   // fixup alignment under windows
@@ -135,13 +134,13 @@ EditorWidget::EditorWidget(int x, int y, int w, int h) :
   gotoLineBn->align(ALIGN_INSIDE | ALIGN_LEFT | ALIGN_CENTER);
 #endif
 
-  colStatus = new Button(gotoLineBn->x() - (st_w + 2), 2, st_w, st_h);
-  rowStatus = new Button(colStatus->x() - (st_w + 2), 2, st_w, st_h);
-  runStatus = new Button(rowStatus->x() - (st_w + 2), 2, st_w, st_h);
-  modStatus = new Button(runStatus->x() - (st_w + 2), 2, st_w, st_h);
+  colStatus = new Fl_Button(gotoLineBn->x() - (st_w + 2), 2, st_w, st_h);
+  rowStatus = new Fl_Button(colStatus->x() - (st_w + 2), 2, st_w, st_h);
+  runStatus = new Fl_Button(rowStatus->x() - (st_w + 2), 2, st_w, st_h);
+  modStatus = new Fl_Button(runStatus->x() - (st_w + 2), 2, st_w, st_h);
 
-  commandChoice = new Button(0, 2, 80, st_h);
-  commandText = new Input(commandChoice->r() + 2, 2, modStatus->x() - commandChoice->r() - 4, st_h);
+  commandChoice = new Fl_Button(0, 2, 80, st_h);
+  commandText = new Fl_Input(commandChoice->r() + 2, 2, modStatus->x() - commandChoice->r() - 4, st_h);
   commandText->align(ALIGN_LEFT | ALIGN_CLIP);
   commandText->when(WHEN_ENTER_KEY_ALWAYS);
   commandText->labelfont(HELVETICA);
@@ -211,7 +210,7 @@ EditorWidget::~EditorWidget() {
  * change the selected text to upper/lower/camel case
  */
 void EditorWidget::change_case(Widget *w, void *eventData) {
-  TextBuffer *tb = editor->buffer();
+  Fl_Text_Buffer *tb = editor->buffer();
   int start, end;
   char *selection = getSelection(&start, &end);
   int len = strlen(selection);
@@ -277,7 +276,7 @@ void EditorWidget::expand_word(Widget *w, void *eventData) {
   const char *fullWord = 0;
   unsigned fullWordLen = 0;
 
-  TextBuffer *textbuf = editor->buffer();
+  Fl_Text_Buffer *textbuf = editor->buffer();
   const char *text = textbuf->text();
 
   if (textbuf->selected()) {
@@ -540,7 +539,7 @@ void EditorWidget::replace_next(Widget *w, void *eventData) {
   const char *find = commandBuffer;
   const char *replace = commandText->value();
 
-  TextBuffer *textbuf = editor->textbuf;
+  Fl_Text_Buffer *textbuf = editor->textbuf;
   int pos = editor->insert_position();
   int found = textbuf->search_forward(pos, find, &pos);
 
@@ -672,7 +671,7 @@ void EditorWidget::doSaveFile(const char *newfile) {
   }
 
   char basfile[PATH_MAX];
-  TextBuffer *textbuf = editor->textbuf;
+  Fl_Text_Buffer *textbuf = editor->textbuf;
 
   if (wnd->_profile->_createBackups && access(newfile, 0) == 0) {
     // rename any existing file as a backup
@@ -836,7 +835,7 @@ void EditorWidget::getRowCol(int *row, int *col) {
 char *EditorWidget::getSelection(int *start, int *end) {
   char *result = 0;
 
-  TextBuffer *tb = editor->buffer();
+  Fl_Text_Buffer *tb = editor->buffer();
   if (tb->selected()) {
     result = tb->selection_text();
     tb->selection_position(start, end);
@@ -876,25 +875,25 @@ void EditorWidget::gotoLine(int line) {
  */
 int EditorWidget::handle(int e) {
   switch (e) {
-  case SHOW:
-  case FOCUS:
-    Fl_focus(editor);
+  case FL_SHOW:
+  case FL_FOCUS:
+    Fl::focus(editor);
     handleFileChange();
     return 1;
-  case KEY:
-    if (event_key() == EscapeKey) {
+  case FL_KEYBOARD:
+    if (Fl::event_key() == FL_Escape) {
       take_focus();
       return 1;
     }
     break;
-  case ENTER:
+  case FL_ENTER:
     if (rename_active) {
       // prevent drawing over the inplace editor child control
       return 0;
     }
   }
 
-  return Group::handle(e);
+  return Fl_Group::handle(e);
 }
 
 /**
@@ -1013,13 +1012,13 @@ void EditorWidget::setEditorColor(Color c, bool defColor) {
   }
   editor->color(c);
 
-  Color bg = lerp(c, BLACK, .1f);       // same offset as editor line numbers
-  Color fg = contrast(c, bg);
+  Fl_Color bg = lerp(c, BLACK, .1f);       // same offset as editor line numbers
+  Fl_Color fg = contrast(c, bg);
   int i;
 
   // set the colours on the command text bar
   for (i = commandText->parent()->children(); i > 0; i--) {
-    Widget *child = commandText->parent()->child(i - 1);
+    Fl_Widget *child = commandText->parent()->child(i - 1);
     setWidgetColor(child, bg, fg);
   }
 
@@ -1171,7 +1170,7 @@ void EditorWidget::addHistory(const char *filename) {
  * creates the sub/func selection list
  */
 void EditorWidget::createFuncList() {
-  TextBuffer *textbuf = editor->textbuf;
+  Fl_Text_Buffer *textbuf = editor->textbuf;
   const char *text = textbuf->text();
   int len = textbuf->length();
   int curLine = 1;
@@ -1270,9 +1269,9 @@ char *EditorWidget::getSelection(Fl_Rect *rc) {
 /**
  * returns the current file modified time
  */
-u_int32_t EditorWidget::getModifiedTime() {
+uint32_t EditorWidget::getModifiedTime() {
   struct stat st_file;
-  u_int32_t modified = 0;
+  uint32_t modified = 0;
   if (filename[0] && !stat(filename, &st_file)) {
     modified = st_file.st_mtime;
   }
@@ -1298,7 +1297,7 @@ void EditorWidget::handleFileChange() {
  * prevent the tty and browser from growing when the outer window is resized
  */
 void EditorWidget::layout() {
-  Group *tile = editor->parent();
+  Fl_Group *tile = editor->parent();
   tile->resizable(editor);
   Group::layout();
 
@@ -1318,7 +1317,7 @@ void EditorWidget::newFile() {
     return;
   }
 
-  TextBuffer *textbuf = editor->textbuf;
+  Fl_Text_Buffer *textbuf = editor->textbuf;
   filename[0] = '\0';
   textbuf->select(0, textbuf->length());
   textbuf->remove_selection();
@@ -1344,7 +1343,7 @@ int EditorWidget::replaceAll(const char *find, const char *replace, bool restore
   int times = 0;
 
   if (strcmp(find, replace) != 0) {
-    TextBuffer *textbuf = editor->textbuf;
+    Fl_Text_Buffer *textbuf = editor->textbuf;
     int prevPos = editor->insert_position();
 
     // loop through the whole string
@@ -1405,7 +1404,7 @@ void EditorWidget::setColor(const char *label, StyleField field) {
   uchar r, g, b;
   split_color(styletable[field].color, r, g, b);
   if (color_chooser(label, r, g, b)) {
-    Color c = Fl_color(r, g, b);
+    Fl_Color c = Fl_color(r, g, b);
     set_color_index(Fl_FREE_COLOR + field, c);
     styletable[field].color = c;
     editor->styleChanged();
@@ -1461,7 +1460,7 @@ void EditorWidget::setModified(bool dirty) {
 /**
  * sets the foreground and background colors on the given widget
  */
-void EditorWidget::setWidgetColor(Widget *w, Color bg, Color fg) {
+void EditorWidget::setWidgetColor(Fl_Widget *w, Fl_Color bg, Fl_Color fg) {
   w->color(bg);
   w->textcolor(fg);
   w->redraw();

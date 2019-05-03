@@ -9,11 +9,11 @@
 #ifndef MAIN_WINDOW_H
 #define MAIN_WINDOW_H
 
+#include <stdint.h>
+
 #include <FL/Fl_Window.H>
 #include <FL/Fl_Group.H>
 #include <FL/Fl_Value_Input.H>
-
-#include <stdint.h>
 
 #include "platform/fltk/display.h"
 #include "platform/fltk/EditorWidget.h"
@@ -48,7 +48,6 @@ enum GroupWidgetEnum {
 
 struct LineInput : public Fl_Input {
   LineInput(int x, int y, int w, int h);
-  bool replace(int b, int e, const char *text, int ilen);
   void layout();
   int handle(int event);
 
@@ -156,7 +155,6 @@ struct MainWindow : public BaseWindow {
   CALLBACK_METHOD(run_break);
   CALLBACK_METHOD(run_selection);
   CALLBACK_METHOD(save_file_as);
-  CALLBACK_METHOD(set_flag);
   CALLBACK_METHOD(set_options);
   CALLBACK_METHOD(tool_plugin);
 

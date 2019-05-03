@@ -168,12 +168,12 @@ struct List {
   }
 
   /**
-   * Returns whether string exists in the list of strings
+   * Returns whether list of strings constains the string
    */
   bool contains(const char *s);
 
   /**
-   * Returns whether T exists in the list
+   * Returns whether the list contains t
    */
   bool contains(T t) {
     bool result = false;

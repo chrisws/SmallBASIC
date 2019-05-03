@@ -8,29 +8,29 @@
 // Download the GNU Public License (GPL) from www.gnu.org
 //
 
-#include <FL/Fl_damage.h>
-#include <FL/Fl_events.h>
+#include <stdint.h>
 
 #include "platform/fltk/BasicEditor.h"
-#include "platform/fltk/kwp.h"
+#include "ui/kwp.h"
 
-using namespace fltk;
+#include <FL/Fl_Rect.H>
+
 using namespace strlib;
 
-Color defaultColor[] = {
-  BLACK,                        // A - Plain
-  color(0, 128, 0),             // B - Comments
-  color(0, 0, 192),             // C - Strings
-  color(192, 0, 0),             // D - code_keywords
-  color(128, 128, 0),           // E - code_functions
-  color(0, 128, 128),           // F - code_procedures
-  color(128, 0, 128),           // G - Find matches
-  color(0, 128, 0),             // H - Italic Comments ';
-  color(0, 128, 128),           // I - Numbers
-  color(128, 128, 64),          // J - Operators
+Fl_Color defaultColor[] = {
+  FL_BLACK,                            // A - Plain
+  fl_rgb_color(0, 128, 0),             // B - Comments
+  fl_rgb_color(0, 0, 192),             // C - Strings
+  fl_rgb_color(192, 0, 0),             // D - code_keywords
+  fl_rgb_color(128, 128, 0),           // E - code_functions
+  fl_rgb_color(0, 128, 128),           // F - code_procedures
+  fl_rgb_color(128, 0, 128),           // G - Find matches
+  fl_rgb_color(0, 128, 0),             // H - Italic Comments ';
+  fl_rgb_color(0, 128, 128),           // I - Numbers
+  fl_rgb_color(128, 128, 64),          // J - Operators
 };
 
-TextDisplay::StyleTableEntry styletable[] = { // Style table
+Fl_Text_Display::StyleTableEntry styletable[] = { // Style table
   { defaultColor[0], COURIER, 12},     // A - Plain
   { defaultColor[1], COURIER, 12},     // B - Comments
   { defaultColor[2], COURIER, 12},     // C - Strings
@@ -88,8 +88,8 @@ void style_update_cb(int pos,   // I - Position of update
                      const char * /* deletedText */ ,   // I - Text that was deleted
                      void *cbArg) {     // I - Callback data
   BasicEditor *editor = (BasicEditor *) cbArg;
-  TextBuffer *stylebuf = editor->stylebuf;
-  TextBuffer *textbuf = editor->textbuf;
+  Fl_Text_Buffer *stylebuf = editor->stylebuf;
+  Fl_Text_Buffer *textbuf = editor->textbuf;
 
   // if this is just a selection change, just unselect the style buffer
   if (nInserted == 0 && nDeleted == 0) {
@@ -154,7 +154,7 @@ void style_update_cb(int pos,   // I - Position of update
 //--BasicEditor------------------------------------------------------------------
 
 BasicEditor::BasicEditor(int x, int y, int w, int h, StatusBar *status) :
-  TextEditor(x, y, w, h),
+  Fl_Text_Editor(x, y, w, h),
   status(status) {
   readonly = false;
   const char *s = getenv("INDENT_LEVEL");
@@ -162,7 +162,7 @@ BasicEditor::BasicEditor(int x, int y, int w, int h, StatusBar *status) :
   matchingBrace = -1;
 
   textbuf = buffer();           // reference only
-  stylebuf = new TextBuffer();
+  stylebuf = new Fl_Text_Buffer();
   search[0] = 0;
   highlight_data(stylebuf, styletable,
                  sizeof(styletable) / sizeof(styletable[0]),
@@ -335,7 +335,7 @@ void BasicEditor::styleChanged() {
  * display the editor buffer
  */
 void BasicEditor::draw() {
-  TextEditor::draw();
+  Fl_Text_Editor::draw();
   if (matchingBrace != -1) {
     // highlight the matching brace
     int X, Y;
@@ -587,25 +587,25 @@ int BasicEditor::handle(int e) {
   int indent;
   bool navigateKey = false;
 
-  switch (event_key()) {
-  case HomeKey:
-  case LeftKey:
-  case UpKey:
-  case RightKey:
-  case DownKey:
-  case PageUpKey:
-  case PageDownKey:
-  case EndKey:
+  switch (Fl::event_key()) {
+  case FL_Home:
+  case FL_Left:
+  case FL_Up:
+  case FL_Right:
+  case FL_Down:
+  case FL_Page_Up:
+  case FL_Page_Down:
+  case FL_End:
     navigateKey = true;
   }
 
-  if (readonly && ((e == KEY && !navigateKey) || e == PASTE)) {
+  if (readonly && ((e == FL_KEYBOARD && !navigateKey) || e == FL_PASTE)) {
     // prevent buffer modification when in readonly state
     return 0;
   }
 
-  if (e == KEY && event_key() == TabKey) {
-    if (event_key_state(LeftCtrlKey) || event_key_state(RightCtrlKey)) {
+  if (e == FL_KEYBOARD && Fl::event_key() == FL_Tab) {
+    if (Fl::event_state(FL_CTRL)) {
       // pass ctrl+key to parent
       return 0;
     }
@@ -613,10 +613,10 @@ int BasicEditor::handle(int e) {
     return 1;                   // skip default handler
   }
   // call default handler then process keys
-  int rtn = TextEditor::handle(e);
+  int rtn = Fl_Text_Editor::handle(e);
   switch (e) {
-  case KEY:
-    if (event_key() == ReturnKey) {
+  case FL_KEYBOARD:
+    if (Fl::event_key() == FL_Enter) {
       indent = getIndent(spaces, sizeof(spaces), cursorPos);
       if (indent) {
         buffer()->insert(cursor_pos_, spaces);
@@ -625,7 +625,7 @@ int BasicEditor::handle(int e) {
       }
     }
     // fallthru to show row-col
-  case RELEASE:
+  case FL_RELEASE:
     showMatchingBrace();
     showRowCol();
     break;

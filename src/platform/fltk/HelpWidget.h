@@ -9,6 +9,8 @@
 #ifndef Fl_HELP_WIDGET
 #define Fl_HELP_WIDGET
 
+#include <stdint.h>
+
 #include <FL/fl_draw.H>
 #include <FL/Fl_Widget.H>
 #include <FL/Fl_Image.H>
@@ -110,7 +112,7 @@ private:
   Fl_Color background, foreground;
   Fl_Scrollbar *scrollbar;
   int16_t vscroll, hscroll;
-  u_int16_t scrollHeight;
+  uint16_t scrollHeight;
   int16_t markX, markY, pointX, pointY;
   int16_t scrollY;
   enum { mm_select, mm_page, mm_scroll } mouseMode;
