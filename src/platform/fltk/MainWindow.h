@@ -14,6 +14,8 @@
 #include <FL/Fl_Window.H>
 #include <FL/Fl_Group.H>
 #include <FL/Fl_Value_Input.H>
+#include <FL/Fl_Menu_Bar.H>
+#include <FL/Fl_Tabs.H>
 
 #include "platform/fltk/display.h"
 #include "platform/fltk/EditorWidget.h"
@@ -25,10 +27,6 @@
 #define DEF_FONT_SIZE 12
 #define NUM_RECENT_ITEMS 9
 #define MAX_DESCENT 8           // filter to avoid non-text fonts
-
-#ifndef MAX_PATH
-#define MAX_PATH 256
-#endif
 
 enum ExecState {
   init_state,

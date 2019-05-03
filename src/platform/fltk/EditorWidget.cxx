@@ -1,24 +1,21 @@
 // This file is part of SmallBASIC
 //
-// Copyright(C) 2001-2013 Chris Warren-Smith.
+// Copyright(C) 2001-2019 Chris Warren-Smith.
 //
 // This program is distributed under the terms of the GPL v2.0 or later
 // Download the GNU Public License (GPL) from www.gnu.org
 //
+
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
 
 #include <stdint.h>
 #include <unistd.h>
 #include <errno.h>
 #include <sys/stat.h>
 
-#include <FL/Fl_Browser.h>
-#include <FL/Fl_ColorChooser.h>
-#include <FL/Fl_Item.h>
-#include <FL/Fl_TiledGroup.h>
-#include <FL/Fl_ask.h>
-#include <FL/Fl_damage.h>
-#include <FL/Fl_events.h>
-#include <FL/Fl_run.h>
+#include <FL/fl_ask.H>
 
 #include "platform/fltk/MainWindow.h"
 #include "platform/fltk/EditorWidget.h"
@@ -37,7 +34,7 @@ extern const char *untitledFile;
 void getHomeDir(char *filename, bool appendSlash = true);
 
 // in BasicEditor.cxx
-extern Fl_Text_Display::StyleTableEntry styletable[];
+extern Fl_Text_Display::Style_Table_Entry styletable[];
 extern Fl_Color defaultColor[];
 
 int completionIndex = 0;
@@ -90,7 +87,7 @@ EditorWidget::EditorWidget(int x, int y, int w, int h) :
   editor = new BasicEditor(0, 0, w - browserWidth, editHeight, this);
   editor->linenumber_width(40);
   editor->wrap_mode(true, 0);
-  editor->selection_color(Fl_color(190, 189, 188));
+  editor->selection_color(fl_rgb_color(190, 189, 188));
   editor->textbuf->add_modify_callback(changed_cb, this);
   editor->box(NO_BOX);
   editor->take_focus();
@@ -99,7 +96,7 @@ EditorWidget::EditorWidget(int x, int y, int w, int h) :
   funcList = new Fl_Browser(editor->w(), 0, browserWidth, editHeight);
   funcList->labelfont(HELVETICA);
   funcList->indented(1);
-  funcList->when(WHEN_RELEASE);
+  funcList->when(FL_WHEN_RELEASE);
   funcList->add(scanLabel);
 
   tty = new TtyWidget(0, editHeight, w, ttyHeight, TTY_ROWS);
@@ -142,12 +139,12 @@ EditorWidget::EditorWidget(int x, int y, int w, int h) :
   commandChoice = new Fl_Button(0, 2, 80, st_h);
   commandText = new Fl_Input(commandChoice->r() + 2, 2, modStatus->x() - commandChoice->r() - 4, st_h);
   commandText->align(ALIGN_LEFT | ALIGN_CLIP);
-  commandText->when(WHEN_ENTER_KEY_ALWAYS);
-  commandText->labelfont(HELVETICA);
+  commandText->when(FL_WHEN_ENTER_KEY_ALWAYS);
+  commandText->labelfont(FL_HELVETICA);
 
   for (int n = 0; n < statusBar->children(); n++) {
-    Widget *w = statusBar->child(n);
-    w->labelfont(HELVETICA);
+    Fl_Widget *w = statusBar->child(n);
+    w->labelfont(FL_HELVETICA);
     w->box(BORDER_BOX);
   }
 
@@ -209,7 +206,7 @@ EditorWidget::~EditorWidget() {
 /**
  * change the selected text to upper/lower/camel case
  */
-void EditorWidget::change_case(Widget *w, void *eventData) {
+void EditorWidget::change_case(Fl_Widget *w, void *eventData) {
   Fl_Text_Buffer *tb = editor->buffer();
   int start, end;
   char *selection = getSelection(&start, &end);
@@ -250,28 +247,28 @@ void EditorWidget::change_case(Widget *w, void *eventData) {
 /**
  * command handler
  */
-void EditorWidget::command_opt(Widget *w, void *eventData) {
+void EditorWidget::command_opt(Fl_Widget *w, void *eventData) {
   setCommand((CommandOpt) (intptr_t) eventData);
 }
 
 /**
  * cut selected text to the clipboard
  */
-void EditorWidget::cut_text(Widget *w, void *eventData) {
-  TextEditor::kf_cut(0, editor);
+void EditorWidget::cut_text(Fl_Widget *w, void *eventData) {
+  Fl_Text_Editor::kf_cut(0, editor);
 }
 
 /**
  * delete selected text
  */
-void EditorWidget::do_delete(Widget *w, void *eventData) {
+void EditorWidget::do_delete(Fl_Widget *w, void *eventData) {
   editor->textbuf->remove_selection();
 }
 
 /**
  * perform keyword completion
  */
-void EditorWidget::expand_word(Widget *w, void *eventData) {
+void EditorWidget::expand_word(Fl_Widget *w, void *eventData) {
   int start, end;
   const char *fullWord = 0;
   unsigned fullWordLen = 0;
@@ -407,14 +404,14 @@ void EditorWidget::expand_word(Widget *w, void *eventData) {
 /**
  * handler for find text command
  */
-void EditorWidget::find(Widget *w, void *eventData) {
+void EditorWidget::find(Fl_Widget *w, void *eventData) {
   setCommand(cmd_find);
 }
 
 /**
  * performs the current command
  */
-void EditorWidget::command(Widget *w, void *eventData) {
+void EditorWidget::command(Fl_Widget *w, void *eventData) {
   bool found = false;
   bool forward = (intptr_t) eventData;
   bool updatePos = (commandOpt != cmd_find_inc);
@@ -456,7 +453,7 @@ void EditorWidget::command(Widget *w, void *eventData) {
 /**
  * font menu selection handler
  */
-void EditorWidget::font_name(Widget *w, void *eventData) {
+void EditorWidget::font_name(Fl_Widget *w, void *eventData) {
   setFont(Fl_font(w->label(), 0));
   wnd->updateConfig(this);
 }
@@ -464,7 +461,7 @@ void EditorWidget::font_name(Widget *w, void *eventData) {
 /**
  * sub/func selection list handler
  */
-void EditorWidget::func_list(Widget *w, void *eventData) {
+void EditorWidget::func_list(Fl_Widget *w, void *eventData) {
   if (funcList && funcList->item()) {
     const char *label = funcList->item()->label();
     if (label) {
@@ -483,21 +480,21 @@ void EditorWidget::func_list(Widget *w, void *eventData) {
 /**
  * goto-line command handler
  */
-void EditorWidget::goto_line(Widget *w, void *eventData) {
+void EditorWidget::goto_line(Fl_Widget *w, void *eventData) {
   setCommand(cmd_goto);
 }
 
 /**
  * paste clipboard text onto the buffer
  */
-void EditorWidget::paste_text(Widget *w, void *eventData) {
-  TextEditor::kf_paste(0, editor);
+void EditorWidget::paste_text(Fl_Widget *w, void *eventData) {
+  Fl_Text_Editor::kf_paste(0, editor);
 }
 
 /**
  * rename the currently selected variable
  */
-void EditorWidget::rename_word(Widget *w, void *eventData) {
+void EditorWidget::rename_word(Fl_Widget *w, void *eventData) {
   if (rename_active) {
     rename_active = false;
   } else {
@@ -515,7 +512,7 @@ void EditorWidget::rename_word(Widget *w, void *eventData) {
 
       rename_active = true;
       while (rename_active && in->focused()) {
-        Fl_wait();
+        Fl::wait();
       }
 
       showFindText("");
@@ -531,7 +528,7 @@ void EditorWidget::rename_word(Widget *w, void *eventData) {
 /**
  * replace the next find occurance
  */
-void EditorWidget::replace_next(Widget *w, void *eventData) {
+void EditorWidget::replace_next(Fl_Widget *w, void *eventData) {
   if (readonly()) {
     return;
   }
@@ -560,7 +557,7 @@ void EditorWidget::replace_next(Widget *w, void *eventData) {
 /**
  * save file menu command handler
  */
-void EditorWidget::save_file(Widget *w, void *eventData) {
+void EditorWidget::save_file(Fl_Widget *w, void *eventData) {
   if (filename[0] == '\0') {
     // no filename - get one!
     wnd->save_file_as();
@@ -573,27 +570,27 @@ void EditorWidget::save_file(Widget *w, void *eventData) {
 /**
  * prevent the tty window from scrolling with new data
  */
-void EditorWidget::scroll_lock(Widget *w, void *eventData) {
+void EditorWidget::scroll_lock(Fl_Widget *w, void *eventData) {
   tty->setScrollLock(w->flags() & STATE);
 }
 
 /**
  * select all text
  */
-void EditorWidget::select_all(Widget *w, void *eventData) {
-  TextEditor::kf_select_all(0, editor);
+void EditorWidget::select_all(Fl_Widget *w, void *eventData) {
+  Fl_Text_Editor::kf_select_all(0, editor);
 }
 
 /**
  * set colour menu command handler
  */
-void EditorWidget::set_color(Widget *w, void *eventData) {
+void EditorWidget::set_color(Fl_Widget *w, void *eventData) {
   StyleField styleField = (StyleField) (intptr_t) eventData;
   if (styleField == st_background || styleField == st_background_def) {
     uchar r, g, b;
     split_color(editor->color(), r, g, b);
     if (color_chooser(w->label(), r, g, b)) {
-      Color c = Fl_color(r, g, b);
+      Fl_Color c = fl_rgb_color(r, g, b);
       set_color_index(Fl_FREE_COLOR + styleField, c);
       setEditorColor(c, styleField == st_background_def);
       editor->styleChanged();
@@ -609,7 +606,7 @@ void EditorWidget::set_color(Widget *w, void *eventData) {
 /**
  * replace text menu command handler
  */
-void EditorWidget::show_replace(Widget *w, void *eventData) {
+void EditorWidget::show_replace(Fl_Widget *w, void *eventData) {
   const char *prime = editor->search;
   if (!prime || !prime[0]) {
     // use selected text when search not available
@@ -622,15 +619,15 @@ void EditorWidget::show_replace(Widget *w, void *eventData) {
 /**
  * undo any edit changes
  */
-void EditorWidget::undo(Widget *w, void *eventData) {
-  TextEditor::kf_undo(0, editor);
+void EditorWidget::undo(Fl_Widget *w, void *eventData) {
+  Fl_Text_Editor::kf_undo(0, editor);
 }
 
 /**
  * de-select the button specified in the eventData
  */
-void EditorWidget::un_select(Widget *w, void *eventData) {
-  ((Button *)eventData)->value(false);
+void EditorWidget::un_select(Fl_Widget *w, void *eventData) {
+  ((Fl_Button *)eventData)->value(false);
 }
 
 //--Public methods--------------------------------------------------------------
@@ -644,7 +641,9 @@ bool EditorWidget::checkSave(bool discard) {
   }
 
   const char *msg = "The current file has not been saved.\n" "Would you like to save it now?";
-  int r = discard ? choice(msg, "Save", "Discard", "Cancel") : choice(msg, "Save", "Cancel", 0);
+  int r = discard ?
+          fl_choice(msg, "Save", "Discard", "Cancel") :
+          fl_choice(msg, "Save", "Cancel", 0);
   if (discard ? (r == 2) : (r == 1)) {
     save_file();                // Save the file
     return !dirty;
@@ -657,7 +656,7 @@ bool EditorWidget::checkSave(bool discard) {
  */
 void EditorWidget::copyText() {
   if (!tty->copySelection()) {
-    TextEditor::kf_copy(0, editor);
+    Fl_Text_Editor::kf_copy(0, editor);
   }
 }
 
@@ -686,7 +685,7 @@ void EditorWidget::doSaveFile(const char *newfile) {
   }
 
   if (textbuf->savefile(basfile)) {
-    alert("Error writing to file \'%s\':\n%s.", basfile, strerror(errno));
+    fl_alert("Error writing to file \'%s\':\n%s.", basfile, strerror(errno));
     return;
   }
 
@@ -756,7 +755,7 @@ void EditorWidget::fileChanged(bool loadfile) {
  * keyboard shortcut handler
  */
 bool EditorWidget::focusWidget() {
-  switch (event_key()) {
+  switch (Fl::event_key()) {
   case 'b':
     setBreakToLine(!isBreakToLine());
     return true;
@@ -769,8 +768,7 @@ bool EditorWidget::focusWidget() {
   case 'f':
     if (strlen(commandText->value()) > 0 && commandOpt == cmd_find) {
       // continue search - shift -> backward else forward
-      command(0, (void *)(intptr_t)((event_key_state(LeftShiftKey) ||
-                                     event_key_state(RightShiftKey)) ? 0 : 1));
+      command(0, (void *)(intptr_t)(Fl::event_state(FL_SHIFT) ? 0 : 1));
     }
     setCommand(cmd_find);
     return true;
@@ -807,7 +805,7 @@ void EditorWidget::getInput(char *result, int size) {
   setCommand(cmd_input_text);
   wnd->setModal(true);
   while (wnd->isModal()) {
-    Fl_wait();
+    Fl::wait();
   }
   if (wnd->isBreakExec()) {
     brun_break();
@@ -919,7 +917,7 @@ void EditorWidget::loadFile(const char *newfile) {
   loading = true;
   if (editor->textbuf->loadfile(filename)) {
     // read failed
-    alert("Error reading from file \'%s\':\n%s.", filename, strerror(errno));
+    fl_alert("Error reading from file \'%s\':\n%s.", filename, strerror(errno));
 
     // restore previous file
     strcpy(filename, oldpath);
@@ -959,7 +957,7 @@ void EditorWidget::readonly(bool is_readonly) {
   }
   modStatus->label(is_readonly ? "RO" : "@line");
   modStatus->redraw();
-  editor->cursor_style(is_readonly ? TextDisplay::DIM_CURSOR : TextDisplay::NORMAL_CURSOR);
+  editor->cursor_style(is_readonly ? Fl_Text_Display::DIM_CURSOR : Fl_Text_Display::NORMAL_CURSOR);
   ((BasicEditor *)editor)->readonly = is_readonly;
 }
 
@@ -1006,14 +1004,14 @@ void EditorWidget::saveSelection(const char *path) {
 /**
  * Sets the editor and editor toolbar color
  */
-void EditorWidget::setEditorColor(Color c, bool defColor) {
+void EditorWidget::setEditorColor(Fl_Color c, bool defColor) {
   if (wnd && wnd->_profile) {
     wnd->_profile->_color = c;
   }
   editor->color(c);
 
-  Fl_Color bg = lerp(c, BLACK, .1f);       // same offset as editor line numbers
-  Fl_Color fg = contrast(c, bg);
+  Fl_Color bg = FL_GRAY0;       // same offset as editor line numbers
+  Fl_Color fg = fl_contrast(c, bg);
   int i;
 
   // set the colours on the command text bar
@@ -1028,7 +1026,7 @@ void EditorWidget::setEditorColor(Color c, bool defColor) {
   if (defColor) {
     // contrast the default colours against the background
     for (i = 0; i < st_background; i++) {
-      styletable[i].color = contrast(defaultColor[i], c);
+      styletable[i].color = fl_contrast(defaultColor[i], c);
     }
   }
 }
@@ -1036,7 +1034,7 @@ void EditorWidget::setEditorColor(Color c, bool defColor) {
 /**
  * sets the current display font
  */
-void EditorWidget::setFont(Font *font) {
+void EditorWidget::setFont(Fl_Font font) {
   if (font) {
     editor->setFont(font);
     tty->setFont(font);
@@ -1060,7 +1058,7 @@ void EditorWidget::setIndentLevel(int level) {
   ((BasicEditor *)editor)->indentLevel = level;
 
   // update environment var for running programs
-  char path[MAX_PATH];
+  char path[PATH_MAX];
   sprintf(path, "INDENT_LEVEL=%d", level);
   putenv(path);
 }
@@ -1110,7 +1108,7 @@ void EditorWidget::statusMsg(const char *msg) {
  * sets the font face, size and colour
  */
 void EditorWidget::updateConfig(EditorWidget *current) {
-  setFont(font(current->editor->getFontName()));
+  setFont(current->editor->getFont()));
   setFontSize(current->editor->getFontSize());
   setEditorColor(current->editor->color(), false);
 }
@@ -1122,9 +1120,9 @@ void EditorWidget::updateConfig(EditorWidget *current) {
  */
 void EditorWidget::addHistory(const char *filename) {
   FILE *fp;
-  char buffer[MAX_PATH];
-  char updatedfile[MAX_PATH];
-  char path[MAX_PATH];
+  char buffer[PATH_MAX];
+  char updatedfile[PATH_MAX];
+  char path[PATH_MAX];
 
   int len = strlen(filename);
   if (strcasecmp(filename + len - 4, ".sbx") == 0 || access(filename, R_OK) != 0) {
@@ -1182,7 +1180,7 @@ void EditorWidget::createFuncList() {
   for (int j = 0; j < keywords_length; j++) {
     keywords_len[j] = strlen(keywords[j]);
   }
-  Group *menuGroup = 0;
+  Fl_Group *menuGroup = 0;
 
   for (int i = 0; i < len; i++) {
     // skip to the newline start
@@ -1285,7 +1283,7 @@ void EditorWidget::handleFileChange() {
   // handle outside changes to the file
   if (filename[0] && modifiedTime != 0 && modifiedTime != getModifiedTime()) {
     const char *msg = "File %s\nhas changed on disk.\n\n" "Do you want to reload the file?";
-    if (ask(msg, filename)) {
+    if (fl_ask(msg, filename)) {
       reloadFile();
     } else {
       modifiedTime = 0;
@@ -1299,7 +1297,7 @@ void EditorWidget::handleFileChange() {
 void EditorWidget::layout() {
   Fl_Group *tile = editor->parent();
   tile->resizable(editor);
-  Group::layout();
+  Fl_Group::layout();
 
   // when set to editor the tile is not resizable using the mouse
   tile->resizable(NULL);
@@ -1354,7 +1352,7 @@ int EditorWidget::replaceAll(const char *find, const char *replace, bool restore
       // found a match; update the position and replace text
       if (!matchWord ||
           ((pos == 0 || !isvar(textbuf->character(pos - 1))) &&
-           !isvar(textbuf->character(pos + strlen(find))))) {
+           !isvar(textbuf->char_at(pos + strlen(find))))) {
         textbuf->select(pos, pos + strlen(find));
         textbuf->remove_selection();
         textbuf->insert(pos, replace);
@@ -1404,7 +1402,7 @@ void EditorWidget::setColor(const char *label, StyleField field) {
   uchar r, g, b;
   split_color(styletable[field].color, r, g, b);
   if (color_chooser(label, r, g, b)) {
-    Fl_Color c = Fl_color(r, g, b);
+    Fl_Color c = fl_rgb_color(r, g, b);
     set_color_index(Fl_FREE_COLOR + field, c);
     styletable[field].color = c;
     editor->styleChanged();
@@ -1444,7 +1442,7 @@ void EditorWidget::setCommand(CommandOpt command) {
   commandText->textcolor(commandChoice->textcolor());
   commandText->redraw();
   commandText->take_focus();
-  commandText->when(commandOpt == cmd_find_inc ? WHEN_CHANGED : WHEN_ENTER_KEY_ALWAYS);
+  commandText->when(commandOpt == cmd_find_inc ? FL_WHEN_CHANGED : FL_WHEN_ENTER_KEY_ALWAYS);
 }
 
 /**
@@ -1452,7 +1450,7 @@ void EditorWidget::setCommand(CommandOpt command) {
  */
 void EditorWidget::setModified(bool dirty) {
   this->dirty = dirty;
-  modStatus->when(dirty ? WHEN_CHANGED : WHEN_NEVER);
+  modStatus->when(dirty ? FL_WHEN_CHANGED : FL_WHEN_NEVER);
   modStatus->label(dirty ? "MOD" : "@line");
   modStatus->redraw();
 }

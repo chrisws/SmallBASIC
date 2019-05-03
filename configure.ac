@@ -367,6 +367,9 @@ function buildFLTK() {
 
    desktopentrydir='$(datarootdir)'/applications
    AC_SUBST(desktopentrydir)
+
+   dnl generate kwp.h
+   (cd src/platform/fltk && g++ -o build_kwp build_kwp.cxx && ./build_kwp)
 }
 
 if test x$ac_build_sdl = xyes; then

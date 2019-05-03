@@ -11,7 +11,7 @@
 #include <stdint.h>
 
 #include "platform/fltk/BasicEditor.h"
-#include "ui/kwp.h"
+#include "platform/fltk/kwp.h"
 
 #include <FL/Fl_Rect.H>
 
@@ -25,22 +25,22 @@ Fl_Color defaultColor[] = {
   fl_rgb_color(128, 128, 0),           // E - code_functions
   fl_rgb_color(0, 128, 128),           // F - code_procedures
   fl_rgb_color(128, 0, 128),           // G - Find matches
-  fl_rgb_color(0, 128, 0),             // H - Italic Comments ';
+  fl_rgb_color(0, 128, 0),             // H - Italic Comments '
   fl_rgb_color(0, 128, 128),           // I - Numbers
   fl_rgb_color(128, 128, 64),          // J - Operators
 };
 
-Fl_Text_Display::StyleTableEntry styletable[] = { // Style table
-  { defaultColor[0], COURIER, 12},     // A - Plain
-  { defaultColor[1], COURIER, 12},     // B - Comments
-  { defaultColor[2], COURIER, 12},     // C - Strings
-  { defaultColor[3], COURIER, 12},     // D - code_keywords
-  { defaultColor[4], COURIER, 12},     // E - code_functions
-  { defaultColor[5], COURIER, 12},     // F - code_procedures
-  { defaultColor[6], COURIER, 12},     // G - Find matches
-  { defaultColor[7], COURIER_ITALIC, 12},// H - Italic Comments ';
-  { defaultColor[8], COURIER, 12},     // I - Numbers
-  { defaultColor[9], COURIER, 12},     // J - Operators
+Fl_Text_Display::Style_Table_Entry styletable[] = {
+  { defaultColor[0], FL_COURIER, 12},        // A - Plain
+  { defaultColor[1], FL_COURIER, 12},        // B - Comments
+  { defaultColor[2], FL_COURIER, 12},        // C - Strings
+  { defaultColor[3], FL_COURIER, 12},        // D - code_keywords
+  { defaultColor[4], FL_COURIER, 12},        // E - code_functions
+  { defaultColor[5], FL_COURIER, 12},        // F - code_procedures
+  { defaultColor[6], FL_COURIER, 12},        // G - Find matches
+  { defaultColor[7], FL_COURIER_ITALIC, 12}, // H - Italic Comments
+  { defaultColor[8], FL_COURIER, 12},        // I - Numbers
+  { defaultColor[9], FL_COURIER, 12},        // J - Operators
 };
 
 #define PLAIN      'A'
@@ -53,10 +53,6 @@ Fl_Text_Display::StyleTableEntry styletable[] = { // Style table
 #define ITCOMMENTS 'H'
 #define DIGITS     'I'
 #define OPERATORS  'J'
-
-const int numCodeKeywords = sizeof(code_keywords) / sizeof(code_keywords[0]);
-const int numCodeFunctions = sizeof(code_functions) / sizeof(code_functions[0]);
-const int numCodeProcedures = sizeof(code_procedures) / sizeof(code_procedures[0]);
 
 /**
  * return whether the character is a valid variable symbol
@@ -262,7 +258,7 @@ void BasicEditor::styleParse(const char *text, char *style, int length) {
           }
         }
 
-        if (bsearch(&bufptr, code_keywords, numCodeKeywords, sizeof(code_keywords[0]), compare_keywords)) {
+        if (bsearch(&bufptr, code_keywords, code_keywords_len, sizeof(code_keywords[0]), compare_keywords)) {
           while (text < temp) {
             *style++ = KEYWORDS;
             text++;
@@ -272,7 +268,7 @@ void BasicEditor::styleParse(const char *text, char *style, int length) {
           length++;
           last = 1;
           continue;
-        } else if (bsearch(&bufptr, code_functions, numCodeFunctions,
+        } else if (bsearch(&bufptr, code_functions, code_functions_len,
                            sizeof(code_functions[0]), compare_keywords)) {
           while (text < temp) {
             *style++ = FUNCTIONS;
@@ -283,7 +279,7 @@ void BasicEditor::styleParse(const char *text, char *style, int length) {
           length++;
           last = 1;
           continue;
-        } else if (bsearch(&bufptr, code_procedures, numCodeProcedures,
+        } else if (bsearch(&bufptr, code_procedures, code_procedures_len,
                            sizeof(code_procedures[0]), compare_keywords)) {
           while (text < temp) {
             *style++ = PROCEDURES;
@@ -328,7 +324,7 @@ void BasicEditor::styleParse(const char *text, char *style, int length) {
 void BasicEditor::styleChanged() {
   textbuf->select(0, textbuf->length());
   textbuf->select(0, 0);
-  redraw(DAMAGE_ALL);
+  damage(FL_DAMAGE_ALL);
 }
 
 /**
@@ -339,12 +335,12 @@ void BasicEditor::draw() {
   if (matchingBrace != -1) {
     // highlight the matching brace
     int X, Y;
-    int cursor = cursor_style_;
-    cursor_style_ = BLOCK_CURSOR;
+    int cursor = cursor_style();
+    cursor_style(BLOCK_CURSOR);
     if (position_to_xy(matchingBrace, &X, &Y)) {
       draw_cursor(X, Y);
     }
-    cursor_style_ = cursor;
+    cursor_style(cursor);
   }
 }
 
@@ -411,7 +407,7 @@ void BasicEditor::handleTab() {
   int indent;
 
   // get the desired indent based on the previous line
-  int lineStart = buffer()->line_start(cursor_pos_);
+  int lineStart = buffer()->line_start(insert_position());
   int prevLineStart = buffer()->line_start(lineStart - 1);
 
   if (prevLineStart && prevLineStart + 1 == lineStart) {
@@ -452,14 +448,14 @@ void BasicEditor::handleTab() {
     memset(spaces, ' ', len);
     spaces[len] = 0;
     buffer()->insert(lineStart, spaces);
-    if (cursor_pos_ - lineStart < indent) {
+    if (insert_position() - lineStart < indent) {
       // jump cursor to start of text
-      cursor_pos_ = lineStart + indent;
+      insert_position(lineStart + indent);
     } else {
       // move cursor along with text movement, staying on same line
       int maxpos = buffer()->line_end(lineStart);
-      if (cursor_pos_ + len <= maxpos) {
-        cursor_pos_ += len;
+      if (insert_position() + len <= maxpos) {
+        insert_position(insert_position() + len);
       }
     }
   } else if (curIndent > indent) {
@@ -475,7 +471,7 @@ void BasicEditor::handleTab() {
 /**
  * sets the current display font
  */
-void BasicEditor::setFont(Font *font) {
+void BasicEditor::setFont(Fl_Font font) {
   if (font) {
     int len = sizeof(styletable) / sizeof(styletable[0]);
     for (int i = 0; i < len; i++) {
@@ -500,11 +496,11 @@ void BasicEditor::setFontSize(int size) {
  * display the matching brace
  */
 void BasicEditor::showMatchingBrace() {
-  char cursorChar = buffer()->character(cursor_pos_ - 1);
+  char cursorChar = buffer()->char_at(insert_position() - 1);
   char cursorMatch = 0;
   int pair = -1;
   int iter = -1;
-  int pos = cursor_pos_ - 2;
+  int pos = insert_position() - 2;
 
   switch (cursorChar) {
   case ']':
@@ -515,13 +511,13 @@ void BasicEditor::showMatchingBrace() {
     break;
   case '(':
     cursorMatch = ')';
-    pos = cursor_pos_;
+    pos = insert_position();
     iter = 1;
     break;
   case '[':
     cursorMatch = ']';
     iter = 1;
-    pos = cursor_pos_;
+    pos = insert_position();
     break;
   }
   if (cursorMatch != -0) {
@@ -530,7 +526,7 @@ void BasicEditor::showMatchingBrace() {
     int len = buffer()->length();
     int gap = 0;
     while (pos > 0 && pos < len) {
-      char nextChar = buffer()->character(pos);
+      char nextChar = buffer()->char_at(pos);
       if (nextChar == 0 || nextChar == '\n') {
         break;
       }
@@ -582,7 +578,7 @@ void BasicEditor::showFindText(const char *find) {
  * FLTK event handler
  */
 int BasicEditor::handle(int e) {
-  int cursorPos = cursor_pos_;
+  int cursor_pos = insert_position();
   char spaces[250];
   int indent;
   bool navigateKey = false;
@@ -617,11 +613,11 @@ int BasicEditor::handle(int e) {
   switch (e) {
   case FL_KEYBOARD:
     if (Fl::event_key() == FL_Enter) {
-      indent = getIndent(spaces, sizeof(spaces), cursorPos);
+      indent = getIndent(spaces, sizeof(spaces), cursor_pos);
       if (indent) {
-        buffer()->insert(cursor_pos_, spaces);
-        cursor_pos_ += indent;
-        redraw(DAMAGE_ALL);
+        buffer()->insert(insert_position(), spaces);
+        insert_position(insert_position() + indent);
+        damage(FL_DAMAGE_ALL);
       }
     }
     // fallthru to show row-col
@@ -641,7 +637,7 @@ void BasicEditor::showRowCol() {
   int row = -1;
   int col = 0;
 
-  if (!position_to_linecol(cursor_pos_, &row, &col)) {
+  if (!position_to_linecol(insert_position(), &row, &col)) {
     // This is a workaround for a bug in the FLTK TextDisplay widget
     // where linewrapping causes a mis-calculation of line offsets which
     // sometimes prevents the display of the last few lines of text.
@@ -649,7 +645,7 @@ void BasicEditor::showRowCol() {
     scroll(0, 0);
     insert_position(buffer()->length());
     scroll(count_lines(0, buffer()->length(), 1), 0);
-    position_to_linecol(cursor_pos_, &row, &col);
+    position_to_linecol(insert_position(), &row, &col);
   }
 
   status->setRowCol(row, col + 1);
@@ -712,7 +708,7 @@ char *BasicEditor::getSelection(Fl_Rect *rc) {
       textbuf->selection_position(&start, &end);
     } else {
       int pos = insert_position();
-      if (isvar(textbuf->character(pos))) {
+      if (isvar(textbuf->char_at(pos))) {
         start = textbuf->word_start(pos);
         end = textbuf->word_end(pos);
       } else {
@@ -727,7 +723,7 @@ char *BasicEditor::getSelection(Fl_Rect *rc) {
       rc->x(x1);
       rc->y(y1);
       rc->w(x2 - x1);
-      rc->h(maxsize_);
+      rc->h(maxSize());
       result = textbuf->text_range(start, end);
     }
   }
@@ -744,23 +740,23 @@ int BasicEditor::getFontSize() {
 /**
  * returns the current font face name
  */
-const char *BasicEditor::getFontName() {
-  return styletable[0].font->name();
+Fl_Font BasicEditor::getFont() {
+  return styletable[0].font;
 }
 
 /**
  * returns the BASIC keyword list
  */
 void BasicEditor::getKeywords(strlib::List<String *> &keywords) {
-  for (int i = 0; i < numCodeKeywords; i++) {
+  for (int i = 0; i < code_keywords_len; i++) {
     keywords.add(new String(code_keywords[i]));
   }
 
-  for (int i = 0; i < numCodeFunctions; i++) {
+  for (int i = 0; i < code_functions_len; i++) {
     keywords.add(new String(code_functions[i]));
   }
 
-  for (int i = 0; i < numCodeProcedures; i++) {
+  for (int i = 0; i < code_procedures_len; i++) {
     keywords.add(new String(code_procedures[i]));
   }
 }
@@ -769,7 +765,7 @@ void BasicEditor::getKeywords(strlib::List<String *> &keywords) {
  * returns the row and col position for the current cursor position
  */
 void BasicEditor::getRowCol(int *row, int *col) {
-  position_to_linecol(cursor_pos_, row, col);
+  position_to_linecol(insert_position(), row, col);
 }
 
 /**

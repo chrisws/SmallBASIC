@@ -40,6 +40,7 @@ struct Canvas {
 #include <FL/Fl.H>
 #include <FL/Fl_Rect.H>
 #include <FL/Fl_Image.H>
+#define MAX_CANVAS_SIZE 20
 
 struct Canvas {
   Canvas();

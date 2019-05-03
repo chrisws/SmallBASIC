@@ -28,7 +28,7 @@ struct BasicEditor : public Fl_Text_Editor {
   unsigned getIndent(char *indent, int len, int pos);
   void draw();
   int getFontSize();
-  const char *getFontName();
+  Fl_Font getFont();
   void getKeywords(strlib::List<strlib::String *> &keywords);
   void getRowCol(int *row, int *col);
   void getSelEndRowCol(int *row, int *col);
@@ -43,6 +43,8 @@ struct BasicEditor : public Fl_Text_Editor {
   void showRowCol();
   void styleChanged();
   void styleParse(const char *text, char *style, int length);
+  int hor_offset() { return mHorizOffset; }
+  int maxSize() { return mMaxsize; }
 
   bool readonly;
   int indentLevel;

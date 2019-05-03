@@ -10,11 +10,6 @@
 #include <config.h>
 #endif
 
-#include <dirent.h>
-#include <unistd.h>
-
-#include <FL/Fl_Menu_Bar.H>
-#include <FL/Fl_Tabs.H>
 #include <FL/fl_ask.H>
 
 #include "platform/fltk/MainWindow.h"
@@ -69,6 +64,18 @@ bool isFormActive();
 #define CHOICE_EXIT  2
 #define CHOICE_BREAK 1
 
+void vsncat(char *buffer, size_t size, ...) {
+  va_list args;
+  va_start(args, size);
+  strlcpy(buffer, va_arg(args, char *), size);
+  for (char *next = va_arg(args, char *);
+       next != NULL;
+       next = va_arg(args, char *)) {
+    strlcat(buffer, next, size);
+  }
+  va_end(args);
+}
+
 //--EditWindow functions--------------------------------------------------------
 
 void MainWindow::statusMsg(RunMessage runMessage, const char *statusMessage) {
@@ -87,8 +94,8 @@ void MainWindow::busyMessage() {
 }
 
 void MainWindow::pathMessage(const char *file) {
-  char message[MAX_PATH];
-  sprintf(message, "File not found: %s", file);
+  char message[PATH_MAX];
+  snprintf(message, sizeof(message), "File not found: %s", file);
   statusMsg(rs_err, message);
 }
 
@@ -105,13 +112,13 @@ void MainWindow::showEditTab(EditorWidget *editWidget) {
 bool MainWindow::basicMain(EditorWidget *editWidget,
                            const char *fullpath, bool toolExec) {
   int len = strlen(fullpath);
-  char path[MAX_PATH];
+  char path[PATH_MAX];
   bool breakToLine = false;     // whether to restore the editor cursor
 
   if (strcasecmp(fullpath + len - 4, ".htm") == 0 ||
       strcasecmp(fullpath + len - 5, ".html") == 0) {
     // render html edit buffer
-    sprintf(path, "file:%s", fullpath);
+    snprintf(path, sizeof(path), "file:%s", fullpath);
     updateForm(path);
     if (editWidget) {
       editWidget->take_focus();
@@ -277,7 +284,7 @@ void MainWindow::quit(Fl_Widget *w, void *eventData) {
     int n = _tabGroup->children();
     for (int c = 0; c < n; c++) {
       Fl_Group *group = (Fl_Group *)_tabGroup->child(c);
-      char path[MAX_PATH];
+      char path[PATH_MAX];
       if (gw_editor == getGroupWidget(group)) {
         EditorWidget *editWidget = (EditorWidget *)group->child(0);
         const char *filename = editWidget->getFilename();
@@ -317,7 +324,7 @@ void MainWindow::help_home(Fl_Widget *w, void *eventData) {
  */
 void MainWindow::showHelpPage() {
   HelpWidget *help = getHelp();
-  char path[MAX_PATH];
+  char path[PATH_MAX];
   getHomeDir(path);
   help->setDocHome(path);
   strcat(path, "help.html");
@@ -330,13 +337,13 @@ void MainWindow::showHelpPage() {
  */
 bool MainWindow::execHelp() {
   bool result = true;
-  char path[MAX_PATH];
+  char path[PATH_MAX];
   if (strncmp(opt_command, "http://", 7) == 0) {
     // launch in real browser
     browseFile(opt_command);
     result = false;
   } else {
-    sprintf(path, "%s/%s/help.bas", packageHome, pluginHome);
+    snprintf(path, sizeof(path), "%s/%s/help.bas", packageHome, pluginHome);
     basicMain(getEditor(), path, true);
   }
   return result;
@@ -426,19 +433,19 @@ void MainWindow::export_file(Fl_Widget *w, void *eventData) {
           Fl_Text_Buffer *textbuf = editWidget->editor->buffer();
           const char *data = textbuf->text();
           if (token[0]) {
-            sprintf(buffer, "# %s\n", token);
+            vsncat(buffer, sizeof(buffer), "# ", token, "\n", NULL);
             dev_fwrite(handle, (byte *)buffer, strlen(buffer));
           }
           if (!dev_fwrite(handle, (byte *)data, textbuf->length())) {
-            sprintf(buffer, "Failed to write: %s", _exportFile.c_str());
+            vsncat(buffer, sizeof(buffer), "Failed to write: ", _exportFile.c_str(), NULL);
             statusMsg(rs_err, buffer);
           } else {
-            sprintf(buffer, "Exported %s to %s", editWidget->getFilename(),
-                    _exportFile.c_str());
+            vsncat(buffer, sizeof(buffer), "Exported", editWidget->getFilename(), " to ",
+                   _exportFile.c_str(), NULL);
             statusMsg(rs_ready, buffer);
           }
         } else {
-          sprintf(buffer, "Failed to open: %s", _exportFile.c_str());
+          vsncat(buffer, sizeof(buffer), "Failed to open: ", _exportFile.c_str(), NULL);
           statusMsg(rs_err, buffer);
         }
         dev_fclose(handle);
@@ -514,7 +521,7 @@ void MainWindow::font_size_decr(Fl_Widget *w, void *eventData) {
 }
 
 void MainWindow::font_cache_clear(Fl_Widget *w, void *eventData) {
-  char path[MAX_PATH];
+  char path[PATH_MAX];
   getHomeDir(path);
   strcat(path, fontCache);
   unlink(path);
@@ -528,7 +535,7 @@ void MainWindow::run(Fl_Widget *w, void *eventData) {
     if (runMode == edit_state) {
       // inhibit autosave on run function with environment var
       const char *noSave = dev_getenv("NO_RUN_SAVE");
-      char path[MAX_PATH];
+      char path[PATH_MAX];
       if (noSave == 0 || noSave[0] != '1') {
         if (filename == 0 || filename[0] == 0) {
           getHomeDir(path);
@@ -561,7 +568,7 @@ void MainWindow::run_break(Fl_Widget *w, void *eventData) {
 void MainWindow::run_selection(Fl_Widget *w, void *eventData) {
   EditorWidget *editWidget = getEditor();
   if (editWidget) {
-    char path[MAX_PATH];
+    char path[PATH_MAX];
     getHomeDir(path);
     strcat(path, "selection.bas");
     editWidget->saveSelection(path);
@@ -577,8 +584,8 @@ void MainWindow::editor_plugin(Fl_Widget *w, void *eventData) {
   EditorWidget *editWidget = getEditor();
   if (editWidget) {
     Fl_Text_Editor *editor = editWidget->editor;
-    char filename[MAX_PATH];
-    char path[MAX_PATH];
+    char filename[PATH_MAX];
+    char path[PATH_MAX];
     strcpy(filename, editWidget->getFilename());
 
     if (runMode == edit_state) {
@@ -588,11 +595,11 @@ void MainWindow::editor_plugin(Fl_Widget *w, void *eventData) {
         editWidget->getRowCol(&row, &col);
         editWidget->getSelStartRowCol(&s1r, &s1c);
         editWidget->getSelEndRowCol(&s2r, &s2c);
-        sprintf(opt_command, "%s|%d|%d|%d|%d|%d|%d",
-                filename, row - 1, col, s1r - 1, s1c, s2r - 1, s2c);
+        snprintf(opt_command, sizeof(opt_command), "%s|%d|%d|%d|%d|%d|%d",
+                 filename, row - 1, col, s1r - 1, s1c, s2r - 1, s2c);
         runMode = run_state;
         editWidget->runState(rs_run);
-        sprintf(path, "%s/%s", packageHome, (const char *)eventData);
+        snprintf(path, sizeof(path), "%s/%s", packageHome, (const char *)eventData);
         int interactive = opt_interactive;
         opt_interactive = false;
         int success = sbasic_main(path);
@@ -617,10 +624,10 @@ void MainWindow::editor_plugin(Fl_Widget *w, void *eventData) {
  */
 void MainWindow::tool_plugin(Fl_Widget *w, void *eventData) {
   if (runMode == edit_state) {
-    char path[MAX_PATH];
-    sprintf(opt_command, "%s/%s", packageHome, pluginHome);
+    char path[PATH_MAX];
+    snprintf(opt_command, sizeof(opt_command), "%s/%s", packageHome, pluginHome);
     statusMsg(rs_ready, (const char *)eventData);
-    sprintf(path, "%s/%s", packageHome, (const char *)eventData);
+    snprintf(path, sizeof(path), "%s/%s", packageHome, (const char *)eventData);
     _tabGroup->value(_outputGroup);
     basicMain(0, path, true);
     statusMsg(rs_ready, 0);
@@ -664,8 +671,8 @@ void MainWindow::load_file(Fl_Widget *w, void *eventData) {
  *Adds a plug-in to the menu
  */
 void MainWindow::addPlugin(Fl_Menu_Bar *menu, const char *label, const char *filename) {
-  char path[MAX_PATH];
-  sprintf(path, "%s/%s", pluginHome, filename);
+  char path[PATH_MAX];
+  snprintf(path, PATH_MAX, "%s/%s", pluginHome, filename);
   if (access(path, R_OK) == 0) {
     menu->add(label, 0, editor_plugin_cb, strdup(path));
   }
@@ -676,8 +683,8 @@ void MainWindow::addPlugin(Fl_Menu_Bar *menu, const char *label, const char *fil
  */
 void MainWindow::scanRecentFiles(Fl_Menu_Bar *menu) {
   FILE *fp;
-  char buffer[MAX_PATH];
-  char path[MAX_PATH];
+  char buffer[PATH_MAX];
+  char path[PATH_MAX];
   char label[1024];
   int i = 0;
 
@@ -696,7 +703,7 @@ void MainWindow::scanRecentFiles(Fl_Menu_Bar *menu) {
         if (fileLabel != 0 && *fileLabel == '_') {
           fileLabel++;
         }
-        sprintf(label, "&File/Open Recent File/%s", fileLabel);
+        snprintf(label, sizeof(label), "&File/Open Recent File/%s", fileLabel);
         //TODO: fixme
         //recentMenu[i] = menu->add(label, CTRL + '1' + i, (Fl_Callback *)
         //load_file_cb, (void *)(intptr_t)(i + 1), RAW_LABEL);
@@ -709,7 +716,7 @@ void MainWindow::scanRecentFiles(Fl_Menu_Bar *menu) {
     fclose(fp);
   }
   while (i < NUM_RECENT_ITEMS) {
-    sprintf(label, "&File/Open Recent File/%s", untitledFile);
+    snprintf(label, sizeof(label), "&File/Open Recent File/%s", untitledFile);
     //TODO: fixme
     //recentMenu[i] = menu->add(label, CTRL + '1' + i, (Fl_Callback *)
     //load_file_cb, (void *)(intptr_t)(i + 1));
@@ -723,8 +730,8 @@ void MainWindow::scanRecentFiles(Fl_Menu_Bar *menu) {
  */
 void MainWindow::scanPlugIns(Fl_Menu_Bar *menu) {
   FILE *file;
-  char buffer[MAX_PATH];
-  char path[MAX_PATH];
+  char buffer[PATH_MAX];
+  char path[PATH_MAX];
   char label[1024];
   DIR *dp;
   struct dirent *e;
@@ -739,13 +746,13 @@ void MainWindow::scanPlugIns(Fl_Menu_Bar *menu) {
     const char *filename = e->d_name;
     int len = strlen(filename);
     if (strcasecmp(filename + len - 4, ".bas") == 0) {
-      sprintf(path, "%s/%s/%s", packageHome, pluginHome, filename);
+      snprintf(path, sizeof(path), "%s/%s/%s", packageHome, pluginHome, filename);
       file = fopen(path, "r");
       if (!file) {
         continue;
       }
 
-      if (!fgets(buffer, MAX_PATH, file)) {
+      if (!fgets(buffer, PATH_MAX, file)) {
         fclose(file);
         continue;
       }
@@ -758,15 +765,15 @@ void MainWindow::scanPlugIns(Fl_Menu_Bar *menu) {
         continue;
       }
 
-      if (fgets(buffer, MAX_PATH, file) && strncmp("'menu", buffer, 5) == 0) {
+      if (fgets(buffer, PATH_MAX, file) && strncmp("'menu", buffer, 5) == 0) {
         FileWidget::trimEOL(buffer);
         int offs = 6;
         while (buffer[offs] && (buffer[offs] == '\t' || buffer[offs] == ' ')) {
           offs++;
         }
-        sprintf(label, (editorTool ? "&Edit/Basic/%s" : "&Basic/%s"), buffer + offs);
+        snprintf(label, sizeof(label), (editorTool ? "&Edit/Basic/%s" : "&Basic/%s"), buffer + offs);
         // use an absolute path
-        sprintf(path, "%s/%s", pluginHome, filename);
+        snprintf(path, sizeof(path), "%s/%s", pluginHome, filename);
         menu->add(label, 0, (Fl_Callback *)
                   (editorTool ? editor_plugin_cb : tool_plugin_cb), strdup(path));
       }
@@ -914,7 +921,7 @@ bool initialise(int argc, char **argv) {
   dev_setenv("PKG_HOME", packageHome);
 
   // bas_home contains user editable files along with generated help
-  char path[MAX_PATH];
+  char path[PATH_MAX];
   getHomeDir(path, false);
   dev_setenv("BAS_HOME", path);
 
@@ -1108,7 +1115,7 @@ Fl_Group *MainWindow::createEditor(const char *title) {
 void MainWindow::new_file(Fl_Widget *w, void *eventData) {
   EditorWidget *editWidget = 0;
   Fl_Group *untitledEditor = findTab(untitledFile);
-  char path[MAX_PATH];
+  char path[PATH_MAX];
 
   if (untitledEditor) {
     _tabGroup->value(untitledEditor);
@@ -1150,7 +1157,7 @@ void MainWindow::open_file(Fl_Widget *w, void *eventData) {
 
   // change to the directory of the current editor widget
   EditorWidget *editWidget = getEditor(false);
-  char path[MAX_PATH];
+  char path[PATH_MAX];
 
   if (editWidget) {
     FileWidget::splitPath(editWidget->getFilename(), path);
@@ -1171,7 +1178,7 @@ void MainWindow::open_file(Fl_Widget *w, void *eventData) {
 
   StringList *paths = new StringList();
   for (int i = 0; i < NUM_RECENT_ITEMS; i++) {
-    char nextPath[MAX_PATH];
+    char nextPath[PATH_MAX];
     FileWidget::splitPath(recentPath[i].c_str(), nextPath);
     if (nextPath[0] && !paths->contains(nextPath)) {
       paths->add(nextPath);
@@ -1374,7 +1381,7 @@ Fl_Group *MainWindow::getPrevTab(Fl_Group *current) {
  * Opens the config file ready for writing
  */
 FILE *MainWindow::openConfig(const char *fileName, const char *flags) {
-  char path[MAX_PATH];
+  char path[PATH_MAX];
   getHomeDir(path);
   strcat(path, fileName);
   return fopen(path, flags);
@@ -1396,7 +1403,7 @@ void MainWindow::setModal(bool modal) {
  * sets the window title based on the filename
  */
 void MainWindow::setTitle(Fl_Window *widget, const char *filename) {
-  char title[MAX_PATH];
+  char title[PATH_MAX];
   const char *dot = strrchr(filename, '.');
   int len = (dot ? dot - filename : strlen(filename));
 
@@ -1472,13 +1479,13 @@ void MainWindow::execLink(strlib::String &link) {
   // execute a link from the html window
   if (0 == strncasecmp(file, "http://", 7)) {
     char localFile[PATH_MAX];
-    char path[MAX_PATH];
+    char path[PATH_MAX];
     dev_file_t df;
 
     memset(&df, 0, sizeof(dev_file_t));
     strcpy(df.name, file);
     if (http_open(&df) == 0) {
-      sprintf(localFile, "Failed to open URL: %s", file);
+      snprintf(localFile, sizeof(localFile), "Failed to open URL: %s", file);
       statusMsg(rs_ready, localFile);
       return;
     }
@@ -1499,9 +1506,9 @@ void MainWindow::execLink(strlib::String &link) {
       if (strcasecmp(localFile + len - 4, ".gif") == 0 ||
           strcasecmp(localFile + len - 4, ".jpeg") == 0 ||
           strcasecmp(localFile + len - 4, ".jpg") == 0) {
-        sprintf(path, "<img src=%s>", localFile);
+        snprintf(path, sizeof(path), "<img src=%s>", localFile);
       } else {
-        sprintf(path, "file:%s", localFile);
+        snprintf(path, sizeof(path), "file:%s", localFile);
       }
       _siteHome.append(df.name, df.drv_dw[1]);
       statusMsg(rs_ready, _siteHome.c_str());
@@ -1571,12 +1578,12 @@ void MainWindow::loadIcon(const char *prefix, int resourceId) {
     }
     wnd->icon((char *)ico);
 #else
-    char buffer[MAX_PATH];
-    char path[MAX_PATH];
+    char buffer[PATH_MAX];
+    char path[PATH_MAX];
     const char *key = "Icon=";
 
     // read the application desktop file, then scan for the Icon file
-    sprintf(path, "%s/share/applications/%s.desktop", prefix, Fl_Window::xclass());
+    snprintf(path, sizeof(path), "%s/share/applications/%s.desktop", prefix, Fl_Window::xclass());
     FILE *fp = fopen(path, "r");
     if (fp) {
       while (feof(fp) == 0 && fgets(buffer, sizeof(buffer), fp)) {
