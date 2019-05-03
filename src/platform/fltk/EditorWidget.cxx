@@ -16,6 +16,7 @@
 #include <sys/stat.h>
 
 #include <FL/fl_ask.H>
+#include <FL/Fl_Color_Chooser.H>
 
 #include "platform/fltk/MainWindow.h"
 #include "platform/fltk/EditorWidget.h"
@@ -81,7 +82,7 @@ EditorWidget::EditorWidget(int x, int y, int w, int h) :
   int editHeight = tileHeight - ttyHeight;
   int browserWidth = w / 8;
 
-  Fl_Tiled_Group *tile = new Fl_Tiled_Group(0, 0, w, tileHeight);
+  Fl_Group *tile = new Fl_Group(0, 0, w, tileHeight);
   tile->begin();
 
   editor = new BasicEditor(0, 0, w - browserWidth, editHeight, this);
@@ -89,19 +90,18 @@ EditorWidget::EditorWidget(int x, int y, int w, int h) :
   editor->wrap_mode(true, 0);
   editor->selection_color(fl_rgb_color(190, 189, 188));
   editor->textbuf->add_modify_callback(changed_cb, this);
-  editor->box(NO_BOX);
+  editor->box(FL_NO_BOX);
   editor->take_focus();
 
   // sub-func jump droplist
   funcList = new Fl_Browser(editor->w(), 0, browserWidth, editHeight);
-  funcList->labelfont(HELVETICA);
-  funcList->indented(1);
+  funcList->labelfont(FL_HELVETICA);
   funcList->when(FL_WHEN_RELEASE);
   funcList->add(scanLabel);
 
   tty = new TtyWidget(0, editHeight, w, ttyHeight, TTY_ROWS);
-  tty->color(WHITE);            // bg
-  tty->labelcolor(BLACK);       // fg
+  tty->color(FL_WHITE);            // bg
+  tty->labelcolor(FL_BLACK);       // fg
 
   tile->end();
 
@@ -109,8 +109,8 @@ EditorWidget::EditorWidget(int x, int y, int w, int h) :
   w -= 4;
 
   // editor status bar
-  Fl_Group *statusBar = new Fl_Group(2, tty->b() + 2, w, MNU_HEIGHT);
-  statusBar->box(NO_BOX);
+  Fl_Group *statusBar = new Fl_Group(2, (tty->h() - tty->y()) + 2, w, MNU_HEIGHT);
+  statusBar->box(FL_NO_BOX);
   statusBar->begin();
 
   // widths become relative when the outer window is resized
@@ -125,10 +125,10 @@ EditorWidget::EditorWidget(int x, int y, int w, int h) :
 
 #ifdef __MINGW32__
   // fixup alignment under windows
-  logPrintBn->align(ALIGN_INSIDE | ALIGN_LEFT | ALIGN_CENTER);
-  lockBn->align(ALIGN_INSIDE | ALIGN_LEFT | ALIGN_CENTER);
-  hideIdeBn->align(ALIGN_INSIDE | ALIGN_LEFT | ALIGN_CENTER);
-  gotoLineBn->align(ALIGN_INSIDE | ALIGN_LEFT | ALIGN_CENTER);
+  logPrintBn->align(FL_ALIGN_INSIDE | FL_ALIGN_LEFT | FL_ALIGN_CENTER);
+  lockBn->align(FL_ALIGN_INSIDE | FL_ALIGN_LEFT | FL_ALIGN_CENTER);
+  hideIdeBn->align(FL_ALIGN_INSIDE | FL_ALIGN_LEFT | FL_ALIGN_CENTER);
+  gotoLineBn->align(FL_ALIGN_INSIDE | FL_ALIGN_LEFT | FL_ALIGN_CENTER);
 #endif
 
   colStatus = new Fl_Button(gotoLineBn->x() - (st_w + 2), 2, st_w, st_h);
@@ -137,15 +137,15 @@ EditorWidget::EditorWidget(int x, int y, int w, int h) :
   modStatus = new Fl_Button(runStatus->x() - (st_w + 2), 2, st_w, st_h);
 
   commandChoice = new Fl_Button(0, 2, 80, st_h);
-  commandText = new Fl_Input(commandChoice->r() + 2, 2, modStatus->x() - commandChoice->r() - 4, st_h);
-  commandText->align(ALIGN_LEFT | ALIGN_CLIP);
+  commandText = new Fl_Input(commandChoice->x() + commandChoice->w() + 2, 2, modStatus->x() - commandChoice->w() - 4, st_h);
+  commandText->align(FL_ALIGN_LEFT | FL_ALIGN_CLIP);
   commandText->when(FL_WHEN_ENTER_KEY_ALWAYS);
   commandText->labelfont(FL_HELVETICA);
 
   for (int n = 0; n < statusBar->children(); n++) {
     Fl_Widget *w = statusBar->child(n);
     w->labelfont(FL_HELVETICA);
-    w->box(BORDER_BOX);
+    w->box(FL_BORDER_BOX);
   }
 
   statusBar->resizable(commandText);
@@ -192,7 +192,7 @@ EditorWidget::EditorWidget(int x, int y, int w, int h) :
   if (wnd && wnd->_profile) {
     wnd->_profile->loadConfig(this);
   } else {
-    setEditorColor(WHITE, true);
+    setEditorColor(FL_WHITE, true);
   }
   take_focus();
 }
@@ -416,7 +416,7 @@ void EditorWidget::command(Fl_Widget *w, void *eventData) {
   bool forward = (intptr_t) eventData;
   bool updatePos = (commandOpt != cmd_find_inc);
 
-  if (event_button() == RightButton) {
+  if (Fl::event_button() == FL_RIGHT_MOUSE) {
     // right click
     forward = 0;
   }
@@ -425,7 +425,7 @@ void EditorWidget::command(Fl_Widget *w, void *eventData) {
   case cmd_find_inc:
   case cmd_find:
     found = editor->findText(commandText->value(), forward, updatePos);
-    commandText->textcolor(found ? commandChoice->textcolor() : RED);
+    commandText->textcolor(found ? commandChoice->color() : FL_RED);
     commandText->redraw();
     break;
 
@@ -454,7 +454,8 @@ void EditorWidget::command(Fl_Widget *w, void *eventData) {
  * font menu selection handler
  */
 void EditorWidget::font_name(Fl_Widget *w, void *eventData) {
-  setFont(Fl_font(w->label(), 0));
+  // TODO: fixme
+  //setFont(Fl_Font(w->label(), 0));
   wnd->updateConfig(this);
 }
 
@@ -462,6 +463,8 @@ void EditorWidget::font_name(Fl_Widget *w, void *eventData) {
  * sub/func selection list handler
  */
 void EditorWidget::func_list(Fl_Widget *w, void *eventData) {
+  /*
+    TODO: fixme
   if (funcList && funcList->item()) {
     const char *label = funcList->item()->label();
     if (label) {
@@ -475,6 +478,7 @@ void EditorWidget::func_list(Fl_Widget *w, void *eventData) {
       }
     }
   }
+  */
 }
 
 /**
@@ -505,15 +509,17 @@ void EditorWidget::rename_word(Fl_Widget *w, void *eventData) {
       begin();
       LineInput *in = new LineInput(rc.x(), rc.y(), rc.w() + 10, rc.h());
       end();
-      in->text(selection);
+      // TODO: fixme
+      //in->text(selection);
       in->callback(rename_word_cb);
-      in->textfont(COURIER);
+      in->textfont(FL_COURIER);
       in->textsize(getFontSize());
 
       rename_active = true;
-      while (rename_active && in->focused()) {
-        Fl::wait();
-      }
+      // TODO: fixme
+      //while (rename_active && in->focused()) {
+      // Fl::wait();
+      //}
 
       showFindText("");
       replaceAll(selection, in->value(), true, true);
@@ -571,7 +577,8 @@ void EditorWidget::save_file(Fl_Widget *w, void *eventData) {
  * prevent the tty window from scrolling with new data
  */
 void EditorWidget::scroll_lock(Fl_Widget *w, void *eventData) {
-  tty->setScrollLock(w->flags() & STATE);
+  // TODO: fixme
+  //tty->setScrollLock(w->flags() & STATE);
 }
 
 /**
@@ -588,10 +595,11 @@ void EditorWidget::set_color(Fl_Widget *w, void *eventData) {
   StyleField styleField = (StyleField) (intptr_t) eventData;
   if (styleField == st_background || styleField == st_background_def) {
     uchar r, g, b;
-    split_color(editor->color(), r, g, b);
-    if (color_chooser(w->label(), r, g, b)) {
+    // TODO: fixme
+    //split_color(editor->color(), r, g, b);
+    if (fl_color_chooser(w->label(), r, g, b)) {
       Fl_Color c = fl_rgb_color(r, g, b);
-      set_color_index(Fl_FREE_COLOR + styleField, c);
+      //set_color_index(FL_FREE_COLOR + styleField, c);
       setEditorColor(c, styleField == st_background_def);
       editor->styleChanged();
     }
@@ -641,6 +649,8 @@ bool EditorWidget::checkSave(bool discard) {
   }
 
   const char *msg = "The current file has not been saved.\n" "Would you like to save it now?";
+  /*
+    TODO: fixme
   int r = discard ?
           fl_choice(msg, "Save", "Discard", "Cancel") :
           fl_choice(msg, "Save", "Cancel", 0);
@@ -649,6 +659,8 @@ bool EditorWidget::checkSave(bool discard) {
     return !dirty;
   }
   return (discard && r == 1);
+  */
+  return false;
 }
 
 /**
@@ -1108,7 +1120,7 @@ void EditorWidget::statusMsg(const char *msg) {
  * sets the font face, size and colour
  */
 void EditorWidget::updateConfig(EditorWidget *current) {
-  setFont(current->editor->getFont()));
+  setFont(current->editor->getFont());
   setFontSize(current->editor->getFontSize());
   setEditorColor(current->editor->color(), false);
 }
@@ -1209,9 +1221,10 @@ void EditorWidget::createFuncList() {
         if (i > i_begin) {
           String s(text + i_begin, i - i_begin);
           if (j < 2) {
-            menuGroup = funcList->add_group(s.c_str(), 0, (void *)(intptr_t)curLine);
+            // TODO: fixme
+            //menuGroup = funcList->add_group(s.c_str(), 0, (void *)(intptr_t)curLine);
           } else {
-            funcList->add_leaf(s.c_str(), menuGroup, (void *)(intptr_t)curLine);
+            // funcList->add_leaf(s.c_str(), menuGroup, (void *)(intptr_t)curLine);
           }
         }
         break;
@@ -1283,11 +1296,14 @@ void EditorWidget::handleFileChange() {
   // handle outside changes to the file
   if (filename[0] && modifiedTime != 0 && modifiedTime != getModifiedTime()) {
     const char *msg = "File %s\nhas changed on disk.\n\n" "Do you want to reload the file?";
-    if (fl_ask(msg, filename)) {
+    /*
+      TODO: fixme
+    if (fl_choice(msg, filename, "Yes", "No")) {
       reloadFile();
     } else {
       modifiedTime = 0;
     }
+    */
   }
 }
 
@@ -1297,7 +1313,8 @@ void EditorWidget::handleFileChange() {
 void EditorWidget::layout() {
   Fl_Group *tile = editor->parent();
   tile->resizable(editor);
-  Fl_Group::layout();
+  // TODO: fixme
+  //Fl_Group::layout();
 
   // when set to editor the tile is not resizable using the mouse
   tile->resizable(NULL);
@@ -1351,7 +1368,7 @@ int EditorWidget::replaceAll(const char *find, const char *replace, bool restore
     while (textbuf->search_forward(pos, find, &pos)) {
       // found a match; update the position and replace text
       if (!matchWord ||
-          ((pos == 0 || !isvar(textbuf->character(pos - 1))) &&
+          ((pos == 0 || !isvar(textbuf->char_at(pos - 1))) &&
            !isvar(textbuf->char_at(pos + strlen(find))))) {
         textbuf->select(pos, pos + strlen(find));
         textbuf->remove_selection();
@@ -1400,10 +1417,11 @@ bool EditorWidget::searchBackward(const char *text, int startPos,
  */
 void EditorWidget::setColor(const char *label, StyleField field) {
   uchar r, g, b;
-  split_color(styletable[field].color, r, g, b);
-  if (color_chooser(label, r, g, b)) {
+  // TODO: fixme
+  //split_color(styletable[field].color, r, g, b);
+  if (fl_color_chooser(label, r, g, b)) {
     Fl_Color c = fl_rgb_color(r, g, b);
-    set_color_index(Fl_FREE_COLOR + field, c);
+    //set_color_index(FL_FREE_COLOR + field, c);
     styletable[field].color = c;
     editor->styleChanged();
   }
@@ -1439,7 +1457,8 @@ void EditorWidget::setCommand(CommandOpt command) {
     break;
   }
   commandChoice->redraw();
-  commandText->textcolor(commandChoice->textcolor());
+  //TODO: fixme
+  //commandText->textcolor(commandChoice->textcolor());
   commandText->redraw();
   commandText->take_focus();
   commandText->when(commandOpt == cmd_find_inc ? FL_WHEN_CHANGED : FL_WHEN_ENTER_KEY_ALWAYS);
@@ -1460,7 +1479,8 @@ void EditorWidget::setModified(bool dirty) {
  */
 void EditorWidget::setWidgetColor(Fl_Widget *w, Fl_Color bg, Fl_Color fg) {
   w->color(bg);
-  w->textcolor(fg);
+  // TODO: fixme
+  //w->textcolor(fg);
   w->redraw();
 }
 

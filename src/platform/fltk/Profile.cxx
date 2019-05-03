@@ -1,14 +1,17 @@
 // This file is part of SmallBASIC
 //
-// Copyright(C) 2001-2013 Chris Warren-Smith.
+// Copyright(C) 2001-2019 Chris Warren-Smith.
 //
 // This program is distributed under the terms of the GPL v2.0 or later
 // Download the GNU Public License (GPL) from www.gnu.org
 //
 
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
+
 #include <unistd.h>
 #include <ctype.h>
-#include <FL/Fl_Monitor.h>
 
 #include "platform/fltk/Profile.h"
 #include "platform/fltk/MainWindow.h"
@@ -25,14 +28,14 @@ const char *lineNumbersKey = "lineNumbers";
 const char *appPositionKey = "appPosition";
 
 // in BasicEditor.cxx
-extern TextDisplay::StyleTableEntry styletable[];
+extern Fl_Text_Display::Style_Table_Entry styletable[];
 
 //
 // Profile constructor
 //
 Profile::Profile() : 
-  _color(WHITE),
-  _font(COURIER),
+  _color(FL_WHITE),
+  _font(FL_COURIER),
   _appPosition(0, 0, 640, 480),
   _fontSize(12),
   _indentLevel(2),
@@ -57,7 +60,7 @@ void Profile::loadConfig(EditorWidget *editWidget) {
 //
 void Profile::restore(MainWindow *wnd) {
   strlib::String buffer;
-  Properties profile;
+  Properties<String *> profile;
   long len;
 
   FILE *fp = wnd->openConfig(configFile, "r");
@@ -142,7 +145,7 @@ int Profile::nextInteger(const char *s, int len, int &index) {
 //
 // restore a rectangle value with the given key
 //
-Fl_Rect Profile::restoreRect(Properties *profile, const char *key) {
+Fl_Rect Profile::restoreRect(Properties<String *> *profile, const char *key) {
   Fl_Rect result(0, 0, 0, 0);
   String *value = profile->get(key);
   if (value != NULL) {
@@ -161,7 +164,7 @@ Fl_Rect Profile::restoreRect(Properties *profile, const char *key) {
 //
 // load any stored font or color settings
 //
-void Profile::restoreStyles(Properties *profile) {
+void Profile::restoreStyles(Properties<String *> *profile) {
   // restore size and face
   restoreValue(profile, fontSizeKey, &_fontSize);
   String *fontName = profile->get(fontNameKey);
@@ -189,7 +192,7 @@ void Profile::restoreStyles(Properties *profile) {
 //
 // restore the editor tabs
 //
-void Profile::restoreTabs(MainWindow *wnd, Properties *profile) {
+void Profile::restoreTabs(MainWindow *wnd, Properties<String *> *profile) {
   bool usedEditor = false;
   strlib::List<String *> paths;
   profile->get(pathKey, &paths);
@@ -211,7 +214,7 @@ void Profile::restoreTabs(MainWindow *wnd, Properties *profile) {
     EditorWidget *editWidget = 0;
     if (usedEditor) {
       // constructor will call loadConfig
-      Group *group = wnd->createEditor(path);
+      Fl_Group *group = wnd->createEditor(path);
       editWidget = wnd->getEditor(group);
     } else {
       // load into the initial buffer
@@ -243,7 +246,7 @@ void Profile::restoreTabs(MainWindow *wnd, Properties *profile) {
 //
 // restore the int value
 //
-void Profile::restoreValue(Properties *p, const char *key, int *value) {
+void Profile::restoreValue(Properties<String *> *p, const char *key, int *value) {
   String *s = p->get(key);
   if (s) {
     *value = s->toInteger();
@@ -260,10 +263,11 @@ void Profile::restoreWindowPos(MainWindow *wnd, Fl_Rect &rc) {
   int h = rc.h();
 
   if (x > 0 && y > 0 && w > 100 && h > 100) {
-    const Monitor & monitor = Monitor::all();
-    if (x < monitor.w() && y < monitor.h()) {
-      wnd->resize(x, y, w, h);
-    }
+    //TODO: fixme
+    //const Monitor & monitor = Monitor::all();
+    //if (x < monitor.w() && y < monitor.h()) {
+    //wnd->resize(x, y, w, h);
+    //}
   }
 }
 
@@ -284,7 +288,8 @@ void Profile::saveStyles(FILE *fp) {
   saveValue(fp, fontNameKey, styletable[0].font->name());
 
   for (int i = 0; i <= st_background; i++) {
-    split_color(i == st_background ? _color : styletable[i].color, r, g, b);
+    // TODO: fixme
+    //fl_split_color(i == st_background ? _color : styletable[i].color, r, g, b);
     fprintf(fp, "%02d=#%02x%02x%02x\n", i, r, g, b);
   }
 }
@@ -295,8 +300,8 @@ void Profile::saveStyles(FILE *fp) {
 void Profile::saveTabs(FILE *fp, MainWindow *wnd) {
   int n = wnd->_tabGroup->children();
   for (int c = 0; c < n; c++) {
-    Group *group = (Group *) wnd->_tabGroup->child(c);
-    if (gw_editor == ((GroupWidget) (intptr_t) group->user_data())) {
+    Fl_Group *group = (Fl_Group *) wnd->_tabGroup->child(c);
+    if (gw_editor == ((GroupWidgetEnum) (intptr_t) group->user_data())) {
       EditorWidget *editWidget = (EditorWidget *) group->child(0);
 
       bool logPrint = editWidget->isLogPrint();

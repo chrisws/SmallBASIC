@@ -1,6 +1,6 @@
 // This file is part of SmallBASIC
 //
-// Copyright(C) 2001-2014 Chris Warren-Smith.
+// Copyright(C) 2001-2019 Chris Warren-Smith.
 //
 // This program is distributed under the terms of the GPL v2.0 or later
 // Download the GNU Public License (GPL) from www.gnu.org
@@ -13,9 +13,8 @@
 #include <dirent.h>
 #include <unistd.h>
 #include <sys/stat.h>
-#include <FL/Fl_ask.h>
-#include <FL/Fl_events.h>
-#include <FL/Fl_run.h>
+
+#include <FL/fl_ask.H>
 
 #include "platform/fltk/MainWindow.h"
 #include "platform/fltk/HelpWidget.h"
@@ -85,15 +84,15 @@ void updateSortBy(SORT_BY newSort) {
 }
 
 static void anchorClick_event(void *) {
-  Fl_remove_check(anchorClick_event);
+  Fl::remove_check(anchorClick_event);
   fileWidget->anchorClick();
 }
 
-static void anchorClick_cb(Widget *w, void *v) {
+static void anchorClick_cb(Fl_Widget *w, void *v) {
   if (fileWidget) {
     click.empty();
     click.append((char *)v);
-    Fl_add_check(anchorClick_event); // post message
+    Fl::add_check(anchorClick_event); // post message
   }
 }
 
@@ -245,7 +244,7 @@ void FileWidget::anchorClick() {
   }
 
   if (_saveEditorAs) {
-    Input *input = (Input *) getInput("saveas");
+    Fl_Input *input = (Fl_Input *) getInput("saveas");
     input->value(target);
   } else {
     setDocHome(docHome);
@@ -318,7 +317,7 @@ void FileWidget::setDir(const char *target) {
     strcpy(_path, target);
     displayPath();
   } else {
-    message("Invalid path '%s'", target);
+    fl_message("Invalid path '%s'", target);
   }
 }
 
@@ -434,13 +433,13 @@ void FileWidget::displayPath() {
 // open the path
 //
 void FileWidget::enterPath() {
-  const char *newPath = Fl_input("Enter path:", _path);
+  const char *newPath = fl_input("Enter path:", _path);
   if (newPath != 0) {
     if (chdir(newPath) == 0) {
       strcpy(_path, newPath);
       displayPath();
     } else {
-      message("Invalid path '%s'", newPath);
+      fl_message("Invalid path '%s'", newPath);
     }
   }
 }
@@ -453,32 +452,32 @@ int FileWidget::handle(int e) {
   static int dnd_active = 0;
 
   switch (e) {
-  case SHOW:
+  case FL_SHOW:
     if (_saveEditorAs) {
       _saveEditorAs = 0;
       displayPath();
     }
     break;
 
-  case DND_LEAVE:
+  case FL_DND_LEAVE:
     dnd_active = 0;
     return 1;
 
-  case DND_DRAG:
-  case DND_RELEASE:
-  case DND_ENTER:
+  case FL_DND_DRAG:
+  case FL_DND_RELEASE:
+  case FL_DND_ENTER:
     dnd_active = 1;
     return 1;
 
-  case MOVE:
+  case FL_MOVE:
     if (dnd_active) {
       return 1;                 // return 1 to become drop-target
     }
     break;
 
-  case PASTE:
-    strncpy(buffer, Fl_event_text(), Fl_event_length());
-    buffer[Fl_event_length()] = 0;
+  case FL_PASTE:
+    strncpy(buffer, Fl::event_text(), Fl::event_length());
+    buffer[Fl::event_length()] = 0;
     forwardSlash(buffer);
     wnd->editFile(buffer);
     dnd_active = 0;
@@ -515,9 +514,10 @@ void FileWidget::saveAs() {
         strcat(savepath, enteredPath);
       }
       const char *msg = "%s\n\nFile already exists.\nDo you want to replace it?";
-      if (access(savepath, 0) != 0 || ask(msg, savepath)) {
-        _saveEditorAs->doSaveFile(savepath);
-      }
+      //TODO: fixme
+      //if (access(savepath, 0) != 0 || fl_choice(msg, savepath)) {
+      //_saveEditorAs->doSaveFile(savepath);
+      //}
     }
   }
 }
