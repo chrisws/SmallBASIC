@@ -9,8 +9,6 @@
 #ifndef FLTK_UTILS_H
 #define FLTK_UTILS_H
 
-int x_get_pixel(int x, int y);
-
 #define DAMAGE_HIGHLIGHT FL_DAMAGE_USER1
 #define DAMAGE_PUSHED    FL_DAMAGE_USER2
 

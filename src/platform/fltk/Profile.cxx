@@ -79,12 +79,12 @@ void Profile::restore(MainWindow *wnd) {
 
     Fl_Rect rc;
     rc = restoreRect(&profile, appPositionKey);
-    if (!rc.empty()) {
+    if (rc.w() && rc.h()) {
       _appPosition = rc;
     }
 
     rc = restoreRect(&profile, windowPosKey);
-    if (!rc.empty()) {
+    if (rc.w() && rc.h()) {
       restoreWindowPos(wnd, rc);
     }
 
@@ -97,13 +97,16 @@ void Profile::restore(MainWindow *wnd) {
 // restore the standalone window position
 //
 void Profile::restoreAppPosition(Fl_Window *wnd) {
-  if (!_appPosition.empty()) {
+  if (_appPosition.w() && _appPosition.h()) {
+    /*
+      TODO: fixme
     wnd->w(_appPosition.w());
     wnd->h(_appPosition.h());
     if (_appPosition.x() != 0) {
       wnd->x(_appPosition.x());
       wnd->y(_appPosition.y());
     }
+    */
   }
 }
 
@@ -121,7 +124,8 @@ void Profile::save(MainWindow *wnd) {
       saveStyles(fp);
       saveTabs(fp, wnd);
       saveRect(fp, appPositionKey, &_appPosition);
-      saveRect(fp, windowPosKey, wnd);
+      // TODO: fixme
+      //saveRect(fp, windowPosKey, wnd);
       fclose(fp);
     }
   }
@@ -169,15 +173,18 @@ void Profile::restoreStyles(Properties<String *> *profile) {
   restoreValue(profile, fontSizeKey, &_fontSize);
   String *fontName = profile->get(fontNameKey);
   if (fontName) {
-    _font = Fl_font(fontName->c_str());
+    // TODO: fixme
+    //_font = fl_rgb_font(fontName->c_str());
   }
 
   for (int i = 0; i <= st_background; i++) {
     char buffer[4];
     sprintf(buffer, "%02d", i);
+    /*
+      // TODO: fixme
     String *color = profile->get(buffer);
     if (color) {
-      Color c = Fl_color(color->c_str());
+      Fl_Color c = fl_rgb_color(color->c_str());
       if (c != NO_COLOR) {
         if (i == st_background) {
           this->_color = c;
@@ -186,6 +193,7 @@ void Profile::restoreStyles(Properties<String *> *profile) {
         }
       }
     }
+    */
   }
 }
 
@@ -195,7 +203,8 @@ void Profile::restoreStyles(Properties<String *> *profile) {
 void Profile::restoreTabs(MainWindow *wnd, Properties<String *> *profile) {
   bool usedEditor = false;
   strlib::List<String *> paths;
-  profile->get(pathKey, &paths);
+  // TODO: fixme
+  //profile->get(pathKey, &paths);
 
   List_each(String*, it, paths) {
     String *nextString = (*it);
@@ -285,7 +294,8 @@ void Profile::saveStyles(FILE *fp) {
   uchar r, g, b;
 
   saveValue(fp, fontSizeKey, (int)styletable[0].size);
-  saveValue(fp, fontNameKey, styletable[0].font->name());
+  // TODO: fixme
+  //saveValue(fp, fontNameKey, styletable[0].font->name());
 
   for (int i = 0; i <= st_background; i++) {
     // TODO: fixme
@@ -309,7 +319,7 @@ void Profile::saveTabs(FILE *fp, MainWindow *wnd) {
       bool hideIde = editWidget->isHideIDE();
       bool gotoLine = editWidget->isBreakToLine();
       int insertPos = editWidget->editor->insert_position();
-      int topLineNo = editWidget->editor->top_line();
+      int topLineNo = 0; // TODO: fixme editWidget->editor->top_line();
 
       fprintf(fp, "%s='%d;%d;%d;%d;%d;%d;%s'\n", pathKey,
               logPrint, scrollLock, hideIde, gotoLine, insertPos, topLineNo, editWidget->getFilename());
