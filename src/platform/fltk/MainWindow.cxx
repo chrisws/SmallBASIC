@@ -23,7 +23,7 @@ char *runfile = 0;
 int recentIndex = 0;
 int restart = 0;
 bool opt_interactive;
-Fl_Widget *recentMenu[NUM_RECENT_ITEMS];
+int recentMenu[NUM_RECENT_ITEMS];
 strlib::String recentPath[NUM_RECENT_ITEMS];
 int recentPosition[NUM_RECENT_ITEMS];
 MainWindow *wnd;
@@ -50,9 +50,8 @@ const char *aboutText =
   "GNU General Public License version 2 as published by "
   "the Free Software Foundation.<br><br>" "<i>Press F1 for help";
 
-// runtime.cpp
-void getHomeDir(char *filename, bool appendSlash = true);
-bool cacheLink(dev_file_t *df, char *localFile);
+// in system.cxx
+bool cacheLink(dev_file_t *df, char *localFile, size_t size);
 
 #define CHOICE_EXIT  2
 #define CHOICE_BREAK 1
@@ -279,7 +278,7 @@ void MainWindow::quit(Fl_Widget *w, void *eventData) {
         const char *filename = editWidget->getFilename();
         int offs = strlen(filename) - strlen(untitledFile);
         if (filename[0] == 0 || (offs > 0 && strcasecmp(filename + offs, untitledFile) == 0)) {
-          getHomeDir(path);
+          getHomeDir(path, sizeof(path));
           strcat(path, untitledFile);
           editWidget->doSaveFile(path);
         } else if (!editWidget->checkSave(true)) {
@@ -314,7 +313,7 @@ void MainWindow::help_home(Fl_Widget *w, void *eventData) {
 void MainWindow::showHelpPage() {
   HelpWidget *help = getHelp();
   char path[PATH_MAX];
-  getHomeDir(path);
+  getHomeDir(path, sizeof(path));
   help->setDocHome(path);
   strcat(path, "help.html");
   help->loadFile(path);
@@ -419,13 +418,12 @@ void MainWindow::export_file(Fl_Widget *w, void *eventData) {
         }
         _exportFile = buffer;
         if (dev_fopen(handle, _exportFile, DEV_FILE_OUTPUT)) {
-          Fl_Text_Buffer *textbuf = editWidget->editor->buffer();
-          const char *data = textbuf->text();
+          const char *data = editWidget->data();
           if (token[0]) {
             vsncat(buffer, sizeof(buffer), "# ", token, "\n", NULL);
             dev_fwrite(handle, (byte *)buffer, strlen(buffer));
           }
-          if (!dev_fwrite(handle, (byte *)data, textbuf->length())) {
+          if (!dev_fwrite(handle, (byte *)data, editWidget->dataLength())) {
             vsncat(buffer, sizeof(buffer), "Failed to write: ", _exportFile.c_str(), NULL);
             statusMsg(rs_err, buffer);
           } else {
@@ -511,7 +509,7 @@ void MainWindow::font_size_decr(Fl_Widget *w, void *eventData) {
 
 void MainWindow::font_cache_clear(Fl_Widget *w, void *eventData) {
   char path[PATH_MAX];
-  getHomeDir(path);
+  getHomeDir(path, sizeof(path));
   strcat(path, fontCache);
   unlink(path);
   statusMsg(rs_err, "Restart SmallBASIC to load new fonts");
@@ -527,7 +525,7 @@ void MainWindow::run(Fl_Widget *w, void *eventData) {
       char path[PATH_MAX];
       if (noSave == 0 || noSave[0] != '1') {
         if (filename == 0 || filename[0] == 0) {
-          getHomeDir(path);
+          getHomeDir(path, sizeof(path));
           strcat(path, untitledFile);
           filename = path;
           editWidget->doSaveFile(filename);
@@ -558,7 +556,7 @@ void MainWindow::run_selection(Fl_Widget *w, void *eventData) {
   EditorWidget *editWidget = getEditor();
   if (editWidget) {
     char path[PATH_MAX];
-    getHomeDir(path);
+    getHomeDir(path, sizeof(path));
     strcat(path, "selection.bas");
     editWidget->saveSelection(path);
     basicMain(editWidget, path, false);
@@ -677,7 +675,7 @@ void MainWindow::scanRecentFiles(Fl_Menu_Bar *menu) {
   char label[1024];
   int i = 0;
 
-  getHomeDir(path);
+  getHomeDir(path, sizeof(path));
   strcat(path, historyFile);
   fp = fopen(path, "r");
   if (fp) {
@@ -693,10 +691,8 @@ void MainWindow::scanRecentFiles(Fl_Menu_Bar *menu) {
           fileLabel++;
         }
         snprintf(label, sizeof(label), "&File/Open Recent File/%s", fileLabel);
-        //TODO: fixme
-        //recentMenu[i] = menu->add(label, CTRL + '1' + i, (Fl_Callback *)
-        //load_file_cb, (void *)(intptr_t)(i + 1), RAW_LABEL);
-        //recentPath[i].append(buffer);
+        recentMenu[i] = menu->add(label, FL_CTRL + '1' + i, (Fl_Callback *)load_file_cb, (void *)(intptr_t)(i + 1));
+        recentPath[i].append(buffer);
         if (++i == NUM_RECENT_ITEMS) {
           break;
         }
@@ -706,10 +702,8 @@ void MainWindow::scanRecentFiles(Fl_Menu_Bar *menu) {
   }
   while (i < NUM_RECENT_ITEMS) {
     snprintf(label, sizeof(label), "&File/Open Recent File/%s", untitledFile);
-    //TODO: fixme
-    //recentMenu[i] = menu->add(label, CTRL + '1' + i, (Fl_Callback *)
-    //load_file_cb, (void *)(intptr_t)(i + 1));
-    //recentPath[i].append(untitledFile);
+    recentMenu[i] = menu->add(label, FL_CTRL + '1' + i, (Fl_Callback *)load_file_cb, (void *)(intptr_t)(i + 1));
+    recentPath[i].append(untitledFile);
     i++;
   }
 }
@@ -911,7 +905,7 @@ bool initialise(int argc, char **argv) {
 
   // bas_home contains user editable files along with generated help
   char path[PATH_MAX];
-  getHomeDir(path, false);
+  getHomeDir(path, sizeof(path), false);
   dev_setenv("BAS_HOME", path);
 
   wnd = new MainWindow(800, 650);
@@ -991,7 +985,7 @@ MainWindow::MainWindow(int w, int h) :
 
   FileWidget::forwardSlash(runfile);
   begin();
-  Fl_Menu_Bar *m = new Fl_Menu_Bar(0, 0, w, MNU_HEIGHT);
+  Fl_Menu_Bar *m = _menuBar = new Fl_Menu_Bar(0, 0, w, MNU_HEIGHT);
   m->add("&File/&New File", FL_CTRL + 'n', new_file_cb);
   m->add("&File/&Open File", FL_CTRL + 'o', open_file_cb);
   m->add("&File/_Open Recent File/", 0, (Fl_Callback *)NULL);
@@ -1090,8 +1084,7 @@ Fl_Group *MainWindow::createEditor(const char *title) {
   editGroup->copy_label(slash ? slash + 1 : title);
   editGroup->begin();
   editGroup->box(FL_THIN_DOWN_BOX);
-  editGroup->resizable(new EditorWidget(2, 2, w - 4, h - 2));
-
+  editGroup->resizable(new EditorWidget(2, 2, w - 4, h - 2, _menuBar));
   editGroup->user_data((void *)gw_editor);
   editGroup->end();
 
@@ -1114,15 +1107,14 @@ void MainWindow::new_file(Fl_Widget *w, void *eventData) {
     editWidget = getEditor(createEditor(untitledFile));
 
     // preserve the contents of any existing untitled.bas
-    getHomeDir(path);
+    getHomeDir(path, sizeof(path));
     strcat(path, untitledFile);
     if (access(path, 0) == 0) {
       editWidget->loadFile(path);
     }
   }
 
-  Fl_Text_Buffer *textbuf = editWidget->editor->buffer();
-  textbuf->select(0, textbuf->length());
+  editWidget->selectAll();
 }
 
 void MainWindow::open_file(Fl_Widget *w, void *eventData) {
@@ -1158,7 +1150,7 @@ void MainWindow::open_file(Fl_Widget *w, void *eventData) {
       strcpy(path, packageHome);
       break;
     case gw_help:
-      getHomeDir(path);
+      getHomeDir(path, sizeof(path));
       break;
     default:
       path[0] = 0;
@@ -1371,7 +1363,7 @@ Fl_Group *MainWindow::getPrevTab(Fl_Group *current) {
  */
 FILE *MainWindow::openConfig(const char *fileName, const char *flags) {
   char path[PATH_MAX];
-  getHomeDir(path);
+  getHomeDir(path, sizeof(path));
   strcat(path, fileName);
   return fopen(path, flags);
 }
@@ -1479,7 +1471,7 @@ void MainWindow::execLink(strlib::String &link) {
       return;
     }
 
-    bool httpOK = cacheLink(&df, localFile);
+    bool httpOK = cacheLink(&df, localFile, sizeof(localFile));
     char *extn = strrchr(file, '.');
     if (!editWidget) {
       editWidget = getEditor(createEditor(file));

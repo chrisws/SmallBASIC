@@ -46,14 +46,13 @@ struct BasicEditor : public Fl_Text_Editor {
   int hor_offset() { return mHorizOffset; }
   int maxSize() { return mMaxsize; }
 
-  bool readonly;
-  int indentLevel;
-  int matchingBrace;
-
-  Fl_Text_Buffer *stylebuf;
-  Fl_Text_Buffer *textbuf;
-  char search[256];
-  StatusBar *status;
+  bool _readonly;
+  int _indentLevel;
+  int _matchingBrace;
+  Fl_Text_Buffer *_stylebuf;
+  Fl_Text_Buffer *_textbuf;
+  char _search[PATH_MAX];
+  StatusBar *_status;
 };
 
 #endif

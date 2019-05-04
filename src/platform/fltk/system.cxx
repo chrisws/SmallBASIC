@@ -486,27 +486,25 @@ char *dev_gets(char *dest, int size) {
 //
 // utils
 //
-void getHomeDir(char *fileName, bool appendSlash) {
-  const char *vars[] = {
-    "APPDATA", "HOME", "TMP", "TEMP", "TMPDIR"
+void getHomeDir(char *fileName, size_t size, bool appendSlash) {
+  static const char *envVars[] = {
+    "APPDATA", "HOME", "TMP", "TEMP", "TMPDIR", ""
   };
 
-  int vars_len = sizeof(vars) / sizeof(vars[0]);
+  fileName[0] = '\0';
 
-  fileName[0] = 0;
-
-  for (int i = 0; i < vars_len; i++) {
-    const char *home = getenv(vars[i]);
+  for (int i = 0; envVars[i][0] != '\0' && fileName[0] == '\0'; i++) {
+    const char *home = getenv(envVars[i]);
     if (home && access(home, R_OK) == 0) {
-      strcpy(fileName, home);
+      strlcpy(fileName, home, size);
       if (i == 1) {
         // unix path
-        strcat(fileName, "/.config");
+        strlcat(fileName, "/.config", size);
         makedir(fileName);
       }
-      strcat(fileName, "/SmallBASIC");
+      strlcat(fileName, "/SmallBASIC", size);
       if (appendSlash) {
-        strcat(fileName, "/");
+        strlcat(fileName, "/", size);
       }
       makedir(fileName);
       break;
@@ -515,7 +513,7 @@ void getHomeDir(char *fileName, bool appendSlash) {
 }
 
 // copy the url into the local cache
-bool cacheLink(dev_file_t *df, char *localFile) {
+bool cacheLink(dev_file_t *df, char *localFile, size_t size) {
   char rxbuff[1024];
   FILE *fp;
   const char *url = df->name;
@@ -525,7 +523,7 @@ bool cacheLink(dev_file_t *df, char *localFile) {
   bool inHeader = true;
   bool httpOK = false;
 
-  getHomeDir(localFile, true);
+  getHomeDir(localFile, size, true);
   strcat(localFile, "/cache/");
   makedir(localFile);
 

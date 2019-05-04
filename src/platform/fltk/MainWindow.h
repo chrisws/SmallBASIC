@@ -28,6 +28,9 @@
 #define NUM_RECENT_ITEMS 9
 #define MAX_DESCENT 8           // filter to avoid non-text fonts
 
+// in system.cxx
+void getHomeDir(char *filename, size_t size, bool appendSlash = true);
+
 enum ExecState {
   init_state,
   edit_state,
@@ -172,6 +175,9 @@ struct MainWindow : public BaseWindow {
 
   // configuration
   Profile *_profile;
+
+  // the system menu
+  Fl_Menu_Bar *_menuBar;
 };
 
 #endif

@@ -22,12 +22,9 @@
 
 // in MainWindow.cxx
 extern String recentPath[];
-extern Fl_Widget *recentMenu[];
+extern int recentMenu[];
 extern const char *historyFile;
 extern const char *untitledFile;
-
-// in dev_fltk.cpp
-void getHomeDir(char *filename, bool appendSlash = true);
 
 // in BasicEditor.cxx
 extern Fl_Text_Display::Style_Table_Entry styletable[];
@@ -48,7 +45,7 @@ EditorWidget *get_editor() {
 
 //--EditorWidget----------------------------------------------------------------
 
-EditorWidget::EditorWidget(int x, int y, int w, int h) :
+EditorWidget::EditorWidget(int x, int y, int w, int h, Fl_Menu_Bar *menuBar) :
   Fl_Group(x, y, w, h),
   editor(NULL),
   tty(NULL),
@@ -66,7 +63,8 @@ EditorWidget::EditorWidget(int x, int y, int w, int h) :
   hideIdeBn(NULL),
   gotoLineBn(NULL),
   commandOpt(cmd_find),
-  commandChoice(NULL) {
+  commandChoice(NULL),
+  _menuBar(menuBar) {
 
   filename[0] = 0;
   box(FL_NO_BOX);
@@ -84,7 +82,7 @@ EditorWidget::EditorWidget(int x, int y, int w, int h) :
   editor->linenumber_width(40);
   editor->wrap_mode(true, 0);
   editor->selection_color(fl_rgb_color(190, 189, 188));
-  editor->textbuf->add_modify_callback(changed_cb, this);
+  editor->_textbuf->add_modify_callback(changed_cb, this);
   editor->box(FL_NO_BOX);
   editor->take_focus();
 
@@ -202,7 +200,7 @@ EditorWidget::~EditorWidget() {
  * change the selected text to upper/lower/camel case
  */
 void EditorWidget::change_case(Fl_Widget *w, void *eventData) {
-  Fl_Text_Buffer *tb = editor->buffer();
+  Fl_Text_Buffer *tb = editor->_textbuf;
   int start, end;
   char *selection = getSelection(&start, &end);
   int len = strlen(selection);
@@ -257,7 +255,7 @@ void EditorWidget::cut_text(Fl_Widget *w, void *eventData) {
  * delete selected text
  */
 void EditorWidget::do_delete(Fl_Widget *w, void *eventData) {
-  editor->textbuf->remove_selection();
+  editor->_textbuf->remove_selection();
 }
 
 /**
@@ -268,7 +266,7 @@ void EditorWidget::expand_word(Fl_Widget *w, void *eventData) {
   const char *fullWord = 0;
   unsigned fullWordLen = 0;
 
-  Fl_Text_Buffer *textbuf = editor->buffer();
+  Fl_Text_Buffer *textbuf = editor->_textbuf;
   const char *text = textbuf->text();
 
   if (textbuf->selected()) {
@@ -537,7 +535,7 @@ void EditorWidget::replace_next(Fl_Widget *w, void *eventData) {
   const char *find = commandBuffer;
   const char *replace = commandText->value();
 
-  Fl_Text_Buffer *textbuf = editor->textbuf;
+  Fl_Text_Buffer *textbuf = editor->_textbuf;
   int pos = editor->insert_position();
   int found = textbuf->search_forward(pos, find, &pos);
 
@@ -610,10 +608,10 @@ void EditorWidget::set_color(Fl_Widget *w, void *eventData) {
  * replace text menu command handler
  */
 void EditorWidget::show_replace(Fl_Widget *w, void *eventData) {
-  const char *prime = editor->search;
+  const char *prime = editor->_search;
   if (!prime || !prime[0]) {
     // use selected text when search not available
-    prime = editor->textbuf->selection_text();
+    prime = editor->_textbuf->selection_text();
   }
   commandText->value(prime);
   setCommand(cmd_replace);
@@ -677,7 +675,7 @@ void EditorWidget::doSaveFile(const char *newfile) {
   }
 
   char basfile[PATH_MAX];
-  Fl_Text_Buffer *textbuf = editor->textbuf;
+  Fl_Text_Buffer *textbuf = editor->_textbuf;
 
   if (wnd->_profile->_createBackups && access(newfile, 0) == 0) {
     // rename any existing file as a backup
@@ -705,8 +703,8 @@ void EditorWidget::doSaveFile(const char *newfile) {
 
   // store a copy in lastedit.bas
   if (wnd->_profile->_createBackups) {
-    getHomeDir(basfile);
-    strcat(basfile, "lastedit.bas");
+    getHomeDir(basfile, sizeof(basfile));
+    strlcat(basfile, "lastedit.bas", sizeof(basfile));
     textbuf->savefile(basfile);
   }
 
@@ -733,7 +731,8 @@ void EditorWidget::fileChanged(bool loadfile) {
       bool found = false;
 
       for (int i = 0; i < NUM_RECENT_ITEMS; i++) {
-        if (strcmp(filename, recentPath[i].c_str()) == 0) {
+        if (recentPath[i].c_str() !=  NULL &&
+            strcmp(filename, recentPath[i].c_str()) == 0) {
           found = true;
           break;
         }
@@ -742,7 +741,7 @@ void EditorWidget::fileChanged(bool loadfile) {
       if (found == false) {
         // shift items downwards
         for (int i = NUM_RECENT_ITEMS - 1; i > 0; i--) {
-          recentMenu[i]->copy_label(recentMenu[i - 1]->label());
+          //_menuBar->replace(recentMenu[i], _menuBar->text(recentMenu[i]));
           recentPath[i].empty();
           recentPath[i].append(recentPath[i - 1]);
         }
@@ -750,7 +749,7 @@ void EditorWidget::fileChanged(bool loadfile) {
         const char *label = FileWidget::splitPath(filename, NULL);
         recentPath[0].empty();
         recentPath[0].append(filename);
-        recentMenu[0]->copy_label(label);
+        _menuBar->replace(recentMenu[0], label);
       }
     }
   }
@@ -840,7 +839,7 @@ void EditorWidget::getRowCol(int *row, int *col) {
 char *EditorWidget::getSelection(int *start, int *end) {
   char *result = 0;
 
-  Fl_Text_Buffer *tb = editor->buffer();
+  Fl_Text_Buffer *tb = editor->_textbuf;
   if (tb->selected()) {
     result = tb->selection_text();
     tb->selection_position(start, end);
@@ -922,19 +921,19 @@ void EditorWidget::loadFile(const char *newfile) {
   FileWidget::forwardSlash(filename);
 
   loading = true;
-  if (editor->textbuf->loadfile(filename)) {
+  if (editor->_textbuf->loadfile(filename)) {
     // read failed
     fl_alert("Error reading from file \'%s\':\n%s.", filename, strerror(errno));
 
     // restore previous file
     strcpy(filename, oldpath);
-    editor->textbuf->loadfile(filename);
+    editor->_textbuf->loadfile(filename);
   }
 
   dirty = false;
   loading = false;
 
-  editor->textbuf->call_modify_callbacks();
+  editor->_textbuf->call_modify_callbacks();
   editor->show_insert_position();
   modifiedTime = getModifiedTime();
   readonly(false);
@@ -951,7 +950,7 @@ void EditorWidget::loadFile(const char *newfile) {
  * returns the buffer readonly flag
  */
 bool EditorWidget::readonly() {
-  return ((BasicEditor *)editor)->readonly;
+  return ((BasicEditor *)editor)->_readonly;
 }
 
 /**
@@ -965,7 +964,7 @@ void EditorWidget::readonly(bool is_readonly) {
   modStatus->label(is_readonly ? "RO" : "@line");
   modStatus->redraw();
   editor->cursor_style(is_readonly ? Fl_Text_Display::DIM_CURSOR : Fl_Text_Display::NORMAL_CURSOR);
-  ((BasicEditor *)editor)->readonly = is_readonly;
+  ((BasicEditor *)editor)->_readonly = is_readonly;
 }
 
 /**
@@ -1062,7 +1061,7 @@ void EditorWidget::setFontSize(int size) {
  * sets the indent level to the given amount
  */
 void EditorWidget::setIndentLevel(int level) {
-  ((BasicEditor *)editor)->indentLevel = level;
+  ((BasicEditor *)editor)->_indentLevel = level;
 
   // update environment var for running programs
   char path[PATH_MAX];
@@ -1148,8 +1147,8 @@ void EditorWidget::addHistory(const char *filename) {
   filename = updatedfile;
 
   // save into the history file
-  getHomeDir(path);
-  strcat(path, historyFile);
+  getHomeDir(path, sizeof(path));
+  strlcat(path, historyFile, sizeof(path));
 
   fp = fopen(path, "r");
   if (fp) {
@@ -1175,7 +1174,7 @@ void EditorWidget::addHistory(const char *filename) {
  * creates the sub/func selection list
  */
 void EditorWidget::createFuncList() {
-  Fl_Text_Buffer *textbuf = editor->textbuf;
+  Fl_Text_Buffer *textbuf = editor->_textbuf;
   const char *text = textbuf->text();
   int len = textbuf->length();
   int curLine = 1;
@@ -1251,9 +1250,9 @@ void EditorWidget::doChange(int inserted, int deleted) {
  * handler for the sub/func list selection event
  */
 void EditorWidget::findFunc(const char *find) {
-  const char *text = editor->textbuf->text();
+  const char *text = editor->_textbuf->text();
   int findLen = strlen(find);
-  int len = editor->textbuf->length();
+  int len = editor->_textbuf->length();
   int lineNo = 1;
   for (int i = 0; i < len; i++) {
     if (strncasecmp(text + i, find, findLen) == 0) {
@@ -1327,7 +1326,7 @@ void EditorWidget::newFile() {
     return;
   }
 
-  Fl_Text_Buffer *textbuf = editor->textbuf;
+  Fl_Text_Buffer *textbuf = editor->_textbuf;
   filename[0] = '\0';
   textbuf->select(0, textbuf->length());
   textbuf->remove_selection();
@@ -1353,7 +1352,7 @@ int EditorWidget::replaceAll(const char *find, const char *replace, bool restore
   int times = 0;
 
   if (strcmp(find, replace) != 0) {
-    Fl_Text_Buffer *textbuf = editor->textbuf;
+    Fl_Text_Buffer *textbuf = editor->_textbuf;
     int prevPos = editor->insert_position();
 
     // loop through the whole string

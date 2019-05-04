@@ -4,7 +4,7 @@
 //
 // This program is distributed under the terms of the GPL v2.0 or later
 // Download the GNU Public License (GPL) from www.gnu.org
-// 
+//
 
 #ifndef EDITOR_WIDGET_H
 #define EDITOR_WIDGET_H
@@ -72,7 +72,7 @@ enum CommandOpt {
 
 class EditorWidget : public Fl_Group, StatusBar {
 public:
-  EditorWidget(int x, int y, int w, int h);
+  EditorWidget(int x, int y, int w, int h, Fl_Menu_Bar *menu);
   virtual ~EditorWidget();
 
   CALLBACK_METHOD(change_case);
@@ -137,6 +137,9 @@ public:
   bool isLoading() { return loading; }
   bool isLogPrint() { return logPrintBn->value(); }
   bool isScrollLock() { return lockBn->value(); }
+  void selectAll() { editor->_textbuf->select(0, editor->_textbuf->length()); }
+  const char *data() { return editor->_textbuf->text(); }
+  int dataLength() { return editor->_textbuf->length(); }
 
   BasicEditor *editor;
   TtyWidget *tty;
@@ -185,6 +188,8 @@ private:
   Fl_Button *commandChoice;
 
   strlib::String commandBuffer;
+
+  Fl_Menu_Bar *_menuBar;
 };
 
 #endif

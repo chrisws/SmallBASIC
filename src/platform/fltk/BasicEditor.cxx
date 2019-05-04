@@ -83,8 +83,8 @@ void style_update_cb(int pos,   // I - Position of update
                      const char * /* deletedText */ ,   // I - Text that was deleted
                      void *cbArg) {     // I - Callback data
   BasicEditor *editor = (BasicEditor *) cbArg;
-  Fl_Text_Buffer *stylebuf = editor->stylebuf;
-  Fl_Text_Buffer *textbuf = editor->textbuf;
+  Fl_Text_Buffer *stylebuf = editor->_stylebuf;
+  Fl_Text_Buffer *textbuf = editor->_textbuf;
 
   // if this is just a selection change, just unselect the style buffer
   if (nInserted == 0 && nDeleted == 0) {
@@ -150,24 +150,25 @@ void style_update_cb(int pos,   // I - Position of update
 
 BasicEditor::BasicEditor(int x, int y, int w, int h, StatusBar *status) :
   Fl_Text_Editor(x, y, w, h),
-  status(status) {
-  readonly = false;
-  const char *s = getenv("INDENT_LEVEL");
-  indentLevel = (s && s[0] ? atoi(s) : 2);
-  matchingBrace = -1;
+  _readonly(false),
+  _status(status) {
 
-  textbuf = buffer();           // reference only
-  stylebuf = new Fl_Text_Buffer();
-  search[0] = 0;
-  highlight_data(stylebuf, styletable,
+  const char *s = getenv("INDENT_LEVEL");
+  _indentLevel = (s && s[0] ? atoi(s) : 2);
+  _matchingBrace = -1;
+  _textbuf = new Fl_Text_Buffer();
+  _stylebuf = new Fl_Text_Buffer();
+  _search[0] = 0;
+  highlight_data(_stylebuf, styletable,
                  sizeof(styletable) / sizeof(styletable[0]),
                  PLAIN, style_unfinished_cb, 0);
-  textbuf->add_modify_callback(style_update_cb, this);
+  _textbuf->add_modify_callback(style_update_cb, this);
+  buffer(_textbuf);
 }
 
 BasicEditor::~BasicEditor() {
-  // cleanup
-  delete stylebuf;
+  delete _textbuf;
+  delete _stylebuf;
 }
 
 /**
@@ -179,7 +180,7 @@ void BasicEditor::styleParse(const char *text, char *style, int length) {
   char buf[255];
   char *bufptr;
   const char *temp;
-  int searchLen = strlen(search);
+  int searchLen = strlen(_search);
 
   for (; length > 0; length--, text++) {
     if (current == PLAIN) {
@@ -238,7 +239,7 @@ void BasicEditor::styleParse(const char *text, char *style, int length) {
         bufptr = buf;
 
         if (searchLen > 0) {
-          const char *sfind = strstr(bufptr, search);
+          const char *sfind = strstr(bufptr, _search);
           // find text match
           if (sfind != 0) {
             int offset = sfind - bufptr;
@@ -321,8 +322,8 @@ void BasicEditor::styleParse(const char *text, char *style, int length) {
  * handler for the style change event
  */
 void BasicEditor::styleChanged() {
-  textbuf->select(0, textbuf->length());
-  textbuf->select(0, 0);
+  _textbuf->select(0, _textbuf->length());
+  _textbuf->select(0, 0);
   damage(FL_DAMAGE_ALL);
 }
 
@@ -331,12 +332,12 @@ void BasicEditor::styleChanged() {
  */
 void BasicEditor::draw() {
   Fl_Text_Editor::draw();
-  if (matchingBrace != -1) {
+  if (_matchingBrace != -1) {
     // highlight the matching brace
     int X, Y;
     int cursor = cursor_style();
     cursor_style(BLOCK_CURSOR);
-    if (position_to_xy(matchingBrace, &X, &Y)) {
+    if (position_to_xy(_matchingBrace, &X, &Y)) {
       draw_cursor(X, Y);
     }
     cursor_style(cursor);
@@ -389,7 +390,7 @@ unsigned BasicEditor::getIndent(char *spaces, int len, int pos) {
       }
     }
     // indent new line
-    for (int j = 0; j < indentLevel; j++, i++) {
+    for (int j = 0; j < _indentLevel; j++, i++) {
       spaces[i] = ' ';
     }
   }
@@ -434,8 +435,8 @@ void BasicEditor::handleTab() {
       strncasecmp(buf + curIndent, "case", 4) == 0 ||
       strncasecmp(buf + curIndent, "end", 3) == 0 ||
       strncasecmp(buf + curIndent, "until ", 6) == 0) {
-    if (indent >= indentLevel) {
-      indent -= indentLevel;
+    if (indent >= _indentLevel) {
+      indent -= _indentLevel;
     }
   }
   if (curIndent < indent) {
@@ -546,15 +547,15 @@ void BasicEditor::showMatchingBrace() {
     }
   }
 
-  if (matchingBrace != -1) {
-    int lineStart = buffer()->line_start(matchingBrace);
-    int lineEnd = buffer()->line_end(matchingBrace);
+  if (_matchingBrace != -1) {
+    int lineStart = buffer()->line_start(_matchingBrace);
+    int lineEnd = buffer()->line_end(_matchingBrace);
     redisplay_range(lineStart, lineEnd);
-    matchingBrace = -1;
+    _matchingBrace = -1;
   }
   if (pair != -1) {
     redisplay_range(pair, pair);
-    matchingBrace = pair;
+    _matchingBrace = pair;
   }
 }
 
@@ -563,14 +564,14 @@ void BasicEditor::showMatchingBrace() {
  */
 void BasicEditor::showFindText(const char *find) {
   // copy lowercase search string for high-lighting
-  strcpy(search, find);
-  int findLen = strlen(search);
+  strcpy(_search, find);
+  int findLen = strlen(_search);
 
   for (int i = 0; i < findLen; i++) {
-    search[i] = tolower(search[i]);
+    _search[i] = tolower(_search[i]);
   }
 
-  style_update_cb(0, textbuf->length(), textbuf->length(), 0, 0, this);
+  style_update_cb(0, _textbuf->length(), _textbuf->length(), 0, 0, this);
 }
 
 /**
@@ -594,7 +595,7 @@ int BasicEditor::handle(int e) {
     navigateKey = true;
   }
 
-  if (readonly && ((e == FL_KEYBOARD && !navigateKey) || e == FL_PASTE)) {
+  if (_readonly && ((e == FL_KEYBOARD && !navigateKey) || e == FL_PASTE)) {
     // prevent buffer modification when in readonly state
     return 0;
   }
@@ -647,7 +648,7 @@ void BasicEditor::showRowCol() {
     position_to_linecol(insert_position(), &row, &col);
   }
 
-  status->setRowCol(row, col + 1);
+  _status->setRowCol(row, col + 1);
 }
 
 /**
@@ -663,7 +664,7 @@ void BasicEditor::gotoLine(int line) {
   int pos = buffer()->skip_lines(0, line - 1);  // find pos at line-1
   insert_position(buffer()->line_start(pos));   // insert at column 0
   show_insert_position();
-  status->setRowCol(line, 1);
+  _status->setRowCol(line, 1);
   scroll(line, hor_offset());
 }
 
@@ -700,16 +701,16 @@ void BasicEditor::getSelEndRowCol(int *row, int *col) {
  */
 char *BasicEditor::getSelection(Fl_Rect *rc) {
   char *result = 0;
-  if (!readonly) {
+  if (!_readonly) {
     int x1, y1, x2, y2, start, end;
 
-    if (textbuf->selected()) {
-      textbuf->selection_position(&start, &end);
+    if (_textbuf->selected()) {
+      _textbuf->selection_position(&start, &end);
     } else {
       int pos = insert_position();
-      if (isvar(textbuf->char_at(pos))) {
-        start = textbuf->word_start(pos);
-        end = textbuf->word_end(pos);
+      if (isvar(_textbuf->char_at(pos))) {
+        start = _textbuf->word_start(pos);
+        end = _textbuf->word_end(pos);
       } else {
         start = end = 0;
       }
@@ -723,7 +724,7 @@ char *BasicEditor::getSelection(Fl_Rect *rc) {
       rc->y(y1);
       rc->w(x2 - x1);
       rc->h(maxSize());
-      result = textbuf->text_range(start, end);
+      result = _textbuf->text_range(start, end);
     }
   }
   return result;
@@ -776,11 +777,11 @@ bool BasicEditor::findText(const char *find, bool forward, bool updatePos) {
   bool found = false;
   if (find != 0 && find[0] != 0) {
     int pos = insert_position();
-    found = forward ? textbuf->search_forward(pos, search, &pos) :
-            textbuf->search_backward(pos - strlen(find), search, &pos);
+    found = forward ? _textbuf->search_forward(pos, _search, &pos) :
+            _textbuf->search_backward(pos - strlen(find), _search, &pos);
     if (found && updatePos) {
-      textbuf->select(pos, pos + strlen(search));
-      insert_position(pos + strlen(search));
+      _textbuf->select(pos, pos + strlen(_search));
+      insert_position(pos + strlen(_search));
       show_insert_position();
     }
   }
