@@ -10,6 +10,7 @@
 #include <sys/socket.h>
 #include <FL/fl_ask.H>
 #include "platform/fltk/MainWindow.h"
+#include "platform/fltk/HelpWidget.h"
 #include "platform/fltk/display.h"
 #include "platform/fltk/system.h"
 #include "common/sbapp.h"
@@ -48,8 +49,15 @@ int System::ask(const char *title, const char *prompt, bool cancel) {
   return 0;
 }
 
+void System::browseFile(const char *url) {
+  ::browseFile(url);
+}
+
 void System::setClipboardText(const char *text) {
   //Fl_copy(text, strlen(text), true);
+}
+
+void System::setWindowSize(int width, int height) {
 }
 
 char *System::getClipboardText() {
@@ -62,6 +70,36 @@ bool System::isRunning() {
 
 bool System::isBreak() {
   return wnd->isBreakExec();
+}
+
+void System::optionsBox(StringList *items) {
+  /*
+  int y = 0;
+  int index = 0;
+  int selectedIndex = -1;
+  int screenId = widget->_ansiWidget->insetTextScreen(20,20,80,80);
+  List_each(String *, it, *items) {
+    char *str = (char *)(* it)->c_str();
+    int w = Fl_getwidth(str) + 20;
+    FormInput *item = new MenuButton(index, selectedIndex, str, 2, y, w, 22);
+    widget->_ansiWidget->addInput(item);
+    index++;
+    y += 24;
+  }
+
+  while (g_system->isRunning() && selectedIndex == -1) {
+    g_system->processEvents(true);
+  }
+
+  widget->_ansiWidget->removeInputs();
+  widget->_ansiWidget->selectScreen(screenId);
+  if (!g_system->isBreak()) {
+    if (!form_ui::optionSelected(selectedIndex)) {
+      dev_pushkey(selectedIndex);
+    }
+  }
+  widget->redraw();
+  */
 }
 
 MAEvent System::processEvents(bool wait) {
@@ -85,6 +123,27 @@ void System::systemPrint(const char *message, ...) {
 //
 // maapi implementation
 //
+int maGetEvent(MAEvent *event) {
+  int result = 0;
+  if (Fl::check()) {
+    switch (Fl::event()) {
+    case FL_PUSH:
+      event->type = EVENT_TYPE_POINTER_PRESSED;
+      result = 1;
+      break;
+    case FL_DRAG:
+      event->type = EVENT_TYPE_POINTER_DRAGGED;
+      result = 1;
+      break;
+    case FL_RELEASE:
+      event->type = EVENT_TYPE_POINTER_RELEASED;
+      result = 1;
+      break;
+    }
+  }
+  return result;
+}
+
 void maUpdateScreen(void) {
   ((::GraphicsWidget *)graphics)->redraw();
 }
@@ -95,6 +154,10 @@ int maShowVirtualKeyboard(void) {
 
 int maGetMilliSecondCount(void) {
   return dev_get_millisecond_count();
+}
+
+void maWait(int timeout) {
+  Fl::wait(timeout);
 }
 
 //
@@ -138,6 +201,11 @@ int osd_devinit() {
   ansiWidget->reset();
   ansiWidget->setAutoflush(!opt_show_page);
 
+  return 1;
+}
+
+int osd_devrestore() {
+  ansiWidget->setAutoflush(true);
   return 1;
 }
 
@@ -502,7 +570,7 @@ bool cacheLink(dev_file_t *df, char *localFile) {
       return false;
     }
   }
-  // TODO: move this to a separate thread
+
   while (true) {
     int bytes = recv(df->handle, (char *)rxbuff, sizeof(rxbuff), 0);
     if (bytes == 0) {
@@ -533,14 +601,6 @@ bool cacheLink(dev_file_t *df, char *localFile) {
         if (strstr(rxbuff + iattr, "200 OK") != 0) {
           httpOK = true;
         }
-//                 if (strncmp(rxbuff+iattr, "Last-Modified: ", 15) == 0) {
-//                     // Last-Modified: Tue, 29 Jul 2003 20:19:10 GMT
-//                     if (access(localFile, 0) == 0) {
-//                         fclose(fp);
-//                         shutdown(df->handle, df->handle);
-//                         return true;
-//                     }
-//                 }
         if (strncmp(rxbuff + iattr, "Location: ", 10) == 0) {
           // handle redirection
           shutdown(df->handle, df->handle);
@@ -570,5 +630,6 @@ bool cacheLink(dev_file_t *df, char *localFile) {
 //
 void open_audio() {}
 void close_audio() {}
+void osd_audio(const char *path) {}
 void osd_clear_sound_queue() {}
 void dev_log_stack(const char *keyword, int type, int line) {}

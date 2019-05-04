@@ -33,8 +33,6 @@ public:
 private:
   void draw();
   void layout();
-  int handle(int e);
-
   void buttonClicked(const char *action);
   bool loadFonts(const char *font, const char *boldFont);
   bool loadFont(const char *filename, FT_Face &face);
