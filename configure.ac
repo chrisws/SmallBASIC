@@ -332,14 +332,19 @@ function buildFLTK() {
    dnl Checks for FLTK 1.x
    AC_CHECK_PROG(have_fltk, fltk-config, [yes], [no])
 
+   AC_CHECK_PROG(have_freetype2, freetype-config, [yes], [no])
+   if test "${have_freetype2}" = "no" ; then
+     AC_MSG_ERROR([libfreetype6-dev not installed: configure failed.])
+   fi
+
    dnl avoid using MSCRT versions of printf for long double
    case "${host_os}" in
      *mingw* | cygwin*)
      PACKAGE_CFLAGS="${PACKAGE_CFLAGS} -D__USE_MINGW_ANSI_STDIO"
    esac
 
-   FLTK_CXXFLAGS="${PACKAGE_CFLAGS} `fltk-config --cxxflags` -fno-exceptions"
-   PACKAGE_LIBS="${PACKAGE_LIBS} `fltk-config --ldstaticflags --use-images`"
+   FLTK_CXXFLAGS="${PACKAGE_CFLAGS} `fltk-config --cxxflags` `freetype-config --cflags` -fno-exceptions"
+   PACKAGE_LIBS="${PACKAGE_LIBS} `fltk-config --ldstaticflags --use-images` `freetype-config --libs`"
 
    dnl do not depend on cygwin.dll under cygwin build
    case "${host_os}" in

@@ -10,8 +10,10 @@
 #include <time.h>
 #include "ui/utils.h"
 #include "platform/fltk/display.h"
+#include "platform/fltk/system.h"
 
 extern ui::Graphics *graphics;
+extern System *g_system;
 
 //
 // Canvas implementation
@@ -123,7 +125,8 @@ bool GraphicsWidget::construct(const char *font, const char *boldFont) {
   if (result) {
     _screen = new Canvas();
     _ansiWidget = new AnsiWidget(w(), h());
-    if (_screen != NULL && _ansiWidget != NULL) {
+    g_system = new System(_ansiWidget);
+    if (_screen != NULL && _ansiWidget != NULL && g_system != NULL) {
       result = _screen->create(w(), h()) && _ansiWidget->construct();
       _ansiWidget->setTextColor(DEFAULT_FOREGROUND, DEFAULT_BACKGROUND);
       _ansiWidget->setFontSize(_defsize);

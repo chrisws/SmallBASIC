@@ -6,16 +6,11 @@
 // Download the GNU Public License (GPL) from www.gnu.org
 // 
 
-#ifdef HAVE_CONFIG_H
 #include <config.h>
-#endif
-
 #include <dirent.h>
 #include <unistd.h>
 #include <sys/stat.h>
-
 #include <FL/fl_ask.H>
-
 #include "platform/fltk/MainWindow.h"
 #include "platform/fltk/HelpWidget.h"
 #include "platform/fltk/FileWidget.h"

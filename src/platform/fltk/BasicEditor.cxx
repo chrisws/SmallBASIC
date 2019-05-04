@@ -8,12 +8,11 @@
 // Download the GNU Public License (GPL) from www.gnu.org
 //
 
+#include <config.h>
 #include <stdint.h>
-
+#include <FL/Fl_Rect.H>
 #include "platform/fltk/BasicEditor.h"
 #include "platform/fltk/kwp.h"
-
-#include <FL/Fl_Rect.H>
 
 using namespace strlib;
 

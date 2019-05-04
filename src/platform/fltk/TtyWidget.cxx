@@ -6,10 +6,7 @@
 // Download the GNU Public License (GPL) from www.gnu.org
 // 
 
-#ifdef HAVE_CONFIG_H
 #include <config.h>
-#endif
-
 #include <FL/Fl_Rect.H>
 #include "platform/fltk/TtyWidget.h"
 

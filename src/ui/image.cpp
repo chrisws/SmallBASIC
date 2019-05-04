@@ -429,9 +429,9 @@ void create_image(var_p_t var, ImageBuffer *image) {
   map_add_var(var, IMG_WIDTH, image->_width);
   map_add_var(var, IMG_HEIGHT, image->_height);
   map_add_var(var, IMG_BID, image->_bid);
-  create_func(var, "show", cmd_image_show);
-  create_func(var, "hide", cmd_image_hide);
-  create_func(var, "save", cmd_image_save);
+  v_create_func(var, "show", cmd_image_show);
+  v_create_func(var, "hide", cmd_image_hide);
+  v_create_func(var, "save", cmd_image_save);
 }
 
 // loads an image for the form image input type

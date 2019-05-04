@@ -6,12 +6,8 @@
 // Download the GNU Public License (GPL) from www.gnu.org
 //
 
-#ifdef HAVE_CONFIG_H
 #include <config.h>
-#endif
-
 #include <FL/fl_ask.H>
-
 #include "platform/fltk/MainWindow.h"
 #include "platform/fltk/EditorWidget.h"
 #include "platform/fltk/HelpWidget.h"
@@ -57,9 +53,6 @@ const char *aboutText =
 // runtime.cpp
 void getHomeDir(char *filename, bool appendSlash = true);
 bool cacheLink(dev_file_t *df, char *localFile);
-void updateForm(const char *s);
-void closeForm();
-bool isFormActive();
 
 #define CHOICE_EXIT  2
 #define CHOICE_BREAK 1
@@ -119,7 +112,6 @@ bool MainWindow::basicMain(EditorWidget *editWidget,
       strcasecmp(fullpath + len - 5, ".html") == 0) {
     // render html edit buffer
     snprintf(path, sizeof(path), "file:%s", fullpath);
-    updateForm(path);
     if (editWidget) {
       editWidget->take_focus();
     }
@@ -186,8 +178,6 @@ bool MainWindow::basicMain(EditorWidget *editWidget,
 
   if (fullScreen != NULL) {
     _profile->_appPosition = *fullScreen;
-
-    closeForm();                // cleanup any global formView
     fullScreen->remove(_out);
     delete fullScreen;
 
@@ -207,7 +197,6 @@ bool MainWindow::basicMain(EditorWidget *editWidget,
     if (!toolExec && editWidget && (!was_break || breakToLine)) {
       editWidget->gotoLine(gsb_last_line);
     }
-    closeForm();                // unhide the error
     if (editWidget) {
       showEditTab(editWidget);
       editWidget->runState(was_break ? rs_ready : rs_err);
@@ -1512,7 +1501,6 @@ void MainWindow::execLink(strlib::String &link) {
       }
       _siteHome.append(df.name, df.drv_dw[1]);
       statusMsg(rs_ready, _siteHome.c_str());
-      updateForm(path);
     }
     return;
   }

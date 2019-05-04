@@ -40,4 +40,3 @@ extern "C" void trace(const char *format, ...) {
   fprintf(stderr, buf, 0);
 #endif
 }
-

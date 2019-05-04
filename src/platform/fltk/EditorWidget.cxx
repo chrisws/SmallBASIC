@@ -6,18 +6,13 @@
 // Download the GNU Public License (GPL) from www.gnu.org
 //
 
-#ifdef HAVE_CONFIG_H
 #include <config.h>
-#endif
-
 #include <stdint.h>
 #include <unistd.h>
 #include <errno.h>
 #include <sys/stat.h>
-
 #include <FL/fl_ask.H>
 #include <FL/Fl_Color_Chooser.H>
-
 #include "platform/fltk/MainWindow.h"
 #include "platform/fltk/EditorWidget.h"
 #include "platform/fltk/FileWidget.h"
@@ -1192,7 +1187,7 @@ void EditorWidget::createFuncList() {
   for (int j = 0; j < keywords_length; j++) {
     keywords_len[j] = strlen(keywords[j]);
   }
-  Fl_Group *menuGroup = 0;
+  Fl_Group *menuGroup = NULL;
 
   for (int i = 0; i < len; i++) {
     // skip to the newline start

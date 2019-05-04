@@ -28,6 +28,7 @@ sbasici_SOURCES =                 \
   ../../ui/strlib.cpp             \
   ../../ui/textedit.cpp           \
   display.cxx display.h           \
+  system.cxx system.h             \
   HelpWidget.cxx HelpWidget.h     \
   TtyWidget.cxx TtyWidget.h       \
   MainWindow.cxx MainWindow.h     \

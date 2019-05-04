@@ -6,15 +6,11 @@
 // Download the GNU Public License (GPL) from www.gnu.org
 //
 
-#ifdef HAVE_CONFIG_H
 #include <config.h>
-#endif
-
 #include <errno.h>
 #include <ctype.h>
 #include <unistd.h>
 #include <stdlib.h>
-
 #include <FL/fl_ask.H>
 #include <FL/fl_draw.H>
 #include <FL/Fl_Rect.H>
