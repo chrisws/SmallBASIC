@@ -10,7 +10,6 @@
 #define Fl_HELP_WIDGET
 
 #include <stdint.h>
-
 #include <FL/fl_draw.H>
 #include <FL/Fl_Widget.H>
 #include <FL/Fl_Image.H>
@@ -18,7 +17,6 @@
 #include <FL/Fl_Shared_Image.H>
 #include <FL/Fl_Group.H>
 #include <FL/Fl_Scrollbar.H>
-
 #include "ui/strlib.h"
 #include "platform/fltk/utils.h"
 
@@ -55,7 +53,7 @@ struct ImageNode;
 
 class HelpWidget : public Fl_Group {
 public:
-  HelpWidget(int x, int y, int width, int height, int defsize = MIN_FONT_SIZE);
+  HelpWidget(Fl_Widget *rect, int defsize = MIN_FONT_SIZE);
   virtual ~HelpWidget();
 
   void loadBuffer(const char *buffer);

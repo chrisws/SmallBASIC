@@ -1506,11 +1506,11 @@ static void anchor_callback(Fl_Widget *helpWidget, void *target) {
   ((HelpWidget *) helpWidget)->navigateTo((const char *)target);
 }
 
-HelpWidget::HelpWidget(int x, int y, int width, int height, int defsize) :
-  Fl_Group(x, y, width, height),
+HelpWidget::HelpWidget(Fl_Widget *rect, int defsize) :
+  Fl_Group(rect->x(), rect->y(), rect->w(), rect->h()),
   nodeList(100), namedInputs(5), inputs(5), anchors(5), images(5) {
   begin();
-  scrollbar = new Fl_Scrollbar(width - SCROLL_W, 0, SCROLL_W, height);
+  scrollbar = new Fl_Scrollbar(rect->w() - SCROLL_W, rect->x(), SCROLL_W, rect->h());
   scrollbar->type(FL_VERTICAL);
   scrollbar->value(0, 1, 0, SCROLL_SIZE);
   scrollbar->user_data(this);
@@ -1741,7 +1741,7 @@ void HelpWidget::draw() {
   out.background = background;
   out.y2 = h();
   out.indent = DEFAULT_INDENT + hscroll;
-  out.x1 = out.indent;
+  out.x1 = x() + out.indent;
   out.x2 = w() - (DEFAULT_INDENT + SCROLL_W) + hscroll;
   out.content = false;
   out.measure = false;
@@ -1782,11 +1782,11 @@ void HelpWidget::draw() {
   }
   // must call setfont() before getascent() etc
   fl_font(out.font, out.fontSize);
-  out.y1 = fl_height();
+  out.y1 = x() + fl_height();
   out.lineHeight = out.y1 + fl_descent();
   out.y1 += vscroll;
 
-  fl_push_clip(0, 0, w(), h());
+  fl_push_clip(x(), y(), w(), h());
   bool havePushedAnchor = false;
   if (pushedAnchor && (damage() == DAMAGE_PUSHED)) {
     // just draw the anchor-push
@@ -1796,7 +1796,7 @@ void HelpWidget::draw() {
   }
   // draw the background
   fl_color(out.background);
-  fl_rectf(0, 0, w() - SCROLL_W, out.y2);
+  fl_rectf(x(), y(), w() - SCROLL_W, out.y2);
   fl_color(out.color);
 
   out.background = NO_COLOR;

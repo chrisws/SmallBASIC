@@ -4,7 +4,7 @@
 //
 // This program is distributed under the terms of the GPL v2.0 or later
 // Download the GNU Public License (GPL) from www.gnu.org
-// 
+//
 
 #include "utils.h"
 #include <stdio.h>
@@ -14,10 +14,6 @@
 #if defined(WIN32)
 #include <windows.h>
 #endif
-// see http://download.sysinternals.com/Files/DebugView.zip
-// for the free DebugView program
-// an alternative debug method is to use insight.exe which
-// is included with cygwin.
 
 extern "C" void trace(const char *format, ...) {
   char buf[4096], *p = buf;
@@ -39,4 +35,16 @@ extern "C" void trace(const char *format, ...) {
 #else
   fprintf(stderr, buf, 0);
 #endif
+}
+
+/**
+ * Set r,g,b to the 8-bit components of this color. If it is an indexed
+ * color they are looked up in the table, otherwise they are simply copied
+ * out of the color number.
+ */
+void split_color(Fl_Color i, uint8_t& r, uint8_t& g, uint8_t& b) {
+  uint8_t c = Fl::get_color(i);
+  r = c >> 24;
+  g = c >> 16;
+  b = c >> 8;
 }

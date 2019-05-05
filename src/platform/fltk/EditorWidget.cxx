@@ -45,8 +45,8 @@ EditorWidget *get_editor() {
 
 //--EditorWidget----------------------------------------------------------------
 
-EditorWidget::EditorWidget(int x, int y, int w, int h, Fl_Menu_Bar *menuBar) :
-  Fl_Group(x, y, w, h),
+EditorWidget::EditorWidget(Fl_Widget *rect, Fl_Menu_Bar *menuBar) :
+  Fl_Group(rect->x(), rect->y(), rect->w(), rect->h()),
   editor(NULL),
   tty(NULL),
   dirty(false),
@@ -70,15 +70,15 @@ EditorWidget::EditorWidget(int x, int y, int w, int h, Fl_Menu_Bar *menuBar) :
   box(FL_NO_BOX);
   begin();
 
-  int tileHeight = h - (MNU_HEIGHT + 8);
-  int ttyHeight = h / 8;
+  int tileHeight = rect->h() - (MNU_HEIGHT + 8);
+  int ttyHeight = rect->h() / 8;
   int editHeight = tileHeight - ttyHeight;
-  int browserWidth = w / 8;
+  int browserWidth = rect->w() / 8;
 
-  Fl_Group *tile = new Fl_Group(0, 0, w, tileHeight);
+  Fl_Group *tile = new Fl_Group(0, 0, rect->w(), tileHeight);
   tile->begin();
 
-  editor = new BasicEditor(0, 0, w - browserWidth, editHeight, this);
+  editor = new BasicEditor(0, 0, rect->w() - browserWidth, editHeight, this);
   editor->linenumber_width(40);
   editor->wrap_mode(true, 0);
   editor->selection_color(fl_rgb_color(190, 189, 188));
@@ -92,17 +92,14 @@ EditorWidget::EditorWidget(int x, int y, int w, int h, Fl_Menu_Bar *menuBar) :
   funcList->when(FL_WHEN_RELEASE);
   funcList->add(scanLabel);
 
-  tty = new TtyWidget(0, editHeight, w, ttyHeight, TTY_ROWS);
+  tty = new TtyWidget(0, editHeight, rect->w(), ttyHeight, TTY_ROWS);
   tty->color(FL_WHITE);            // bg
   tty->labelcolor(FL_BLACK);       // fg
 
   tile->end();
 
-  // create the editor toolbar
-  w -= 4;
-
   // editor status bar
-  Fl_Group *statusBar = new Fl_Group(2, (tty->h() - tty->y()) + 2, w, MNU_HEIGHT);
+  Fl_Group *statusBar = new Fl_Group(2, (tty->h() - tty->y()) + 2, rect->w() - 4, MNU_HEIGHT);
   statusBar->box(FL_NO_BOX);
   statusBar->begin();
 
@@ -111,7 +108,7 @@ EditorWidget::EditorWidget(int x, int y, int w, int h, Fl_Menu_Bar *menuBar) :
   int bn_w = 18;
   int st_h = statusBar->h() - 2;
 
-  logPrintBn = new Fl_Toggle_Button(w - (bn_w + 2), 2, bn_w, st_h);
+  logPrintBn = new Fl_Toggle_Button(rect->w() - (bn_w + 6), 2, bn_w, st_h);
   lockBn = new Fl_Toggle_Button(logPrintBn->x() - (bn_w + 2), 2, bn_w, st_h);
   hideIdeBn = new Fl_Toggle_Button(lockBn->x() - (bn_w + 2), 2, bn_w, st_h);
   gotoLineBn = new Fl_Toggle_Button(hideIdeBn->x() - (bn_w + 2), 2, bn_w, st_h);
@@ -587,9 +584,9 @@ void EditorWidget::select_all(Fl_Widget *w, void *eventData) {
 void EditorWidget::set_color(Fl_Widget *w, void *eventData) {
   StyleField styleField = (StyleField) (intptr_t) eventData;
   if (styleField == st_background || styleField == st_background_def) {
-    uchar r, g, b;
+    uint8_t r, g, b;
     // TODO: fixme
-    //split_color(editor->color(), r, g, b);
+    split_color(editor->color(), r, g, b);
     if (fl_color_chooser(w->label(), r, g, b)) {
       Fl_Color c = fl_rgb_color(r, g, b);
       //set_color_index(FL_FREE_COLOR + styleField, c);
@@ -1410,9 +1407,9 @@ bool EditorWidget::searchBackward(const char *text, int startPos,
  * sets the current display colour
  */
 void EditorWidget::setColor(const char *label, StyleField field) {
-  uchar r, g, b;
+  uint8_t r, g, b;
   // TODO: fixme
-  //split_color(styletable[field].color, r, g, b);
+  split_color(styletable[field].color, r, g, b);
   if (fl_color_chooser(label, r, g, b)) {
     Fl_Color c = fl_rgb_color(r, g, b);
     //set_color_index(FL_FREE_COLOR + field, c);

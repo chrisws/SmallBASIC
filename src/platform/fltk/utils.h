@@ -9,6 +9,9 @@
 #ifndef FLTK_UTILS_H
 #define FLTK_UTILS_H
 
+#include <stdint.h>
+#include <FL/Fl.H>
+
 #define DAMAGE_HIGHLIGHT FL_DAMAGE_USER1
 #define DAMAGE_PUSHED    FL_DAMAGE_USER2
 
@@ -27,5 +30,7 @@
 #else
 #define makedir(f) mkdir(f, 0700)
 #endif
+
+void split_color(Fl_Color i, uint8_t& r, uint8_t& g, uint8_t& b);
 
 #endif

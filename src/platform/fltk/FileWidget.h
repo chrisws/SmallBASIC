@@ -10,12 +10,11 @@
 #define FILE_WIDGET_H
 
 #include <limits.h>
-
 #include "platform/fltk/HelpWidget.h"
 #include "platform/fltk/EditorWidget.h"
 
 struct FileWidget:public HelpWidget {
-  FileWidget(int x, int y, int w, int h);
+  FileWidget(Fl_Widget *rect);
   ~FileWidget();
 
   static const char *forwardSlash(char *filename);

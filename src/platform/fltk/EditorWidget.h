@@ -10,7 +10,6 @@
 #define EDITOR_WIDGET_H
 
 #include <stdint.h>
-
 #include <FL/Fl_Browser.H>
 #include <FL/Fl_Window.H>
 #include <FL/Fl_Widget.H>
@@ -20,7 +19,6 @@
 #include <FL/Fl_Text_Editor.H>
 #include <FL/Fl_Choice.H>
 #include <limits.h>
-
 #include "ui/strlib.h"
 #include "platform/fltk/TtyWidget.h"
 #include "platform/fltk/BasicEditor.h"
@@ -72,7 +70,7 @@ enum CommandOpt {
 
 class EditorWidget : public Fl_Group, StatusBar {
 public:
-  EditorWidget(int x, int y, int w, int h, Fl_Menu_Bar *menu);
+  EditorWidget(Fl_Widget *rect, Fl_Menu_Bar *menu);
   virtual ~EditorWidget();
 
   CALLBACK_METHOD(change_case);

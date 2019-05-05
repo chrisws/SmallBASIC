@@ -99,8 +99,8 @@ const char CMD_SORT_DATE = '#';
 const char CMD_SORT_SIZE = '^';
 const char CMD_SORT_NAME = '$';
 
-FileWidget::FileWidget(int x, int y, int w, int h) : 
-  HelpWidget(x, y, w, h),
+FileWidget::FileWidget(Fl_Widget *rect) :
+  HelpWidget(rect),
   _saveEditorAs(0),
   _recentPaths(NULL) {
   callback(anchorClick_cb);

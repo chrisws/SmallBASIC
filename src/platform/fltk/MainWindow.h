@@ -10,13 +10,11 @@
 #define MAIN_WINDOW_H
 
 #include <stdint.h>
-
 #include <FL/Fl_Window.H>
 #include <FL/Fl_Group.H>
 #include <FL/Fl_Value_Input.H>
 #include <FL/Fl_Menu_Bar.H>
 #include <FL/Fl_Tabs.H>
-
 #include "platform/fltk/display.h"
 #include "platform/fltk/EditorWidget.h"
 #include "platform/fltk/HelpWidget.h"
@@ -24,9 +22,7 @@
 #include "platform/fltk/utils.h"
 
 #define MNU_HEIGHT 22
-#define DEF_FONT_SIZE 12
 #define NUM_RECENT_ITEMS 9
-#define MAX_DESCENT 8           // filter to avoid non-text fonts
 
 // in system.cxx
 void getHomeDir(char *filename, size_t size, bool appendSlash = true);
@@ -160,6 +156,7 @@ struct MainWindow : public BaseWindow {
   CALLBACK_METHOD(tool_plugin);
 
   HelpWidget *getHelp();
+  Fl_Group *createTab(GroupWidgetEnum groupWidgetEnum, const char *label = NULL);
 
   strlib::String _siteHome;
   strlib::String _exportFile;

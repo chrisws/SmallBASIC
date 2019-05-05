@@ -1,8 +1,6 @@
-// Based on test/editor.cxx - A simple text editor program for the Fast
-// Light Tool Kit (FLTK). This program is described in Chapter 4 of the FLTK
-// Programmer's Guide. Copyright 1998-2003 by Bill Spitzak and others.
+// This file is part of SmallBASIC
 //
-// Copyright(C) 2001-2013 Chris Warren-Smith.
+// Copyright(C) 2001-2019 Chris Warren-Smith.
 //
 // This program is distributed under the terms of the GPL v2.0 or later
 // Download the GNU Public License (GPL) from www.gnu.org

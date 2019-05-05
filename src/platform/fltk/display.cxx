@@ -139,7 +139,12 @@ bool GraphicsWidget::construct(const char *font, const char *boldFont) {
 }
 
 void GraphicsWidget::draw() {
-  _screen->_img->draw(0, 0, w(), h());
+  if (_screen && _screen->_img) {
+    _screen->_img->draw(x(), y(), w(), h());
+  } else {
+    fl_color(fl_rgb_color(128, 128, 200));
+    fl_rectf(x(), y(), w(), h());
+  }
 }
 
 void GraphicsWidget::redraw() {

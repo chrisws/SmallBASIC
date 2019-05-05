@@ -11,6 +11,7 @@
 #include <ctype.h>
 #include "platform/fltk/Profile.h"
 #include "platform/fltk/MainWindow.h"
+#include "platform/fltk/utils.h"
 
 const char *configFile = "config.txt";
 const char *pathKey = "path";
@@ -287,15 +288,14 @@ void Profile::saveRect(FILE *fp, const char *key, Fl_Rect *rc) {
 // saves the current font size, face and colour configuration
 //
 void Profile::saveStyles(FILE *fp) {
-  uchar r, g, b;
+  uint8_t r, g, b;
 
   saveValue(fp, fontSizeKey, (int)styletable[0].size);
   // TODO: fixme
   //saveValue(fp, fontNameKey, styletable[0].font->name());
 
   for (int i = 0; i <= st_background; i++) {
-    // TODO: fixme
-    //fl_split_color(i == st_background ? _color : styletable[i].color, r, g, b);
+    split_color(i == st_background ? _color : styletable[i].color, r, g, b);
     fprintf(fp, "%02d=#%02x%02x%02x\n", i, r, g, b);
   }
 }

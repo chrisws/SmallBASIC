@@ -12,7 +12,6 @@
 #include <FL/Fl_Widget.H>
 #include <FL/Fl_Image.H>
 #include <FL/fl_draw.H>
-
 #include "lib/maapi.h"
 #include "ui/strlib.h"
 #include "ui/graphics.h"

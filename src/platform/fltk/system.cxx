@@ -27,6 +27,7 @@ System *g_system;
 AnsiWidget *ansiWidget;
 
 #define EVT_PAUSE_TIME 0.005
+#define RX_BUFFER_SIZE 1024
 
 //
 // System implementation
@@ -54,7 +55,7 @@ void System::browseFile(const char *url) {
 }
 
 void System::setClipboardText(const char *text) {
-  //Fl_copy(text, strlen(text), true);
+  Fl::copy(text, strlen(text), true);
 }
 
 void System::setWindowSize(int width, int height) {
@@ -487,6 +488,7 @@ char *dev_gets(char *dest, int size) {
 // utils
 //
 void getHomeDir(char *fileName, size_t size, bool appendSlash) {
+  const int homeIndex = 1;
   static const char *envVars[] = {
     "APPDATA", "HOME", "TMP", "TEMP", "TMPDIR", ""
   };
@@ -497,8 +499,7 @@ void getHomeDir(char *fileName, size_t size, bool appendSlash) {
     const char *home = getenv(envVars[i]);
     if (home && access(home, R_OK) == 0) {
       strlcpy(fileName, home, size);
-      if (i == 1) {
-        // unix path
+      if (i == homeIndex) {
         strlcat(fileName, "/.config", size);
         makedir(fileName);
       }
@@ -514,7 +515,7 @@ void getHomeDir(char *fileName, size_t size, bool appendSlash) {
 
 // copy the url into the local cache
 bool cacheLink(dev_file_t *df, char *localFile, size_t size) {
-  char rxbuff[1024];
+  char rxbuff[RX_BUFFER_SIZE];
   FILE *fp;
   const char *url = df->name;
   const char *pathBegin = strchr(url + 7, '/');
@@ -610,10 +611,8 @@ bool cacheLink(dev_file_t *df, char *localFile, size_t size) {
           break;                // scan next header
         }
       }
-    } else {
-      if (!fwrite(rxbuff, bytes, 1, fp)) {
-        break;
-      }
+    } else if (!fwrite(rxbuff, bytes, 1, fp)) {
+      break;
     }
   }
 

@@ -18,6 +18,11 @@
 #include "common/fs_socket_client.h"
 #include "common/keymap.h"
 
+#define DEF_FONT_SIZE 12
+#define TAB_PADDING 4
+#define OUTER_PADDING 1
+#define WIDGET_PADDING 1
+
 char *packageHome;
 char *runfile = 0;
 int recentIndex = 0;
@@ -879,7 +884,7 @@ bool initialise(int argc, char **argv) {
   opt_file_permitted = 1;
   os_graphics = 1;
   opt_mute_audio = 1;
-  
+
   int i = 0;
   if (Fl::args(argc, argv, i, arg_cb) < argc) {
     fl_message("Options are:\n"
@@ -911,23 +916,13 @@ bool initialise(int argc, char **argv) {
   wnd = new MainWindow(800, 650);
 
   // load startup editors
-  wnd->new_file(0, 0);
-  wnd->_profile->restore(wnd);
-
-  // setup styles
-  // TODO: fixme
-  //Fl_Font defaultFont = FL_HELVETICA;
-  //if (defaultFont) {
-  //Fl_Widget::default_style->labelfont(defaultFont);
-  //Fl_Button::default_style->labelfont(defaultFont);
-  //Fl_Widget::default_style->textfont(defaultFont);
-  //Fl_Button::default_style->textfont(defaultFont);
-  //}
+  //  wnd->new_file(0, 0);
+  //  wnd->_profile->restore(wnd);
+  // Fl::scheme("gtk+");
 
   Fl_Window::default_xclass("smallbasic");
-
   wnd->loadIcon(PACKAGE_PREFIX, 101);
-  // check();
+  Fl::wait(0);
 
   Fl_Window *run_wnd;
 
@@ -1038,30 +1033,45 @@ MainWindow::MainWindow(int w, int h) :
 
   callback(quit_cb);
 
+  int x1 = 0;
+  int y1 = MNU_HEIGHT;
+  int x2 = w;
+  int y2 = h - MNU_HEIGHT;
+
   // outer decoration group
-  h -= MNU_HEIGHT;
-  Fl_Group *outer = new Fl_Group(0, MNU_HEIGHT, w, h);
+  Fl_Group *outer = new Fl_Group(x1, y1, x2, y2);
   outer->begin();
   outer->box(FL_ENGRAVED_BOX);
 
-  // group for all tabs
-  w -= 8;
+  x1 += (OUTER_PADDING);
+  y1 += (OUTER_PADDING);
+  x2 -= (OUTER_PADDING * 2);
+  y2 -= (OUTER_PADDING * 2);
 
-  _tabGroup = new Fl_Tabs(4, 4, w, h - 6);
+  // group for all tabs
+  _tabGroup = new Fl_Tabs(x1, y1, x2, y2);
   _tabGroup->box(FL_NO_BOX);
 
   // create the output tab
-  h -= (MNU_HEIGHT + 8);
-  _tabGroup->begin();
-  _outputGroup = new Fl_Group(0, MNU_HEIGHT, w, h, "Output");
+  x1 += (TAB_PADDING);
+  y1 += (MNU_HEIGHT + TAB_PADDING);
+  x2 -= (TAB_PADDING * 2);
+  y2 -= (MNU_HEIGHT + (TAB_PADDING * 2));
+
+  _outputGroup = new Fl_Group(x1, y1, x2, y2, "Output");
   _outputGroup->box(FL_THIN_DOWN_BOX);
+  _outputGroup->labelfont(FL_HELVETICA);
   _outputGroup->hide();
   _outputGroup->user_data((void *)gw_output);
-  _outputGroup->begin();
-  _out = new GraphicsWidget(2, 2, w - 4, h - 4, DEF_FONT_SIZE);
+
+  x1 += (WIDGET_PADDING);
+  y1 += (WIDGET_PADDING);
+  x2 -= (WIDGET_PADDING * 2);
+  y2 -= (WIDGET_PADDING * 2);
+
+  _out = new GraphicsWidget(x1, y1, x2, y2, DEF_FONT_SIZE);
   _outputGroup->resizable(_out);
   _outputGroup->end();
-
   _tabGroup->resizable(_outputGroup);
   _tabGroup->end();
   outer->end();
@@ -1071,23 +1081,27 @@ MainWindow::MainWindow(int w, int h) :
   resizable(outer);
 }
 
+Fl_Group *MainWindow::createTab(GroupWidgetEnum groupWidgetEnum, const char *label) {
+  _tabGroup->begin();
+  Fl_Group * result = new Fl_Group(_out->x() - (WIDGET_PADDING),
+                                   _out->y() - (WIDGET_PADDING),
+                                   _out->w() + (WIDGET_PADDING * 2),
+                                   _out->h() + (WIDGET_PADDING * 2), label);
+  result->box(FL_THIN_DOWN_BOX);
+  result->labelfont(FL_HELVETICA);
+  result->user_data((void *)groupWidgetEnum);
+  result->begin();
+  return result;
+}
+
 /**
  * create a new help widget and add it to the tab group
  */
 Fl_Group *MainWindow::createEditor(const char *title) {
-  int w = _tabGroup->w();
-  int h = _tabGroup->h() - MNU_HEIGHT;
-
-  _tabGroup->begin();
-  Fl_Group *editGroup = new Fl_Group(0, MNU_HEIGHT, w, h - 2);
+  Fl_Group *editGroup = createTab(gw_editor, slash ? slash + 1 : title);
   const char *slash = strrchr(title, '/');
-  editGroup->copy_label(slash ? slash + 1 : title);
-  editGroup->begin();
-  editGroup->box(FL_THIN_DOWN_BOX);
-  editGroup->resizable(new EditorWidget(2, 2, w - 4, h - 2, _menuBar));
-  editGroup->user_data((void *)gw_editor);
+  editGroup->resizable(new EditorWidget(_out, _menuBar));
   editGroup->end();
-
   _tabGroup->add(editGroup);
   _tabGroup->value(editGroup);
   _tabGroup->end();
@@ -1121,14 +1135,8 @@ void MainWindow::open_file(Fl_Widget *w, void *eventData) {
   FileWidget *fileWidget = NULL;
   Fl_Group *openFileGroup = findTab(gw_file);
   if (!openFileGroup) {
-    int w = _tabGroup->w();
-    int h = _tabGroup->h() - MNU_HEIGHT;
-    _tabGroup->begin();
-    openFileGroup = new Fl_Group(0, MNU_HEIGHT, w, h, fileTabName);
-    openFileGroup->begin();
-    fileWidget = new FileWidget(2, 2, w - 4, h - 4);
-    openFileGroup->box(FL_THIN_DOWN_BOX);
-    openFileGroup->user_data((void *)gw_file);
+    openFileGroup = createTab(gw_file, fileTabName);
+    fileWidget = new FileWidget(_out);
     openFileGroup->resizable(fileWidget);
     openFileGroup->end();
     _tabGroup->end();
@@ -1183,15 +1191,8 @@ HelpWidget *MainWindow::getHelp() {
   HelpWidget *help = 0;
   Fl_Group *helpGroup = findTab(gw_help);
   if (!helpGroup) {
-    int w = _tabGroup->w();
-    int h = _tabGroup->h() - MNU_HEIGHT;
-    _tabGroup->begin();
-    helpGroup = new Fl_Group(0, MNU_HEIGHT, w, h, helpTabName);
-    helpGroup->box(FL_THIN_DOWN_BOX);
-    helpGroup->hide();
-    helpGroup->user_data((void *)gw_help);
-    helpGroup->begin();
-    help = new HelpWidget(2, 2, w - 4, h - 4);
+    helpGroup = createTab(gw_help, helpTabName);
+    help = new HelpWidget(_out);
     help->callback(help_contents_anchor_cb);
     helpGroup->resizable(help);
     _tabGroup->end();

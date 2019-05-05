@@ -10,7 +10,6 @@
 #define PROFILE_H
 
 #include <FL/Fl_Rect.H>
-
 #include "ui/strlib.h"
 
 using namespace strlib;
