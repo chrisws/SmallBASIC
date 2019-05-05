@@ -4,7 +4,7 @@
 //
 // This program is distributed under the terms of the GPL v2.0 or later
 // Download the GNU Public License (GPL) from www.gnu.org
-// 
+//
 
 #include <config.h>
 #include <FL/Fl_Rect.H>
@@ -13,7 +13,7 @@
 //
 // TtyWidget constructor
 //
-TtyWidget::TtyWidget(int x, int y, int w, int h, int numRows) : 
+TtyWidget::TtyWidget(int x, int y, int w, int h, int numRows) :
   Fl_Group(x, y, w, h, 0) {
 
   // initialize the buffer
@@ -28,7 +28,7 @@ TtyWidget::TtyWidget(int x, int y, int w, int h, int numRows) :
 
   begin();
   // vertical scrollbar scrolls in row units
-  vscrollbar = new Fl_Scrollbar(w - SCROLL_W, 1, SCROLL_W, h);
+  vscrollbar = new Fl_Scrollbar(w - SCROLL_W, y + 1, x + SCROLL_W, h);
   vscrollbar->type(FL_VERTICAL);
   vscrollbar->user_data(this);
 
@@ -48,7 +48,7 @@ TtyWidget::~TtyWidget() {
 //
 void TtyWidget::draw() {
   // get the text drawing rectangle
-  Fl_Rect rc = Fl_Rect(0, 0, w(), h() + 1);
+  Fl_Rect rc = Fl_Rect(x(), y(), w(), h() + 1);
   if (vscrollbar->visible()) {
     rc.w(rc.w() - vscrollbar->w());
   }

@@ -28,8 +28,8 @@
 #define Fl_HELP_WIDGET_RESOURCES
 #include "platform/fltk/HelpWidget.h"
 
-#define FOREGROUND_COLOR fl_rgb_color(0,0,128)
-#define BACKGROUND_COLOR fl_rgb_color(0,0,128)
+#define FOREGROUND_COLOR fl_rgb_color(0x65, 0x7b, 0x83)
+#define BACKGROUND_COLOR fl_rgb_color(0, 0x2b, 0x36)
 #define ANCHOR_COLOR fl_rgb_color(0,0,128)
 #define BUTTON_COLOR fl_rgb_color(0,0,128)
 #define DEFAULT_INDENT 2
@@ -678,7 +678,7 @@ void TextNode::drawSelection(const char *s, uint16_t len, uint16_t width, Displa
               left = false;
             }
           } else if (s[i] == ' ' && x > rightX) {
-            rc.w(x - rc.x() - width);
+            //rc.w(x - rc.x() - width);
             selEnd = i;
             break;
           }
@@ -695,7 +695,7 @@ void TextNode::drawSelection(const char *s, uint16_t len, uint16_t width, Displa
               left = false;
             }
           } else if (x > rightX) {
-            rc.w(x - rc.x());
+            //rc.w(x - rc.x());
             selEnd = i + 1;
             break;
           }
@@ -729,7 +729,7 @@ void TextNode::drawSelection(const char *s, uint16_t len, uint16_t width, Displa
       for (int i = 0; i < len; i++) {
         x += fl_width(s + i, 1);
         if (x > rightX) {
-          rc.w(x - rc.x());
+          //rc.w(x - rc.x());
           selEnd = i + 1;
           break;
         }
@@ -742,7 +742,8 @@ void TextNode::drawSelection(const char *s, uint16_t len, uint16_t width, Displa
     // capture the selected text
     out->selection->append(s + selBegin, selEnd - selBegin);
   }
-  fl_color(FL_GRAY0);
+
+  fl_color(fl_rgb_color(0x58, 0x6e, 0x75));
   fl_rectf(rc.x(), rc.y(), rc.w(), rc.h());
   fl_color(out->color);
 }
@@ -1510,7 +1511,7 @@ HelpWidget::HelpWidget(Fl_Widget *rect, int defsize) :
   Fl_Group(rect->x(), rect->y(), rect->w(), rect->h()),
   nodeList(100), namedInputs(5), inputs(5), anchors(5), images(5) {
   begin();
-  scrollbar = new Fl_Scrollbar(rect->w() - SCROLL_W, rect->x(), SCROLL_W, rect->h());
+  scrollbar = new Fl_Scrollbar(rect->w() - SCROLL_W, rect->y(), SCROLL_W, rect->h());
   scrollbar->type(FL_VERTICAL);
   scrollbar->value(0, 1, 0, SCROLL_SIZE);
   scrollbar->user_data(this);

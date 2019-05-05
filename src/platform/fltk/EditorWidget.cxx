@@ -75,10 +75,8 @@ EditorWidget::EditorWidget(Fl_Widget *rect, Fl_Menu_Bar *menuBar) :
   int editHeight = tileHeight - ttyHeight;
   int browserWidth = rect->w() / 8;
 
-  Fl_Group *tile = new Fl_Group(0, 0, rect->w(), tileHeight);
-  tile->begin();
-
-  editor = new BasicEditor(0, 0, rect->w() - browserWidth, editHeight, this);
+  Fl_Group *tile = new Fl_Group(rect->x(), rect->y(), rect->w(), tileHeight);
+  editor = new BasicEditor(rect->x(), rect->y(), rect->w() - browserWidth, editHeight, this);
   editor->linenumber_width(40);
   editor->wrap_mode(true, 0);
   editor->selection_color(fl_rgb_color(190, 189, 188));
@@ -87,31 +85,31 @@ EditorWidget::EditorWidget(Fl_Widget *rect, Fl_Menu_Bar *menuBar) :
   editor->take_focus();
 
   // sub-func jump droplist
-  funcList = new Fl_Browser(editor->w(), 0, browserWidth, editHeight);
+  funcList = new Fl_Browser(editor->w(), rect->y(), browserWidth, editHeight);
   funcList->labelfont(FL_HELVETICA);
   funcList->when(FL_WHEN_RELEASE);
   funcList->add(scanLabel);
 
-  tty = new TtyWidget(0, editHeight, rect->w(), ttyHeight, TTY_ROWS);
+  tty = new TtyWidget(rect->x(), rect->y() + editHeight, rect->w(), ttyHeight, TTY_ROWS);
   tty->color(FL_WHITE);            // bg
   tty->labelcolor(FL_BLACK);       // fg
 
   tile->end();
 
   // editor status bar
-  Fl_Group *statusBar = new Fl_Group(2, (tty->h() - tty->y()) + 2, rect->w() - 4, MNU_HEIGHT);
+  Fl_Group *statusBar = new Fl_Group(rect->x(), rect->y() + ttyHeight + 2, rect->w(), MNU_HEIGHT);
   statusBar->box(FL_NO_BOX);
-  statusBar->begin();
 
   // widths become relative when the outer window is resized
   int st_w = 40;
   int bn_w = 18;
+  int bn_y = rect->h() + 2;
   int st_h = statusBar->h() - 2;
 
-  logPrintBn = new Fl_Toggle_Button(rect->w() - (bn_w + 6), 2, bn_w, st_h);
-  lockBn = new Fl_Toggle_Button(logPrintBn->x() - (bn_w + 2), 2, bn_w, st_h);
-  hideIdeBn = new Fl_Toggle_Button(lockBn->x() - (bn_w + 2), 2, bn_w, st_h);
-  gotoLineBn = new Fl_Toggle_Button(hideIdeBn->x() - (bn_w + 2), 2, bn_w, st_h);
+  logPrintBn = new Fl_Toggle_Button(rect->w() - (bn_w + 6), bn_y, bn_w, st_h);
+  lockBn = new Fl_Toggle_Button(logPrintBn->x() - (bn_w + 2), bn_y, bn_w, st_h);
+  hideIdeBn = new Fl_Toggle_Button(lockBn->x() - (bn_w + 2), bn_y, bn_w, st_h);
+  gotoLineBn = new Fl_Toggle_Button(hideIdeBn->x() - (bn_w + 2), bn_y, bn_w, st_h);
 
 #ifdef __MINGW32__
   // fixup alignment under windows
@@ -121,13 +119,13 @@ EditorWidget::EditorWidget(Fl_Widget *rect, Fl_Menu_Bar *menuBar) :
   gotoLineBn->align(FL_ALIGN_INSIDE | FL_ALIGN_LEFT | FL_ALIGN_CENTER);
 #endif
 
-  colStatus = new Fl_Button(gotoLineBn->x() - (st_w + 2), 2, st_w, st_h);
-  rowStatus = new Fl_Button(colStatus->x() - (st_w + 2), 2, st_w, st_h);
-  runStatus = new Fl_Button(rowStatus->x() - (st_w + 2), 2, st_w, st_h);
-  modStatus = new Fl_Button(runStatus->x() - (st_w + 2), 2, st_w, st_h);
+  colStatus = new Fl_Button(gotoLineBn->x() - (st_w + 2), bn_y, st_w, st_h);
+  rowStatus = new Fl_Button(colStatus->x() - (st_w + 2), bn_y, st_w, st_h);
+  runStatus = new Fl_Button(rowStatus->x() - (st_w + 2), bn_y, st_w, st_h);
+  modStatus = new Fl_Button(runStatus->x() - (st_w + 2), bn_y, st_w, st_h);
 
-  commandChoice = new Fl_Button(0, 2, 80, st_h);
-  commandText = new Fl_Input(commandChoice->x() + commandChoice->w() + 2, 2, modStatus->x() - commandChoice->w() - 4, st_h);
+  commandChoice = new Fl_Button(rect->x(), bn_y, 80, st_h);
+  commandText = new Fl_Input(commandChoice->x() + commandChoice->w() + 2, bn_y, modStatus->x() - commandChoice->w() - 4, st_h);
   commandText->align(FL_ALIGN_LEFT | FL_ALIGN_CLIP);
   commandText->when(FL_WHEN_ENTER_KEY_ALWAYS);
   commandText->labelfont(FL_HELVETICA);

@@ -19,9 +19,10 @@
 #include "common/keymap.h"
 
 #define DEF_FONT_SIZE 12
-#define TAB_PADDING 4
-#define OUTER_PADDING 1
-#define WIDGET_PADDING 1
+#define TAB_PADDING 0
+#define TAB_BORDER 4
+#define OUTER_PADDING 0
+#define WIDGET_PADDING 0
 
 char *packageHome;
 char *runfile = 0;
@@ -47,8 +48,8 @@ const char *aboutText =
   "Version " SB_STR_VER "<br>"
   "Copyright (c) 2002-2019 Chris Warren-Smith.<br><br>"
   "Copyright (c) 2000-2006 Nicholas Christopoulos.<br><br>"
-  "<a href=http://smallbasic.sourceforge.net>"
-  "http://smallbasic.sourceforge.net</a><br><br>"
+  "<a href=https://smallbasic.github.io>"
+  "https://smallbasic.github.io</a><br><br>"
   "SmallBASIC comes with ABSOLUTELY NO WARRANTY. "
   "This program is free software; you can use it "
   "redistribute it and/or modify it under the terms of the "
@@ -916,10 +917,10 @@ bool initialise(int argc, char **argv) {
   wnd = new MainWindow(800, 650);
 
   // load startup editors
-  //  wnd->new_file(0, 0);
-  //  wnd->_profile->restore(wnd);
-  // Fl::scheme("gtk+");
+  wnd->new_file(0, 0);
+  wnd->_profile->restore(wnd);
 
+  Fl::scheme("gtk+");
   Fl_Window::default_xclass("smallbasic");
   wnd->loadIcon(PACKAGE_PREFIX, 101);
   Fl::wait(0);
@@ -1038,47 +1039,35 @@ MainWindow::MainWindow(int w, int h) :
   int x2 = w;
   int y2 = h - MNU_HEIGHT;
 
-  // outer decoration group
-  Fl_Group *outer = new Fl_Group(x1, y1, x2, y2);
-  outer->begin();
-  outer->box(FL_ENGRAVED_BOX);
-
   x1 += (OUTER_PADDING);
-  y1 += (OUTER_PADDING);
+  y1 += (TAB_BORDER + OUTER_PADDING);
   x2 -= (OUTER_PADDING * 2);
-  y2 -= (OUTER_PADDING * 2);
+  y2 -= (TAB_BORDER + OUTER_PADDING * 2);
 
   // group for all tabs
   _tabGroup = new Fl_Tabs(x1, y1, x2, y2);
-  _tabGroup->box(FL_NO_BOX);
 
   // create the output tab
   x1 += (TAB_PADDING);
-  y1 += (MNU_HEIGHT + TAB_PADDING);
+  y1 += (MNU_HEIGHT + (TAB_PADDING));
   x2 -= (TAB_PADDING * 2);
   y2 -= (MNU_HEIGHT + (TAB_PADDING * 2));
 
   _outputGroup = new Fl_Group(x1, y1, x2, y2, "Output");
-  _outputGroup->box(FL_THIN_DOWN_BOX);
   _outputGroup->labelfont(FL_HELVETICA);
-  _outputGroup->hide();
   _outputGroup->user_data((void *)gw_output);
 
-  x1 += (WIDGET_PADDING);
-  y1 += (WIDGET_PADDING);
-  x2 -= (WIDGET_PADDING * 2);
-  y2 -= (WIDGET_PADDING * 2);
+  y1 += WIDGET_PADDING;
+  y2 -= WIDGET_PADDING + 1;
 
   _out = new GraphicsWidget(x1, y1, x2, y2, DEF_FONT_SIZE);
   _outputGroup->resizable(_out);
   _outputGroup->end();
   _tabGroup->resizable(_outputGroup);
   _tabGroup->end();
-  outer->end();
-  end();
 
-  outer->resizable(_tabGroup);
-  resizable(outer);
+  end();
+  resizable(_tabGroup);
 }
 
 Fl_Group *MainWindow::createTab(GroupWidgetEnum groupWidgetEnum, const char *label) {
@@ -1087,7 +1076,7 @@ Fl_Group *MainWindow::createTab(GroupWidgetEnum groupWidgetEnum, const char *lab
                                    _out->y() - (WIDGET_PADDING),
                                    _out->w() + (WIDGET_PADDING * 2),
                                    _out->h() + (WIDGET_PADDING * 2), label);
-  result->box(FL_THIN_DOWN_BOX);
+  result->box(FL_NO_BOX);
   result->labelfont(FL_HELVETICA);
   result->user_data((void *)groupWidgetEnum);
   result->begin();
@@ -1098,8 +1087,8 @@ Fl_Group *MainWindow::createTab(GroupWidgetEnum groupWidgetEnum, const char *lab
  * create a new help widget and add it to the tab group
  */
 Fl_Group *MainWindow::createEditor(const char *title) {
-  Fl_Group *editGroup = createTab(gw_editor, slash ? slash + 1 : title);
   const char *slash = strrchr(title, '/');
+  Fl_Group *editGroup = createTab(gw_editor, slash ? slash + 1 : title);
   editGroup->resizable(new EditorWidget(_out, _menuBar));
   editGroup->end();
   _tabGroup->add(editGroup);
