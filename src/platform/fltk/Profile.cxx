@@ -49,7 +49,7 @@ void Profile::loadConfig(EditorWidget *editWidget) {
   editWidget->setFont(_font);
   editWidget->setFontSize(_fontSize);
   editWidget->setEditorColor(_color, false);
-  editWidget->editor->linenumber_width(_lineNumbers ? 40 : 1);
+  editWidget->getEditor()->linenumber_width(_lineNumbers ? 40 : 1);
 }
 
 //
@@ -234,9 +234,9 @@ void Profile::restoreTabs(MainWindow *wnd, Properties<String *> *profile) {
     editWidget->setLogPrint(logPrint);
     editWidget->setScrollLock(scrollLock);
     editWidget->setBreakToLine(gotoLine);
-    editWidget->editor->insert_position(insertPos);
-    editWidget->editor->show_insert_position();
-    editWidget->editor->scroll(topLineNo, 0);
+    editWidget->getEditor()->insert_position(insertPos);
+    editWidget->getEditor()->show_insert_position();
+    editWidget->getEditor()->scroll(topLineNo, 0);
   }
 
   // restore the active tab
@@ -314,7 +314,7 @@ void Profile::saveTabs(FILE *fp, MainWindow *wnd) {
       bool scrollLock = editWidget->isScrollLock();
       bool hideIde = editWidget->isHideIDE();
       bool gotoLine = editWidget->isBreakToLine();
-      int insertPos = editWidget->editor->insert_position();
+      int insertPos = editWidget->getEditor()->insert_position();
       int topLineNo = 0; // TODO: fixme editWidget->editor->top_line();
 
       fprintf(fp, "%s='%d;%d;%d;%d;%d;%d;%s'\n", pathKey,

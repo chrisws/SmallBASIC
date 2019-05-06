@@ -21,7 +21,7 @@
 #include "platform/fltk/Profile.h"
 #include "platform/fltk/utils.h"
 
-#define MNU_HEIGHT 22
+#define MENU_HEIGHT 24
 #define NUM_RECENT_ITEMS 9
 
 // in system.cxx

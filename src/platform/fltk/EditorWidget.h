@@ -103,7 +103,7 @@ public:
   void doSaveFile(const char *newfile);
   void fileChanged(bool loadfile);
   bool focusWidget();
-  const char *getFilename() { return filename; }
+  const char *getFilename() { return _filename; }
   int getFontSize();
   void getInput(char *result, int size);
   void getRowCol(int *row, int *col);
@@ -112,35 +112,34 @@ public:
   void getSelStartRowCol(int *row, int *col);
   void gotoLine(int line);
   int handle(int e);
-  bool isDirty() { return dirty; }
+  bool isDirty() { return _dirty; }
   void loadFile(const char *newfile);
   bool readonly();
   void readonly(bool is_readonly);
   void runState(RunMessage runMessage);
   void saveSelection(const char *path);
-  void setBreakToLine(bool b) { gotoLineBn->value(b); }
+  void setBreakToLine(bool b) { _gotoLineBn->value(b); }
   void setEditorColor(Fl_Color c, bool defColor);
   void setFont(Fl_Font font);
   void setFontSize(int i);
-  void setHideIde(bool b) { hideIdeBn->value(b); if (b) setLogPrint(!b); }
+  void setHideIde(bool b) { _hideIdeBn->value(b); if (b) setLogPrint(!b); }
   void setIndentLevel(int level);
-  void setLogPrint(bool b) { logPrintBn->value(b); if (b) setHideIde(!b); }
+  void setLogPrint(bool b) { _logPrintBn->value(b); if (b) setHideIde(!b); }
   void setRowCol(int row, int col);
-  void setScrollLock(bool b) { lockBn->value(b); }
+  void setScrollLock(bool b) { _lockBn->value(b); }
   void showPath();
   void statusMsg(const char *msg);
   void updateConfig(EditorWidget *current);
-  bool isBreakToLine() { return gotoLineBn->value(); }
-  bool isHideIDE() { return hideIdeBn->value(); }
-  bool isLoading() { return loading; }
-  bool isLogPrint() { return logPrintBn->value(); }
-  bool isScrollLock() { return lockBn->value(); }
-  void selectAll() { editor->_textbuf->select(0, editor->_textbuf->length()); }
-  const char *data() { return editor->_textbuf->text(); }
-  int dataLength() { return editor->_textbuf->length(); }
-
-  BasicEditor *editor;
-  TtyWidget *tty;
+  bool isBreakToLine() { return _gotoLineBn->value(); }
+  bool isHideIDE() { return _hideIdeBn->value(); }
+  bool isLoading() { return _loading; }
+  bool isLogPrint() { return _logPrintBn->value(); }
+  bool isScrollLock() { return _lockBn->value(); }
+  void selectAll() { _editor->_textbuf->select(0, _editor->_textbuf->length()); }
+  const char *data() { return _editor->_textbuf->text(); }
+  int dataLength() { return _editor->_textbuf->length(); }
+  Fl_Text_Editor *getEditor() { return _editor; }
+  TtyWidget *getTty() { return _tty; }
 
 protected:
   void addHistory(const char *filename);
@@ -163,29 +162,32 @@ protected:
   void showFindText(const char *text);
 
 private:
-  char filename[PATH_MAX];
-  bool dirty;
-  bool loading;
-  uint32_t modifiedTime;
+  BasicEditor *_editor;
+  TtyWidget *_tty;
+
+  char _filename[PATH_MAX];
+  bool _dirty;
+  bool _loading;
+  uint32_t _modifiedTime;
 
   // tool-bar
-  Fl_Input *commandText;
-  Fl_Widget *rowStatus;
-  Fl_Widget *colStatus;
-  Fl_Button *runStatus;
-  Fl_Button *modStatus;
-  Fl_Browser *funcList;
+  Fl_Input *_commandText;
+  Fl_Widget *_rowStatus;
+  Fl_Widget *_colStatus;
+  Fl_Button *_runStatus;
+  Fl_Button *_modStatus;
+  Fl_Browser *_funcList;
 
-  Fl_Toggle_Button *logPrintBn;
-  Fl_Toggle_Button *lockBn;
-  Fl_Toggle_Button *hideIdeBn;
-  Fl_Toggle_Button *gotoLineBn;
+  Fl_Toggle_Button *_logPrintBn;
+  Fl_Toggle_Button *_lockBn;
+  Fl_Toggle_Button *_hideIdeBn;
+  Fl_Toggle_Button *_gotoLineBn;
 
   // same order as display items
-  CommandOpt commandOpt;
-  Fl_Button *commandChoice;
+  CommandOpt _commandOpt;
+  Fl_Button *_commandChoice;
 
-  strlib::String commandBuffer;
+  strlib::String _commandBuffer;
 
   Fl_Menu_Bar *_menuBar;
 };

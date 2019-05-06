@@ -47,98 +47,85 @@ EditorWidget *get_editor() {
 
 EditorWidget::EditorWidget(Fl_Widget *rect, Fl_Menu_Bar *menuBar) :
   Fl_Group(rect->x(), rect->y(), rect->w(), rect->h()),
-  editor(NULL),
-  tty(NULL),
-  dirty(false),
-  loading(false),
-  modifiedTime(0),
-  commandText(NULL),
-  rowStatus(NULL),
-  colStatus(NULL),
-  runStatus(NULL),
-  modStatus(NULL),
-  funcList(NULL),
-  logPrintBn(NULL),
-  lockBn(NULL),
-  hideIdeBn(NULL),
-  gotoLineBn(NULL),
-  commandOpt(cmd_find),
-  commandChoice(NULL),
+  _editor(NULL),
+  _tty(NULL),
+  _dirty(false),
+  _loading(false),
+  _modifiedTime(0),
+  _commandText(NULL),
+  _rowStatus(NULL),
+  _colStatus(NULL),
+  _runStatus(NULL),
+  _modStatus(NULL),
+  _funcList(NULL),
+  _logPrintBn(NULL),
+  _lockBn(NULL),
+  _hideIdeBn(NULL),
+  _gotoLineBn(NULL),
+  _commandOpt(cmd_find),
+  _commandChoice(NULL),
   _menuBar(menuBar) {
-
-  filename[0] = 0;
+  _filename[0] = 0;
   box(FL_NO_BOX);
   begin();
 
-  int tileHeight = rect->h() - (MNU_HEIGHT + 8);
-  int ttyHeight = rect->h() / 8;
-  int editHeight = tileHeight - ttyHeight;
-  int browserWidth = rect->w() / 8;
+  const int st_w = 40;
+  const int bn_w = 18;
+  const int st_h = MENU_HEIGHT - 2;
+  const int choice_w = 80;
+  const int tileHeight = rect->h();;
+  const int ttyHeight = rect->h() / 8;
+  const int browserWidth = rect->w() / 8;
+  const int editHeight = tileHeight - ttyHeight - st_h;
+  const int editWidth = rect->w() - browserWidth;
+  const int st_y = rect->y() + editHeight + ttyHeight;
 
   Fl_Group *tile = new Fl_Group(rect->x(), rect->y(), rect->w(), tileHeight);
-  editor = new BasicEditor(rect->x(), rect->y(), rect->w() - browserWidth, editHeight, this);
-  editor->linenumber_width(40);
-  editor->wrap_mode(true, 0);
-  editor->selection_color(fl_rgb_color(190, 189, 188));
-  editor->_textbuf->add_modify_callback(changed_cb, this);
-  editor->box(FL_NO_BOX);
-  editor->take_focus();
+  _editor = new BasicEditor(rect->x(), rect->y(), editWidth, editHeight, this);
+  _editor->linenumber_width(40);
+  _editor->wrap_mode(true, 0);
+  _editor->selection_color(fl_rgb_color(190, 189, 188));
+  _editor->_textbuf->add_modify_callback(changed_cb, this);
+  _editor->box(FL_NO_BOX);
+  _editor->take_focus();
 
   // sub-func jump droplist
-  funcList = new Fl_Browser(editor->w(), rect->y(), browserWidth, editHeight);
-  funcList->labelfont(FL_HELVETICA);
-  funcList->when(FL_WHEN_RELEASE);
-  funcList->add(scanLabel);
+  _funcList = new Fl_Browser(_editor->w(), rect->y(), browserWidth, editHeight);
+  _funcList->labelfont(FL_HELVETICA);
+  _funcList->when(FL_WHEN_RELEASE);
+  _funcList->box(FL_FLAT_BOX);
+  _funcList->add(scanLabel);
 
-  tty = new TtyWidget(rect->x(), rect->y() + editHeight, rect->w(), ttyHeight, TTY_ROWS);
-  tty->color(FL_WHITE);            // bg
-  tty->labelcolor(FL_BLACK);       // fg
-
+  _tty = new TtyWidget(rect->x(), rect->y() + editHeight, rect->w(), ttyHeight, TTY_ROWS);
+  _tty->color(color());
+  _tty->labelcolor(labelcolor());
   tile->end();
 
   // editor status bar
-  Fl_Group *statusBar = new Fl_Group(rect->x(), rect->y() + ttyHeight + 2, rect->w(), MNU_HEIGHT);
-  statusBar->box(FL_NO_BOX);
+  Fl_Group *statusBar = new Fl_Group(rect->x(), st_y, rect->w(), st_h);
 
-  // widths become relative when the outer window is resized
-  int st_w = 40;
-  int bn_w = 18;
-  int bn_y = rect->h() + 2;
-  int st_h = statusBar->h() - 2;
-
-  logPrintBn = new Fl_Toggle_Button(rect->w() - (bn_w + 6), bn_y, bn_w, st_h);
-  lockBn = new Fl_Toggle_Button(logPrintBn->x() - (bn_w + 2), bn_y, bn_w, st_h);
-  hideIdeBn = new Fl_Toggle_Button(lockBn->x() - (bn_w + 2), bn_y, bn_w, st_h);
-  gotoLineBn = new Fl_Toggle_Button(hideIdeBn->x() - (bn_w + 2), bn_y, bn_w, st_h);
-
-#ifdef __MINGW32__
-  // fixup alignment under windows
-  logPrintBn->align(FL_ALIGN_INSIDE | FL_ALIGN_LEFT | FL_ALIGN_CENTER);
-  lockBn->align(FL_ALIGN_INSIDE | FL_ALIGN_LEFT | FL_ALIGN_CENTER);
-  hideIdeBn->align(FL_ALIGN_INSIDE | FL_ALIGN_LEFT | FL_ALIGN_CENTER);
-  gotoLineBn->align(FL_ALIGN_INSIDE | FL_ALIGN_LEFT | FL_ALIGN_CENTER);
-#endif
-
-  colStatus = new Fl_Button(gotoLineBn->x() - (st_w + 2), bn_y, st_w, st_h);
-  rowStatus = new Fl_Button(colStatus->x() - (st_w + 2), bn_y, st_w, st_h);
-  runStatus = new Fl_Button(rowStatus->x() - (st_w + 2), bn_y, st_w, st_h);
-  modStatus = new Fl_Button(runStatus->x() - (st_w + 2), bn_y, st_w, st_h);
-
-  commandChoice = new Fl_Button(rect->x(), bn_y, 80, st_h);
-  commandText = new Fl_Input(commandChoice->x() + commandChoice->w() + 2, bn_y, modStatus->x() - commandChoice->w() - 4, st_h);
-  commandText->align(FL_ALIGN_LEFT | FL_ALIGN_CLIP);
-  commandText->when(FL_WHEN_ENTER_KEY_ALWAYS);
-  commandText->labelfont(FL_HELVETICA);
+  _logPrintBn = new Fl_Toggle_Button(rect->w() - bn_w, st_y, bn_w, st_h);
+  _lockBn = new Fl_Toggle_Button(_logPrintBn->x() - (bn_w + 2), st_y, bn_w, st_h);
+  _hideIdeBn = new Fl_Toggle_Button(_lockBn->x() - (bn_w + 2), st_y, bn_w, st_h);
+  _gotoLineBn = new Fl_Toggle_Button(_hideIdeBn->x() - (bn_w + 2), st_y, bn_w, st_h);
+  _colStatus = new Fl_Button(_gotoLineBn->x() - (st_w + 2), st_y, st_w, st_h);
+  _rowStatus = new Fl_Button(_colStatus->x() - (st_w + 2), st_y, st_w, st_h);
+  _runStatus = new Fl_Button(_rowStatus->x() - (st_w + 2), st_y, st_w, st_h);
+  _modStatus = new Fl_Button(_runStatus->x() - (st_w + 2), st_y, st_w, st_h);
+  _commandChoice = new Fl_Button(rect->x(), st_y, choice_w, st_h);
+  _commandText = new Fl_Input(rect->x() + choice_w + 2, st_y, _modStatus->x() - choice_w - 4, st_h);
+  _commandText->align(FL_ALIGN_LEFT | FL_ALIGN_CLIP);
+  _commandText->when(FL_WHEN_ENTER_KEY_ALWAYS);
+  _commandText->labelfont(FL_HELVETICA);
 
   for (int n = 0; n < statusBar->children(); n++) {
     Fl_Widget *w = statusBar->child(n);
     w->labelfont(FL_HELVETICA);
-    w->box(FL_BORDER_BOX);
+    w->box(FL_FLAT_BOX);
   }
 
-  statusBar->resizable(commandText);
+  statusBar->resizable(_commandText);
   statusBar->end();
-
   resizable(tile);
   end();
 
@@ -148,33 +135,34 @@ EditorWidget::EditorWidget(Fl_Widget *rect, Fl_Menu_Bar *menuBar) :
   setModified(false);
 
   // button callbacks
-  lockBn->callback(scroll_lock_cb);
-  modStatus->callback(save_file_cb);
-  runStatus->callback(MainWindow::run_cb);
-  commandChoice->callback(command_cb, (void *)1);
-  commandText->callback(command_cb, (void *)1);
-  funcList->callback(func_list_cb, 0);
-  logPrintBn->callback(un_select_cb, (void *)hideIdeBn);
-  hideIdeBn->callback(un_select_cb, (void *)logPrintBn);
-  colStatus->callback(goto_line_cb, 0);
-  rowStatus->callback(goto_line_cb, 0);
+  _lockBn->callback(scroll_lock_cb);
+  _modStatus->callback(save_file_cb);
+  _runStatus->callback(MainWindow::run_cb);
+  _commandChoice->callback(command_cb, (void *)1);
+  _commandText->callback(command_cb, (void *)1);
+  _funcList->callback(func_list_cb, 0);
+  _logPrintBn->callback(un_select_cb, (void *)_hideIdeBn);
+  _hideIdeBn->callback(un_select_cb, (void *)_logPrintBn);
+  _colStatus->callback(goto_line_cb, 0);
+  _rowStatus->callback(goto_line_cb, 0);
 
   // setup icons
-  logPrintBn->label("@i;@b;T"); // italic bold T
-  lockBn->label("@||;");        // vertical bars
-  hideIdeBn->label("@border_frame;");   // large dot
-  gotoLineBn->label("@>;");     // right arrow (goto)
+  _logPrintBn->label("@i;@b;T"); // italic bold T
+  _lockBn->label("@||;");        // vertical bars
+  _hideIdeBn->label("@border_frame;");   // large dot
+  _gotoLineBn->label("@>;");     // right arrow (goto)
 
   // setup tooltips
-  commandText->tooltip("Press Ctrl+f or Ctrl+Shift+f to find again");
-  rowStatus->tooltip("Cursor row position");
-  colStatus->tooltip("Cursor column position");
-  runStatus->tooltip("Run or BREAK");
-  modStatus->tooltip("Save file");
-  logPrintBn->tooltip("Display PRINT statements in the log window");
-  lockBn->tooltip("Prevent log window auto-scrolling");
-  hideIdeBn->tooltip("Hide the editor while program is running");
-  gotoLineBn->tooltip("Position the cursor to the last program line after BREAK");
+  _commandText->tooltip("Press Ctrl+f or Ctrl+Shift+f to find again");
+  _rowStatus->tooltip("Cursor row position");
+  _colStatus->tooltip("Cursor column position");
+  _runStatus->tooltip("Run or BREAK");
+  _modStatus->tooltip("Save file");
+  _logPrintBn->tooltip("Display PRINT statements in the log window");
+  _lockBn->tooltip("Prevent log window auto-scrolling");
+  _hideIdeBn->tooltip("Hide the editor while program is running");
+  _gotoLineBn->tooltip("Position the cursor to the last program line after BREAK");
+  statusMsg("Ready");
 
   // setup defaults or restore settings
   if (wnd && wnd->_profile) {
@@ -186,7 +174,7 @@ EditorWidget::EditorWidget(Fl_Widget *rect, Fl_Menu_Bar *menuBar) :
 }
 
 EditorWidget::~EditorWidget() {
-  delete editor;
+  delete _editor;
 }
 
 //--Event handler methods-------------------------------------------------------
@@ -195,7 +183,7 @@ EditorWidget::~EditorWidget() {
  * change the selected text to upper/lower/camel case
  */
 void EditorWidget::change_case(Fl_Widget *w, void *eventData) {
-  Fl_Text_Buffer *tb = editor->_textbuf;
+  Fl_Text_Buffer *tb = _editor->_textbuf;
   int start, end;
   char *selection = getSelection(&start, &end);
   int len = strlen(selection);
@@ -243,14 +231,14 @@ void EditorWidget::command_opt(Fl_Widget *w, void *eventData) {
  * cut selected text to the clipboard
  */
 void EditorWidget::cut_text(Fl_Widget *w, void *eventData) {
-  Fl_Text_Editor::kf_cut(0, editor);
+  Fl_Text_Editor::kf_cut(0, _editor);
 }
 
 /**
  * delete selected text
  */
 void EditorWidget::do_delete(Fl_Widget *w, void *eventData) {
-  editor->_textbuf->remove_selection();
+  _editor->_textbuf->remove_selection();
 }
 
 /**
@@ -261,7 +249,7 @@ void EditorWidget::expand_word(Fl_Widget *w, void *eventData) {
   const char *fullWord = 0;
   unsigned fullWordLen = 0;
 
-  Fl_Text_Buffer *textbuf = editor->_textbuf;
+  Fl_Text_Buffer *textbuf = _editor->_textbuf;
   const char *text = textbuf->text();
 
   if (textbuf->selected()) {
@@ -275,7 +263,7 @@ void EditorWidget::expand_word(Fl_Widget *w, void *eventData) {
     fullWordLen = pos2 - start - 1;
   } else {
     // nothing selected - get word to left of cursor position
-    int pos = editor->insert_position();
+    int pos = _editor->insert_position();
     end = textbuf->word_end(pos);
     start = textbuf->word_start(end - 1);
     completionIndex = 0;
@@ -332,7 +320,7 @@ void EditorWidget::expand_word(Fl_Widget *w, void *eventData) {
         textbuf->insert(end, word + expandWordLen);
       }
       textbuf->select(end, end + strlen(word + expandWordLen));
-      editor->insert_position(end + strlen(word + expandWordLen));
+      _editor->insert_position(end + strlen(word + expandWordLen));
       free((void *)word);
       return;
     }
@@ -341,7 +329,7 @@ void EditorWidget::expand_word(Fl_Widget *w, void *eventData) {
   completionIndex = -1;         // no more buffer expansions
 
   strlib::List<String *> keywords;
-  editor->getKeywords(keywords);
+  _editor->getKeywords(keywords);
 
   // find the next replacement
   int firstIndex = -1;
@@ -402,24 +390,24 @@ void EditorWidget::find(Fl_Widget *w, void *eventData) {
 void EditorWidget::command(Fl_Widget *w, void *eventData) {
   bool found = false;
   bool forward = (intptr_t) eventData;
-  bool updatePos = (commandOpt != cmd_find_inc);
+  bool updatePos = (_commandOpt != cmd_find_inc);
 
   if (Fl::event_button() == FL_RIGHT_MOUSE) {
     // right click
     forward = 0;
   }
 
-  switch (commandOpt) {
+  switch (_commandOpt) {
   case cmd_find_inc:
   case cmd_find:
-    found = editor->findText(commandText->value(), forward, updatePos);
-    commandText->textcolor(found ? commandChoice->color() : FL_RED);
-    commandText->redraw();
+    found = _editor->findText(_commandText->value(), forward, updatePos);
+    _commandText->textcolor(found ? _commandChoice->color() : FL_RED);
+    _commandText->redraw();
     break;
 
   case cmd_replace:
-    commandBuffer.empty();
-    commandBuffer.append(commandText->value());
+    _commandBuffer.empty();
+    _commandBuffer.append(_commandText->value());
     setCommand(cmd_replace_with);
     break;
 
@@ -428,7 +416,7 @@ void EditorWidget::command(Fl_Widget *w, void *eventData) {
     break;
 
   case cmd_goto:
-    gotoLine(atoi(commandText->value()));
+    gotoLine(atoi(_commandText->value()));
     take_focus();
     break;
 
@@ -453,15 +441,15 @@ void EditorWidget::font_name(Fl_Widget *w, void *eventData) {
 void EditorWidget::func_list(Fl_Widget *w, void *eventData) {
   /*
     TODO: fixme
-  if (funcList && funcList->item()) {
-    const char *label = funcList->item()->label();
+  if (_funcList && _funcList->item()) {
+    const char *label = _funcList->item()->label();
     if (label) {
       if (strcmp(label, scanLabel) == 0) {
-        funcList->clear();
+        _funcList->clear();
         createFuncList();
-        funcList->add(scanLabel);
+        _funcList->add(scanLabel);
       } else {
-        gotoLine(funcList->item()->argument());
+        gotoLine(_funcList->item()->argument());
         take_focus();
       }
     }
@@ -480,7 +468,7 @@ void EditorWidget::goto_line(Fl_Widget *w, void *eventData) {
  * paste clipboard text onto the buffer
  */
 void EditorWidget::paste_text(Fl_Widget *w, void *eventData) {
-  Fl_Text_Editor::kf_paste(0, editor);
+  Fl_Text_Editor::kf_paste(0, _editor);
 }
 
 /**
@@ -527,11 +515,11 @@ void EditorWidget::replace_next(Fl_Widget *w, void *eventData) {
     return;
   }
 
-  const char *find = commandBuffer;
-  const char *replace = commandText->value();
+  const char *find = _commandBuffer;
+  const char *replace = _commandText->value();
 
-  Fl_Text_Buffer *textbuf = editor->_textbuf;
-  int pos = editor->insert_position();
+  Fl_Text_Buffer *textbuf = _editor->_textbuf;
+  int pos = _editor->insert_position();
   int found = textbuf->search_forward(pos, find, &pos);
 
   if (found) {
@@ -540,11 +528,11 @@ void EditorWidget::replace_next(Fl_Widget *w, void *eventData) {
     textbuf->remove_selection();
     textbuf->insert(pos, replace);
     textbuf->select(pos, pos + strlen(replace));
-    editor->insert_position(pos + strlen(replace));
-    editor->show_insert_position();
+    _editor->insert_position(pos + strlen(replace));
+    _editor->show_insert_position();
   } else {
     setCommand(cmd_find);
-    editor->take_focus();
+    _editor->take_focus();
   }
 }
 
@@ -552,12 +540,12 @@ void EditorWidget::replace_next(Fl_Widget *w, void *eventData) {
  * save file menu command handler
  */
 void EditorWidget::save_file(Fl_Widget *w, void *eventData) {
-  if (filename[0] == '\0') {
+  if (_filename[0] == '\0') {
     // no filename - get one!
     wnd->save_file_as();
     return;
   } else {
-    doSaveFile(filename);
+    doSaveFile(_filename);
   }
 }
 
@@ -573,7 +561,7 @@ void EditorWidget::scroll_lock(Fl_Widget *w, void *eventData) {
  * select all text
  */
 void EditorWidget::select_all(Fl_Widget *w, void *eventData) {
-  Fl_Text_Editor::kf_select_all(0, editor);
+  Fl_Text_Editor::kf_select_all(0, _editor);
 }
 
 /**
@@ -584,14 +572,14 @@ void EditorWidget::set_color(Fl_Widget *w, void *eventData) {
   if (styleField == st_background || styleField == st_background_def) {
     uint8_t r, g, b;
     // TODO: fixme
-    split_color(editor->color(), r, g, b);
+    split_color(_editor->color(), r, g, b);
     if (fl_color_chooser(w->label(), r, g, b)) {
       Fl_Color c = fl_rgb_color(r, g, b);
       //set_color_index(FL_FREE_COLOR + styleField, c);
       setEditorColor(c, styleField == st_background_def);
-      editor->styleChanged();
+      _editor->styleChanged();
     }
-    editor->take_focus();
+    _editor->take_focus();
   } else {
     setColor(w->label(), styleField);
   }
@@ -603,12 +591,12 @@ void EditorWidget::set_color(Fl_Widget *w, void *eventData) {
  * replace text menu command handler
  */
 void EditorWidget::show_replace(Fl_Widget *w, void *eventData) {
-  const char *prime = editor->_search;
+  const char *prime = _editor->_search;
   if (!prime || !prime[0]) {
     // use selected text when search not available
-    prime = editor->_textbuf->selection_text();
+    prime = _editor->_textbuf->selection_text();
   }
-  commandText->value(prime);
+  _commandText->value(prime);
   setCommand(cmd_replace);
 }
 
@@ -616,7 +604,7 @@ void EditorWidget::show_replace(Fl_Widget *w, void *eventData) {
  * undo any edit changes
  */
 void EditorWidget::undo(Fl_Widget *w, void *eventData) {
-  Fl_Text_Editor::kf_undo(0, editor);
+  Fl_Text_Editor::kf_undo(0, _editor);
 }
 
 /**
@@ -632,7 +620,7 @@ void EditorWidget::un_select(Fl_Widget *w, void *eventData) {
  * handles saving the current buffer
  */
 bool EditorWidget::checkSave(bool discard) {
-  if (!dirty) {
+  if (!_dirty) {
     return true;                // continue next operation
   }
 
@@ -655,8 +643,8 @@ bool EditorWidget::checkSave(bool discard) {
  * copy selection text to the clipboard
  */
 void EditorWidget::copyText() {
-  if (!tty->copySelection()) {
-    Fl_Text_Editor::kf_copy(0, editor);
+  if (!_tty->copySelection()) {
+    Fl_Text_Editor::kf_copy(0, _editor);
   }
 }
 
@@ -664,13 +652,13 @@ void EditorWidget::copyText() {
  * saves the editor buffer to the given file name
  */
 void EditorWidget::doSaveFile(const char *newfile) {
-  if (!dirty && strcmp(newfile, filename) == 0) {
+  if (!_dirty && strcmp(newfile, _filename) == 0) {
     // neither buffer or filename have changed
     return;
   }
 
   char basfile[PATH_MAX];
-  Fl_Text_Buffer *textbuf = editor->_textbuf;
+  Fl_Text_Buffer *textbuf = _editor->_textbuf;
 
   if (wnd->_profile->_createBackups && access(newfile, 0) == 0) {
     // rename any existing file as a backup
@@ -689,9 +677,9 @@ void EditorWidget::doSaveFile(const char *newfile) {
     return;
   }
 
-  dirty = 0;
-  strcpy(filename, basfile);
-  modifiedTime = getModifiedTime();
+  _dirty = 0;
+  strcpy(_filename, basfile);
+  _modifiedTime = getModifiedTime();
 
   wnd->updateEditTabName(this);
   wnd->showEditTab(this);
@@ -706,19 +694,19 @@ void EditorWidget::doSaveFile(const char *newfile) {
   textbuf->call_modify_callbacks();
   showPath();
   fileChanged(true);
-  addHistory(filename);
-  editor->take_focus();
+  addHistory(_filename);
+  _editor->take_focus();
 }
 
 /**
  * called when the buffer has changed
  */
 void EditorWidget::fileChanged(bool loadfile) {
-  funcList->clear();
+  _funcList->clear();
   if (loadfile) {
     // update the func/sub navigator
     createFuncList();
-    funcList->redraw();
+    _funcList->redraw();
 
     const char *filename = getFilename();
     if (filename && filename[0]) {
@@ -749,7 +737,7 @@ void EditorWidget::fileChanged(bool loadfile) {
     }
   }
 
-  funcList->add(scanLabel);
+  _funcList->add(scanLabel);
 }
 
 /**
@@ -767,7 +755,7 @@ bool EditorWidget::focusWidget() {
     return true;
 
   case 'f':
-    if (strlen(commandText->value()) > 0 && commandOpt == cmd_find) {
+    if (strlen(_commandText->value()) > 0 && _commandOpt == cmd_find) {
       // continue search - shift -> backward else forward
       command(0, (void *)(intptr_t)(Fl::event_state(FL_SHIFT) ? 0 : 1));
     }
@@ -793,7 +781,7 @@ bool EditorWidget::focusWidget() {
  * returns the current font size
  */
 int EditorWidget::getFontSize() {
-  return editor->getFontSize();
+  return _editor->getFontSize();
 }
 
 /**
@@ -801,7 +789,7 @@ int EditorWidget::getFontSize() {
  */
 void EditorWidget::getInput(char *result, int size) {
   if (result && result[0]) {
-    commandText->value(result);
+    _commandText->value(result);
   }
   setCommand(cmd_input_text);
   wnd->setModal(true);
@@ -811,7 +799,7 @@ void EditorWidget::getInput(char *result, int size) {
   if (wnd->isBreakExec()) {
     brun_break();
   } else {
-    const char *value = commandText->value();
+    const char *value = _commandText->value();
     int valueLen = strlen(value);
     int len = (valueLen < size) ? valueLen : size;
     strncpy(result, value, len);
@@ -824,7 +812,7 @@ void EditorWidget::getInput(char *result, int size) {
  * returns the row and col position for the current cursor position
  */
 void EditorWidget::getRowCol(int *row, int *col) {
-  return ((BasicEditor *)editor)->getRowCol(row, col);
+  return ((BasicEditor *)_editor)->getRowCol(row, col);
 }
 
 /**
@@ -834,12 +822,12 @@ void EditorWidget::getRowCol(int *row, int *col) {
 char *EditorWidget::getSelection(int *start, int *end) {
   char *result = 0;
 
-  Fl_Text_Buffer *tb = editor->_textbuf;
+  Fl_Text_Buffer *tb = _editor->_textbuf;
   if (tb->selected()) {
     result = tb->selection_text();
     tb->selection_position(start, end);
   } else {
-    int pos = editor->insert_position();
+    int pos = _editor->insert_position();
     *start = tb->word_start(pos);
     *end = tb->word_end(pos);
     result = tb->text_range(*start, *end);
@@ -852,21 +840,21 @@ char *EditorWidget::getSelection(int *start, int *end) {
  * returns where text selection ends
  */
 void EditorWidget::getSelEndRowCol(int *row, int *col) {
-  return ((BasicEditor *)editor)->getSelEndRowCol(row, col);
+  return ((BasicEditor *)_editor)->getSelEndRowCol(row, col);
 }
 
 /**
  * returns where text selection starts
  */
 void EditorWidget::getSelStartRowCol(int *row, int *col) {
-  return ((BasicEditor *)editor)->getSelStartRowCol(row, col);
+  return ((BasicEditor *)_editor)->getSelStartRowCol(row, col);
 }
 
 /**
  * sets the cursor to the given line number
  */
 void EditorWidget::gotoLine(int line) {
-  ((BasicEditor *)editor)->gotoLine(line);
+  ((BasicEditor *)_editor)->gotoLine(line);
 }
 
 /**
@@ -876,7 +864,7 @@ int EditorWidget::handle(int e) {
   switch (e) {
   case FL_SHOW:
   case FL_FOCUS:
-    Fl::focus(editor);
+    Fl::focus(_editor);
     handleFileChange();
     return 1;
   case FL_KEYBOARD:
@@ -901,36 +889,36 @@ int EditorWidget::handle(int e) {
 void EditorWidget::loadFile(const char *newfile) {
   // save the current filename
   char oldpath[PATH_MAX];
-  strcpy(oldpath, filename);
+  strcpy(oldpath, _filename);
 
   // convert relative path to full path
-  getcwd(filename, sizeof(filename));
-  strcat(filename, "/");
-  strcat(filename, newfile);
+  getcwd(_filename, sizeof(_filename));
+  strcat(_filename, "/");
+  strcat(_filename, newfile);
 
-  if (access(filename, R_OK) != 0) {
+  if (access(_filename, R_OK) != 0) {
     // filename unreadable, try newfile
-    strcpy(filename, newfile);
+    strcpy(_filename, newfile);
   }
 
-  FileWidget::forwardSlash(filename);
+  FileWidget::forwardSlash(_filename);
 
-  loading = true;
-  if (editor->_textbuf->loadfile(filename)) {
+  _loading = true;
+  if (_editor->_textbuf->loadfile(_filename)) {
     // read failed
-    fl_alert("Error reading from file \'%s\':\n%s.", filename, strerror(errno));
+    fl_alert("Error reading from file \'%s\':\n%s.", _filename, strerror(errno));
 
     // restore previous file
-    strcpy(filename, oldpath);
-    editor->_textbuf->loadfile(filename);
+    strcpy(_filename, oldpath);
+    _editor->_textbuf->loadfile(_filename);
   }
 
-  dirty = false;
-  loading = false;
+  _dirty = false;
+  _loading = false;
 
-  editor->_textbuf->call_modify_callbacks();
-  editor->show_insert_position();
-  modifiedTime = getModifiedTime();
+  _editor->_textbuf->call_modify_callbacks();
+  _editor->show_insert_position();
+  _modifiedTime = getModifiedTime();
   readonly(false);
 
   wnd->updateEditTabName(this);
@@ -945,28 +933,28 @@ void EditorWidget::loadFile(const char *newfile) {
  * returns the buffer readonly flag
  */
 bool EditorWidget::readonly() {
-  return ((BasicEditor *)editor)->_readonly;
+  return ((BasicEditor *)_editor)->_readonly;
 }
 
 /**
  * sets the buffer readonly flag
  */
 void EditorWidget::readonly(bool is_readonly) {
-  if (!is_readonly && access(filename, W_OK) != 0) {
+  if (!is_readonly && access(_filename, W_OK) != 0) {
     // cannot set writable since file is readonly
     is_readonly = true;
   }
-  modStatus->label(is_readonly ? "RO" : "@line");
-  modStatus->redraw();
-  editor->cursor_style(is_readonly ? Fl_Text_Display::DIM_CURSOR : Fl_Text_Display::NORMAL_CURSOR);
-  ((BasicEditor *)editor)->_readonly = is_readonly;
+  _modStatus->label(is_readonly ? "RO" : "@line");
+  _modStatus->redraw();
+  _editor->cursor_style(is_readonly ? Fl_Text_Display::DIM_CURSOR : Fl_Text_Display::NORMAL_CURSOR);
+  ((BasicEditor *)_editor)->_readonly = is_readonly;
 }
 
 /**
  * displays the current run-mode flag
  */
 void EditorWidget::runState(RunMessage runMessage) {
-  runStatus->callback(MainWindow::run_cb);
+  _runStatus->callback(MainWindow::run_cb);
   const char *msg = 0;
   switch (runMessage) {
   case rs_err:
@@ -974,13 +962,13 @@ void EditorWidget::runState(RunMessage runMessage) {
     break;
   case rs_run:
     msg = "BRK";
-    runStatus->callback(MainWindow::run_break_cb);
+    _runStatus->callback(MainWindow::run_break_cb);
     break;
   default:
     msg = "RUN";
   }
-  runStatus->copy_label(msg);
-  runStatus->redraw();
+  _runStatus->copy_label(msg);
+  _runStatus->redraw();
 }
 
 /**
@@ -1009,24 +997,23 @@ void EditorWidget::setEditorColor(Fl_Color c, bool defColor) {
   if (wnd && wnd->_profile) {
     wnd->_profile->_color = c;
   }
-  editor->color(c);
+  _editor->color(c);
 
-  Fl_Color bg = FL_GRAY0;       // same offset as editor line numbers
+  Fl_Color bg = _editor->linenumber_bgcolor();
   Fl_Color fg = fl_contrast(c, bg);
-  int i;
 
   // set the colours on the command text bar
-  for (i = commandText->parent()->children(); i > 0; i--) {
-    Fl_Widget *child = commandText->parent()->child(i - 1);
+  for (int i = _commandText->parent()->children(); i > 0; i--) {
+    Fl_Widget *child = _commandText->parent()->child(i - 1);
     setWidgetColor(child, bg, fg);
   }
 
   // set the colours on the function list
-  setWidgetColor(funcList, bg, fg);
+  setWidgetColor(_funcList, bg, fg);
 
   if (defColor) {
     // contrast the default colours against the background
-    for (i = 0; i < st_background; i++) {
+    for (int i = 0; i < st_background; i++) {
       styletable[i].color = fl_contrast(defaultColor[i], c);
     }
   }
@@ -1037,8 +1024,8 @@ void EditorWidget::setEditorColor(Fl_Color c, bool defColor) {
  */
 void EditorWidget::setFont(Fl_Font font) {
   if (font) {
-    editor->setFont(font);
-    tty->setFont(font);
+    _editor->setFont(font);
+    _tty->setFont(font);
     wnd->_profile->_font = font;
   }
 }
@@ -1047,8 +1034,8 @@ void EditorWidget::setFont(Fl_Font font) {
  * sets the current font size
  */
 void EditorWidget::setFontSize(int size) {
-  editor->setFontSize(size);
-  tty->setFontSize(size);
+  _editor->setFontSize(size);
+  _tty->setFontSize(size);
   wnd->_profile->_fontSize = size;
 }
 
@@ -1056,7 +1043,7 @@ void EditorWidget::setFontSize(int size) {
  * sets the indent level to the given amount
  */
 void EditorWidget::setIndentLevel(int level) {
-  ((BasicEditor *)editor)->_indentLevel = level;
+  ((BasicEditor *)_editor)->_indentLevel = level;
 
   // update environment var for running programs
   char path[PATH_MAX];
@@ -1070,19 +1057,19 @@ void EditorWidget::setIndentLevel(int level) {
 void EditorWidget::setRowCol(int row, int col) {
   char rowcol[20];
   sprintf(rowcol, "%d", row);
-  rowStatus->copy_label(rowcol);
-  rowStatus->redraw();
+  _rowStatus->copy_label(rowcol);
+  _rowStatus->redraw();
   sprintf(rowcol, "%d", col);
-  colStatus->copy_label(rowcol);
-  colStatus->redraw();
+  _colStatus->copy_label(rowcol);
+  _colStatus->redraw();
 
   // sync the browser widget selection
-  int len = funcList->children() - 1;
+  int len = _funcList->children() - 1;
   for (int i = 0; i < len; i++) {
-    int line = (int)funcList->child(i)->argument();
-    int nextLine = (int)funcList->child(i + 1)->argument();
+    int line = (int)_funcList->child(i)->argument();
+    int nextLine = (int)_funcList->child(i + 1)->argument();
     if (row >= line && (i == len - 1 || row < nextLine)) {
-      funcList->value(i);
+      _funcList->value(i);
       break;
     }
   }
@@ -1092,7 +1079,7 @@ void EditorWidget::setRowCol(int row, int col) {
  * display the full pathname
  */
 void EditorWidget::showPath() {
-  commandChoice->tooltip(filename);
+  _commandChoice->tooltip(_filename);
 }
 
 /**
@@ -1100,8 +1087,8 @@ void EditorWidget::showPath() {
  */
 void EditorWidget::statusMsg(const char *msg) {
   if (msg) {
-    tty->print(msg);
-    tty->print("\n");
+    _tty->print(msg);
+    _tty->print("\n");
   }
 }
 
@@ -1109,9 +1096,9 @@ void EditorWidget::statusMsg(const char *msg) {
  * sets the font face, size and colour
  */
 void EditorWidget::updateConfig(EditorWidget *current) {
-  setFont(current->editor->getFont());
-  setFontSize(current->editor->getFontSize());
-  setEditorColor(current->editor->color(), false);
+  setFont(current->_editor->getFont());
+  setFontSize(current->_editor->getFontSize());
+  setEditorColor(current->_editor->color(), false);
 }
 
 //--Protected methods-----------------------------------------------------------
@@ -1169,7 +1156,7 @@ void EditorWidget::addHistory(const char *filename) {
  * creates the sub/func selection list
  */
 void EditorWidget::createFuncList() {
-  Fl_Text_Buffer *textbuf = editor->_textbuf;
+  Fl_Text_Buffer *textbuf = _editor->_textbuf;
   const char *text = textbuf->text();
   int len = textbuf->length();
   int curLine = 1;
@@ -1211,9 +1198,9 @@ void EditorWidget::createFuncList() {
           String s(text + i_begin, i - i_begin);
           if (j < 2) {
             // TODO: fixme
-            //menuGroup = funcList->add_group(s.c_str(), 0, (void *)(intptr_t)curLine);
+            //menuGroup = _funcList->add_group(s.c_str(), 0, (void *)(intptr_t)curLine);
           } else {
-            // funcList->add_leaf(s.c_str(), menuGroup, (void *)(intptr_t)curLine);
+            // _funcList->add_leaf(s.c_str(), menuGroup, (void *)(intptr_t)curLine);
           }
         }
         break;
@@ -1229,14 +1216,14 @@ void EditorWidget::createFuncList() {
  * called when the buffer has change - sets the modified flag
  */
 void EditorWidget::doChange(int inserted, int deleted) {
-  if (!loading) {
+  if (!_loading) {
     // do nothing while file load in progress
     if (inserted || deleted) {
-      dirty = 1;
+      _dirty = 1;
     }
 
     if (!readonly()) {
-      setModified(dirty);
+      setModified(_dirty);
     }
   }
 }
@@ -1245,9 +1232,9 @@ void EditorWidget::doChange(int inserted, int deleted) {
  * handler for the sub/func list selection event
  */
 void EditorWidget::findFunc(const char *find) {
-  const char *text = editor->_textbuf->text();
+  const char *text = _editor->_textbuf->text();
   int findLen = strlen(find);
-  int len = editor->_textbuf->length();
+  int len = _editor->_textbuf->length();
   int lineNo = 1;
   for (int i = 0; i < len; i++) {
     if (strncasecmp(text + i, find, findLen) == 0) {
@@ -1263,7 +1250,7 @@ void EditorWidget::findFunc(const char *find) {
  * returns the current selection text
  */
 char *EditorWidget::getSelection(Fl_Rect *rc) {
-  return ((BasicEditor *)editor)->getSelection(rc);
+  return ((BasicEditor *)_editor)->getSelection(rc);
 }
 
 /**
@@ -1272,7 +1259,7 @@ char *EditorWidget::getSelection(Fl_Rect *rc) {
 uint32_t EditorWidget::getModifiedTime() {
   struct stat st_file;
   uint32_t modified = 0;
-  if (filename[0] && !stat(filename, &st_file)) {
+  if (_filename[0] && !stat(_filename, &st_file)) {
     modified = st_file.st_mtime;
   }
   return modified;
@@ -1283,14 +1270,14 @@ uint32_t EditorWidget::getModifiedTime() {
  */
 void EditorWidget::handleFileChange() {
   // handle outside changes to the file
-  if (filename[0] && modifiedTime != 0 && modifiedTime != getModifiedTime()) {
+  if (_filename[0] && _modifiedTime != 0 && _modifiedTime != getModifiedTime()) {
     const char *msg = "File %s\nhas changed on disk.\n\n" "Do you want to reload the file?";
     /*
       TODO: fixme
-    if (fl_choice(msg, filename, "Yes", "No")) {
+    if (fl_choice(msg, _filename, "Yes", "No")) {
       reloadFile();
     } else {
-      modifiedTime = 0;
+      _modifiedTime = 0;
     }
     */
   }
@@ -1300,8 +1287,8 @@ void EditorWidget::handleFileChange() {
  * prevent the tty and browser from growing when the outer window is resized
  */
 void EditorWidget::layout() {
-  Fl_Group *tile = editor->parent();
-  tile->resizable(editor);
+  Fl_Group *tile = _editor->parent();
+  tile->resizable(_editor);
   // TODO: fixme
   //Fl_Group::layout();
 
@@ -1321,14 +1308,14 @@ void EditorWidget::newFile() {
     return;
   }
 
-  Fl_Text_Buffer *textbuf = editor->_textbuf;
-  filename[0] = '\0';
+  Fl_Text_Buffer *textbuf = _editor->_textbuf;
+  _filename[0] = '\0';
   textbuf->select(0, textbuf->length());
   textbuf->remove_selection();
-  dirty = 0;
+  _dirty = 0;
   textbuf->call_modify_callbacks();
   fileChanged(false);
-  modifiedTime = 0;
+  _modifiedTime = 0;
 }
 
 /**
@@ -1336,7 +1323,7 @@ void EditorWidget::newFile() {
  */
 void EditorWidget::reloadFile() {
   char buffer[PATH_MAX];
-  strcpy(buffer, filename);
+  strcpy(buffer, _filename);
   loadFile(buffer);
 }
 
@@ -1347,12 +1334,12 @@ int EditorWidget::replaceAll(const char *find, const char *replace, bool restore
   int times = 0;
 
   if (strcmp(find, replace) != 0) {
-    Fl_Text_Buffer *textbuf = editor->_textbuf;
-    int prevPos = editor->insert_position();
+    Fl_Text_Buffer *textbuf = _editor->_textbuf;
+    int prevPos = _editor->insert_position();
 
     // loop through the whole string
     int pos = 0;
-    editor->insert_position(pos);
+    _editor->insert_position(pos);
 
     while (textbuf->search_forward(pos, find, &pos)) {
       // found a match; update the position and replace text
@@ -1365,14 +1352,14 @@ int EditorWidget::replaceAll(const char *find, const char *replace, bool restore
       }
       // advance beyond replace string
       pos += strlen(replace);
-      editor->insert_position(pos);
+      _editor->insert_position(pos);
       times++;
     }
 
     if (restorePos) {
-      editor->insert_position(prevPos);
+      _editor->insert_position(prevPos);
     }
-    editor->show_insert_position();
+    _editor->show_insert_position();
   }
 
   return times;
@@ -1412,7 +1399,7 @@ void EditorWidget::setColor(const char *label, StyleField field) {
     Fl_Color c = fl_rgb_color(r, g, b);
     //set_color_index(FL_FREE_COLOR + field, c);
     styletable[field].color = c;
-    editor->styleChanged();
+    _editor->styleChanged();
   }
 }
 
@@ -1420,47 +1407,47 @@ void EditorWidget::setColor(const char *label, StyleField field) {
  * sets the current command
  */
 void EditorWidget::setCommand(CommandOpt command) {
-  if (commandOpt == cmd_input_text) {
+  if (_commandOpt == cmd_input_text) {
     wnd->setModal(false);
   }
 
-  commandOpt = command;
+  _commandOpt = command;
   switch (command) {
   case cmd_find:
-    commandChoice->label("@search; Find:");
+    _commandChoice->label("@search; Find:");
     break;
   case cmd_find_inc:
-    commandChoice->label("Inc Find:");
+    _commandChoice->label("Inc Find:");
     break;
   case cmd_replace:
-    commandChoice->label("Replace:");
+    _commandChoice->label("Replace:");
     break;
   case cmd_replace_with:
-    commandChoice->label("With:");
+    _commandChoice->label("With:");
     break;
   case cmd_goto:
-    commandChoice->label("Goto:");
+    _commandChoice->label("Goto:");
     break;
   case cmd_input_text:
-    commandChoice->label("INPUT:");
+    _commandChoice->label("INPUT:");
     break;
   }
-  commandChoice->redraw();
+  _commandChoice->redraw();
   //TODO: fixme
-  //commandText->textcolor(commandChoice->textcolor());
-  commandText->redraw();
-  commandText->take_focus();
-  commandText->when(commandOpt == cmd_find_inc ? FL_WHEN_CHANGED : FL_WHEN_ENTER_KEY_ALWAYS);
+  //_commandText->textcolor(_commandChoice->textcolor());
+  _commandText->redraw();
+  _commandText->take_focus();
+  _commandText->when(_commandOpt == cmd_find_inc ? FL_WHEN_CHANGED : FL_WHEN_ENTER_KEY_ALWAYS);
 }
 
 /**
  * display the toolbar modified flag
  */
 void EditorWidget::setModified(bool dirty) {
-  this->dirty = dirty;
-  modStatus->when(dirty ? FL_WHEN_CHANGED : FL_WHEN_NEVER);
-  modStatus->label(dirty ? "MOD" : "@line");
-  modStatus->redraw();
+  _dirty = dirty;
+  _modStatus->when(dirty ? FL_WHEN_CHANGED : FL_WHEN_NEVER);
+  _modStatus->label(dirty ? "MOD" : "@line");
+  _modStatus->redraw();
 }
 
 /**
@@ -1468,8 +1455,7 @@ void EditorWidget::setModified(bool dirty) {
  */
 void EditorWidget::setWidgetColor(Fl_Widget *w, Fl_Color bg, Fl_Color fg) {
   w->color(bg);
-  // TODO: fixme
-  //w->textcolor(fg);
+  w->labelcolor(fg);
   w->redraw();
 }
 
@@ -1477,6 +1463,5 @@ void EditorWidget::setWidgetColor(Fl_Widget *w, Fl_Color bg, Fl_Color fg) {
  * highlight the given search text
  */
 void EditorWidget::showFindText(const char *text) {
-  editor->showFindText(text);
+  _editor->showFindText(text);
 }
-

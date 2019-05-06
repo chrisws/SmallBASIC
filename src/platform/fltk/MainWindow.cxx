@@ -19,10 +19,7 @@
 #include "common/keymap.h"
 
 #define DEF_FONT_SIZE 12
-#define TAB_PADDING 0
 #define TAB_BORDER 4
-#define OUTER_PADDING 0
-#define WIDGET_PADDING 0
 
 char *packageHome;
 char *runfile = 0;
@@ -576,7 +573,7 @@ void MainWindow::run_selection(Fl_Widget *w, void *eventData) {
 void MainWindow::editor_plugin(Fl_Widget *w, void *eventData) {
   EditorWidget *editWidget = getEditor();
   if (editWidget) {
-    Fl_Text_Editor *editor = editWidget->editor;
+    Fl_Text_Editor *editor = editWidget->getEditor();
     char filename[PATH_MAX];
     char path[PATH_MAX];
     strcpy(filename, editWidget->getFilename());
@@ -639,7 +636,7 @@ void MainWindow::load_file(Fl_Widget *w, void *eventData) {
   }
 
   if (editWidget->checkSave(true)) {
-    Fl_Text_Editor *editor = editWidget->editor;
+    Fl_Text_Editor *editor = editWidget->getEditor();
     // save current position
     recentPosition[recentIndex] = editor->insert_position();
     recentIndex = pathIndex;
@@ -867,7 +864,7 @@ void run_mode_startup(void *data) {
     if (!wnd->basicMain(0, runfile, false)) {
       exit(0);
     }
-    editWidget->editor->take_focus();
+    editWidget->getEditor()->take_focus();
     opt_ide = IDE_INTERNAL;
   }
 }
@@ -981,7 +978,7 @@ MainWindow::MainWindow(int w, int h) :
 
   FileWidget::forwardSlash(runfile);
   begin();
-  Fl_Menu_Bar *m = _menuBar = new Fl_Menu_Bar(0, 0, w, MNU_HEIGHT);
+  Fl_Menu_Bar *m = _menuBar = new Fl_Menu_Bar(0, 0, w, MENU_HEIGHT);
   m->add("&File/&New File", FL_CTRL + 'n', new_file_cb);
   m->add("&File/&Open File", FL_CTRL + 'o', open_file_cb);
   m->add("&File/_Open Recent File/", 0, (Fl_Callback *)NULL);
@@ -1035,31 +1032,19 @@ MainWindow::MainWindow(int w, int h) :
   callback(quit_cb);
 
   int x1 = 0;
-  int y1 = MNU_HEIGHT;
+  int y1 = MENU_HEIGHT + TAB_BORDER;
   int x2 = w;
-  int y2 = h - MNU_HEIGHT;
-
-  x1 += (OUTER_PADDING);
-  y1 += (TAB_BORDER + OUTER_PADDING);
-  x2 -= (OUTER_PADDING * 2);
-  y2 -= (TAB_BORDER + OUTER_PADDING * 2);
+  int y2 = h - MENU_HEIGHT - TAB_BORDER;
 
   // group for all tabs
   _tabGroup = new Fl_Tabs(x1, y1, x2, y2);
 
   // create the output tab
-  x1 += (TAB_PADDING);
-  y1 += (MNU_HEIGHT + (TAB_PADDING));
-  x2 -= (TAB_PADDING * 2);
-  y2 -= (MNU_HEIGHT + (TAB_PADDING * 2));
-
+  y1 += MENU_HEIGHT;
+  y2 -= MENU_HEIGHT;
   _outputGroup = new Fl_Group(x1, y1, x2, y2, "Output");
   _outputGroup->labelfont(FL_HELVETICA);
   _outputGroup->user_data((void *)gw_output);
-
-  y1 += WIDGET_PADDING;
-  y2 -= WIDGET_PADDING + 1;
-
   _out = new GraphicsWidget(x1, y1, x2, y2, DEF_FONT_SIZE);
   _outputGroup->resizable(_out);
   _outputGroup->end();
@@ -1072,10 +1057,7 @@ MainWindow::MainWindow(int w, int h) :
 
 Fl_Group *MainWindow::createTab(GroupWidgetEnum groupWidgetEnum, const char *label) {
   _tabGroup->begin();
-  Fl_Group * result = new Fl_Group(_out->x() - (WIDGET_PADDING),
-                                   _out->y() - (WIDGET_PADDING),
-                                   _out->w() + (WIDGET_PADDING * 2),
-                                   _out->h() + (WIDGET_PADDING * 2), label);
+  Fl_Group * result = new Fl_Group(_out->x(), _out->y(), _out->w(), _out->h(), label);
   result->box(FL_NO_BOX);
   result->labelfont(FL_HELVETICA);
   result->user_data((void *)groupWidgetEnum);
@@ -1422,7 +1404,7 @@ TtyWidget *MainWindow::tty() {
     editor = getEditor(false);
   }
   if (editor) {
-    result = editor->tty;
+    result = editor->getTty();
   }
   return result;
 }
@@ -1431,7 +1413,7 @@ TtyWidget *MainWindow::tty() {
  * returns whether printing to the tty widget is active
  */
 bool MainWindow::logPrint() {
-  return (_runEditWidget && _runEditWidget->tty && _runEditWidget->isLogPrint());
+  return (_runEditWidget && _runEditWidget->getTty() && _runEditWidget->isLogPrint());
 }
 
 void MainWindow::execLink(strlib::String &link) {
