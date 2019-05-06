@@ -10,7 +10,7 @@
 #define EDITOR_WIDGET_H
 
 #include <stdint.h>
-#include <FL/Fl_Browser.H>
+#include <FL/Fl_Tree.H>
 #include <FL/Fl_Window.H>
 #include <FL/Fl_Widget.H>
 #include <FL/Fl_Input.H>
@@ -80,7 +80,6 @@ public:
   CALLBACK_METHOD(do_delete);
   CALLBACK_METHOD(expand_word);
   CALLBACK_METHOD(find);
-  CALLBACK_METHOD(font_name);
   CALLBACK_METHOD(func_list);
   CALLBACK_METHOD(goto_line);
   CALLBACK_METHOD(paste_text);
@@ -176,7 +175,7 @@ private:
   Fl_Widget *_colStatus;
   Fl_Button *_runStatus;
   Fl_Button *_modStatus;
-  Fl_Browser *_funcList;
+  Fl_Tree *_funcList;
 
   Fl_Toggle_Button *_logPrintBn;
   Fl_Toggle_Button *_lockBn;

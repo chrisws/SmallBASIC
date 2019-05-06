@@ -70,8 +70,8 @@ EditorWidget::EditorWidget(Fl_Widget *rect, Fl_Menu_Bar *menuBar) :
   begin();
 
   const int st_w = 40;
-  const int bn_w = 18;
-  const int st_h = MENU_HEIGHT - 2;
+  const int bn_w = 28;
+  const int st_h = MENU_HEIGHT + 2;
   const int choice_w = 80;
   const int tileHeight = rect->h();;
   const int ttyHeight = rect->h() / 8;
@@ -90,15 +90,19 @@ EditorWidget::EditorWidget(Fl_Widget *rect, Fl_Menu_Bar *menuBar) :
   _editor->take_focus();
 
   // sub-func jump droplist
-  _funcList = new Fl_Browser(_editor->w(), rect->y(), browserWidth, editHeight);
+  _funcList = new Fl_Tree(_editor->w(), rect->y(), browserWidth, editHeight);
   _funcList->labelfont(FL_HELVETICA);
   _funcList->when(FL_WHEN_RELEASE);
   _funcList->box(FL_FLAT_BOX);
-  _funcList->add(scanLabel);
+
+  Fl_Tree_Item *scan = new Fl_Tree_Item(_funcList);
+  scan->label(scanLabel);
+  _funcList->showroot(0);
+  _funcList->add(scanLabel, scan);
 
   _tty = new TtyWidget(rect->x(), rect->y() + editHeight, rect->w(), ttyHeight, TTY_ROWS);
-  _tty->color(color());
-  _tty->labelcolor(labelcolor());
+  _tty->color(FL_DARK3);
+  _tty->labelcolor(FL_GREEN);
   tile->end();
 
   // editor status bar
@@ -121,8 +125,13 @@ EditorWidget::EditorWidget(Fl_Widget *rect, Fl_Menu_Bar *menuBar) :
   for (int n = 0; n < statusBar->children(); n++) {
     Fl_Widget *w = statusBar->child(n);
     w->labelfont(FL_HELVETICA);
-    w->box(FL_FLAT_BOX);
+    w->box(FL_NO_BOX);
   }
+  _commandText->box(FL_THIN_DOWN_BOX);
+  _logPrintBn->box(FL_THIN_UP_BOX);
+  _lockBn->box(FL_THIN_UP_BOX);
+  _hideIdeBn->box(FL_THIN_UP_BOX);
+  _gotoLineBn->box(FL_THIN_UP_BOX);
 
   statusBar->resizable(_commandText);
   statusBar->end();
@@ -147,10 +156,10 @@ EditorWidget::EditorWidget(Fl_Widget *rect, Fl_Menu_Bar *menuBar) :
   _rowStatus->callback(goto_line_cb, 0);
 
   // setup icons
-  _logPrintBn->label("@i;@b;T"); // italic bold T
-  _lockBn->label("@||;");        // vertical bars
-  _hideIdeBn->label("@border_frame;");   // large dot
-  _gotoLineBn->label("@>;");     // right arrow (goto)
+  _gotoLineBn->label("G");  // right arrow (goto)
+  _hideIdeBn->label("X");   // large dot
+  _lockBn->label("J");      // vertical bars
+  _logPrintBn->label("T");  // italic bold T
 
   // setup tooltips
   _commandText->tooltip("Press Ctrl+f or Ctrl+Shift+f to find again");
@@ -427,34 +436,23 @@ void EditorWidget::command(Fl_Widget *w, void *eventData) {
 }
 
 /**
- * font menu selection handler
- */
-void EditorWidget::font_name(Fl_Widget *w, void *eventData) {
-  // TODO: fixme
-  //setFont(Fl_Font(w->label(), 0));
-  wnd->updateConfig(this);
-}
-
-/**
  * sub/func selection list handler
  */
 void EditorWidget::func_list(Fl_Widget *w, void *eventData) {
-  /*
-    TODO: fixme
-  if (_funcList && _funcList->item()) {
-    const char *label = _funcList->item()->label();
+  if (_funcList && _funcList->callback_item()) {
+    Fl_Tree_Item *item = (Fl_Tree_Item*)_funcList->callback_item();
+    const char *label = item->label();
     if (label) {
       if (strcmp(label, scanLabel) == 0) {
         _funcList->clear();
         createFuncList();
         _funcList->add(scanLabel);
       } else {
-        gotoLine(_funcList->item()->argument());
+        gotoLine((int)(intptr_t)item->user_data());
         take_focus();
       }
     }
   }
-  */
 }
 
 /**
@@ -1069,7 +1067,8 @@ void EditorWidget::setRowCol(int row, int col) {
     int line = (int)_funcList->child(i)->argument();
     int nextLine = (int)_funcList->child(i + 1)->argument();
     if (row >= line && (i == len - 1 || row < nextLine)) {
-      _funcList->value(i);
+      // TODO: fixme
+      //_funcList->value(i);
       break;
     }
   }
@@ -1168,7 +1167,7 @@ void EditorWidget::createFuncList() {
   for (int j = 0; j < keywords_length; j++) {
     keywords_len[j] = strlen(keywords[j]);
   }
-  Fl_Group *menuGroup = NULL;
+  Fl_Tree_Item *menuGroup = NULL;
 
   for (int i = 0; i < len; i++) {
     // skip to the newline start
@@ -1197,10 +1196,15 @@ void EditorWidget::createFuncList() {
         if (i > i_begin) {
           String s(text + i_begin, i - i_begin);
           if (j < 2) {
-            // TODO: fixme
-            //menuGroup = _funcList->add_group(s.c_str(), 0, (void *)(intptr_t)curLine);
-          } else {
-            // _funcList->add_leaf(s.c_str(), menuGroup, (void *)(intptr_t)curLine);
+            menuGroup = new Fl_Tree_Item(_funcList);
+            menuGroup->label(s.c_str());
+            menuGroup->user_data((void *)(intptr_t)curLine);
+            _funcList->add(s.c_str(), menuGroup);
+          } else if (menuGroup != NULL) {
+            Fl_Tree_Item *leaf = new Fl_Tree_Item(_funcList);
+            leaf->label(s.c_str());
+            leaf->user_data((void *)(intptr_t)curLine);
+            menuGroup->add(_funcList->prefs(), s.c_str(), leaf);
           }
         }
         break;
