@@ -15,6 +15,8 @@
 extern ui::Graphics *graphics;
 extern System *g_system;
 
+// TODO: can this be replaced with: Fl_Image_Surface.H
+
 //
 // Canvas implementation
 //

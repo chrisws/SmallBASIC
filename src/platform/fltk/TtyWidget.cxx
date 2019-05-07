@@ -70,8 +70,6 @@ void TtyWidget::draw() {
   fl_color(color());
   fl_rectf(rc.x(), rc.y(), rc.w(), rc.h());
   fl_push_clip(rc.x(), rc.y(), rc.w(), rc.h());
-  fl_color(FL_BLACK);
-  fl_line(0, 0, w(), 0);
   fl_color(labelcolor());
   fl_font(labelfont(), (int)labelsize());
 

@@ -71,7 +71,7 @@ EditorWidget::EditorWidget(Fl_Widget *rect, Fl_Menu_Bar *menuBar) :
 
   const int st_w = 40;
   const int bn_w = 28;
-  const int st_h = MENU_HEIGHT + 2;
+  const int st_h = MENU_HEIGHT + 4;
   const int choice_w = 80;
   const int tileHeight = rect->h();;
   const int ttyHeight = rect->h() / 8;
@@ -108,16 +108,16 @@ EditorWidget::EditorWidget(Fl_Widget *rect, Fl_Menu_Bar *menuBar) :
   // editor status bar
   Fl_Group *statusBar = new Fl_Group(rect->x(), st_y, rect->w(), st_h);
 
-  _logPrintBn = new Fl_Toggle_Button(rect->w() - bn_w, st_y, bn_w, st_h);
-  _lockBn = new Fl_Toggle_Button(_logPrintBn->x() - (bn_w + 2), st_y, bn_w, st_h);
-  _hideIdeBn = new Fl_Toggle_Button(_lockBn->x() - (bn_w + 2), st_y, bn_w, st_h);
-  _gotoLineBn = new Fl_Toggle_Button(_hideIdeBn->x() - (bn_w + 2), st_y, bn_w, st_h);
+  _logPrintBn = new Fl_Toggle_Button(rect->w() - bn_w, st_y + 1, bn_w, st_h - 2);
+  _lockBn = new Fl_Toggle_Button(_logPrintBn->x() - (bn_w + 2), st_y + 1, bn_w, st_h - 2);
+  _hideIdeBn = new Fl_Toggle_Button(_lockBn->x() - (bn_w + 2), st_y + 1, bn_w, st_h - 2);
+  _gotoLineBn = new Fl_Toggle_Button(_hideIdeBn->x() - (bn_w + 2), st_y + 1, bn_w, st_h - 2);
   _colStatus = new Fl_Button(_gotoLineBn->x() - (st_w + 2), st_y, st_w, st_h);
   _rowStatus = new Fl_Button(_colStatus->x() - (st_w + 2), st_y, st_w, st_h);
   _runStatus = new Fl_Button(_rowStatus->x() - (st_w + 2), st_y, st_w, st_h);
   _modStatus = new Fl_Button(_runStatus->x() - (st_w + 2), st_y, st_w, st_h);
   _commandChoice = new Fl_Button(rect->x(), st_y, choice_w, st_h);
-  _commandText = new Fl_Input(rect->x() + choice_w + 2, st_y, _modStatus->x() - choice_w - 4, st_h);
+  _commandText = new Fl_Input(rect->x() + choice_w + 2, st_y + 1, _modStatus->x() - choice_w - 4, st_h - 2);
   _commandText->align(FL_ALIGN_LEFT | FL_ALIGN_CLIP);
   _commandText->when(FL_WHEN_ENTER_KEY_ALWAYS);
   _commandText->labelfont(FL_HELVETICA);
@@ -483,17 +483,16 @@ void EditorWidget::rename_word(Fl_Widget *w, void *eventData) {
       begin();
       LineInput *in = new LineInput(rc.x(), rc.y(), rc.w() + 10, rc.h());
       end();
-      // TODO: fixme
-      //in->text(selection);
+
+      in->value(selection);
       in->callback(rename_word_cb);
       in->textfont(FL_COURIER);
       in->textsize(getFontSize());
 
       rename_active = true;
-      // TODO: fixme
-      //while (rename_active && in->focused()) {
-      // Fl::wait();
-      //}
+      while (rename_active && in == Fl::focus()) {
+        Fl::wait();
+      }
 
       showFindText("");
       replaceAll(selection, in->value(), true, true);
@@ -551,8 +550,7 @@ void EditorWidget::save_file(Fl_Widget *w, void *eventData) {
  * prevent the tty window from scrolling with new data
  */
 void EditorWidget::scroll_lock(Fl_Widget *w, void *eventData) {
-  // TODO: fixme
-  //tty->setScrollLock(w->flags() & STATE);
+  _tty->setScrollLock(_lockBn->value());
 }
 
 /**
@@ -622,19 +620,15 @@ bool EditorWidget::checkSave(bool discard) {
     return true;                // continue next operation
   }
 
-  const char *msg = "The current file has not been saved.\n" "Would you like to save it now?";
-  /*
-    TODO: fixme
+  const char *msg = "The current file has not been saved\n\nWould you like to save it now?";
   int r = discard ?
-          fl_choice(msg, "Save", "Discard", "Cancel") :
-          fl_choice(msg, "Save", "Cancel", 0);
+          fl_choice(msg, "Save", "Discard", "Cancel", NULL) :
+          fl_choice(msg, "Save", "Cancel", NULL, NULL);
   if (discard ? (r == 2) : (r == 1)) {
     save_file();                // Save the file
-    return !dirty;
+    return !_dirty;
   }
   return (discard && r == 1);
-  */
-  return false;
 }
 
 /**
@@ -1275,15 +1269,16 @@ uint32_t EditorWidget::getModifiedTime() {
 void EditorWidget::handleFileChange() {
   // handle outside changes to the file
   if (_filename[0] && _modifiedTime != 0 && _modifiedTime != getModifiedTime()) {
-    const char *msg = "File %s\nhas changed on disk.\n\n" "Do you want to reload the file?";
-    /*
-      TODO: fixme
-    if (fl_choice(msg, _filename, "Yes", "No")) {
+    String st;
+    st.append("File")
+      .append(_filename)
+      .append("has changed on disk.\n\n")
+      .append("Do you want to reload the file?");
+    if (fl_choice(st.c_str(), "Yes", "No", NULL, NULL)) {
       reloadFile();
     } else {
       _modifiedTime = 0;
     }
-    */
   }
 }
 
@@ -1418,7 +1413,7 @@ void EditorWidget::setCommand(CommandOpt command) {
   _commandOpt = command;
   switch (command) {
   case cmd_find:
-    _commandChoice->label("@search; Find:");
+    _commandChoice->label("@search  Find:");
     break;
   case cmd_find_inc:
     _commandChoice->label("Inc Find:");
@@ -1437,8 +1432,8 @@ void EditorWidget::setCommand(CommandOpt command) {
     break;
   }
   _commandChoice->redraw();
-  //TODO: fixme
-  //_commandText->textcolor(_commandChoice->textcolor());
+
+  _commandText->color(_commandChoice->color());
   _commandText->redraw();
   _commandText->take_focus();
   _commandText->when(_commandOpt == cmd_find_inc ? FL_WHEN_CHANGED : FL_WHEN_ENTER_KEY_ALWAYS);

@@ -919,6 +919,7 @@ bool initialise(int argc, char **argv) {
 
   Fl::scheme("gtk+");
   Fl_Window::default_xclass("smallbasic");
+  fl_message_title("SmallBASIC");
   wnd->loadIcon(PACKAGE_PREFIX, 101);
   Fl::wait(0);
 
