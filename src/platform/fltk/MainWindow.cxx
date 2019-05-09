@@ -307,7 +307,7 @@ void MainWindow::quit(Fl_Widget *w, void *eventData) {
  * opens the smallbasic home page in a browser window
  */
 void MainWindow::help_home(Fl_Widget *w, void *eventData) {
-  browseFile("http://smallbasic.sf.net");
+  browseFile("http://smallbasic.github.io");
 }
 
 /**
@@ -391,7 +391,7 @@ void MainWindow::help_contents(Fl_Widget *w, void *eventData) {
  * displays the program help page in a browser window
  */
 void MainWindow::help_app(Fl_Widget *w, void *eventData) {
-  browseFile("https://smallbasic.github.io/reference/955.html");
+  browseFile("https://smallbasic.github.io/pages/reference.html");
 }
 
 void MainWindow::help_about(Fl_Widget *w, void *eventData) {
@@ -1536,7 +1536,7 @@ void MainWindow::loadIcon(const char *prefix, int resourceId) {
     const char *key = "Icon=";
 
     // read the application desktop file, then scan for the Icon file
-    snprintf(path, sizeof(path), "%s/share/applications/%s.desktop", prefix, Fl_Window::xclass());
+    snprintf(path, sizeof(path), "%s/share/applications/smallbasic.desktop", prefix);
     FILE *fp = fopen(path, "r");
     if (fp) {
       while (feof(fp) == 0 && fgets(buffer, sizeof(buffer), fp)) {
@@ -1545,6 +1545,7 @@ void MainWindow::loadIcon(const char *prefix, int resourceId) {
           // found icon spec
           const char *filename = buffer + strlen(key);
           Fl_Image *ico = Fl_Shared_Image::get(filename);
+          // TODO: fixme
           if (ico) {
             if (sizeof(unsigned) == ico->d()) {
               // prefix the buffer with unsigned width and height values
@@ -1555,8 +1556,7 @@ void MainWindow::loadIcon(const char *prefix, int resourceId) {
               memcpy(image + 2, ico->data(), size);
               icon(image);
             }
-            // TODO: fixme
-            //Fl_Shared_Image::remove(filename);
+            delete ico;
           }
           break;
         }
@@ -1640,7 +1640,7 @@ int BaseWindow::handle(int e) {
 bool BaseWindow::handleKeyEvent() {
   int k = Fl::event_key();
   bool key_pushed = true;
-
+ 
   switch (k) {
   case FL_Tab:
     dev_pushkey(SB_KEY_TAB);

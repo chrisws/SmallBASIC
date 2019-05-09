@@ -5,7 +5,7 @@
 // This program is distributed under the terms of the GPL v2.0 or later
 // Download the GNU Public License (GPL) from www.gnu.org
 //
-// Copyright(C) 2002-2015 Chris Warren-Smith.
+// Copyright(C) 2002-2019 Chris Warren-Smith.
 
 #include "common/sys.h"
 #include "common/messages.h"
@@ -14,7 +14,7 @@
 #include "lib/maapi.h"
 #include "ui/image.h"
 #include "ui/system.h"
-#include "ui/graphics.h"
+#include "ui/rgb.h"
 
 #if !defined(LODEPNG_NO_COMPILE_CPP)
   #define LODEPNG_NO_COMPILE_CPP

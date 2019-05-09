@@ -12,10 +12,10 @@
 #include "platform/fltk/display.h"
 #include "platform/fltk/system.h"
 
-extern ui::Graphics *graphics;
 extern System *g_system;
+GraphicsWidget *graphics;
 
-// TODO: can this be replaced with: Fl_Image_Surface.H
+#define MAX_CANVAS_SIZE 20
 
 //
 // Canvas implementation
@@ -23,80 +23,77 @@ extern System *g_system;
 Canvas::Canvas() :
   _w(0),
   _h(0),
-  _pixels(NULL),
-  _img(NULL),
+  _scale(0),
+  _offscreen(0),
   _clip(NULL) {
 }
 
 Canvas::~Canvas() {
-  delete [] _pixels;
-  delete _img;
+  if (_offscreen) {
+    fl_delete_offscreen(_offscreen);
+    _offscreen = 0;
+  }
   delete _clip;
-  _pixels = NULL;
-  _img = NULL;
   _clip = NULL;
 }
 
 bool Canvas::create(int w, int h) {
   logEntered();
-  bool result;
   _w = w;
   _h = h;
-  _pixels = new pixel_t[w * h];
-  _img = new Fl_RGB_Image((const uchar *)_pixels, w, h, 4, 0);
-  if (_pixels && _img) {
-    memset(_pixels, 0, w * h);
-    result = true;
-  } else {
-    result = false;
-  }
-  return result;
+  _offscreen = fl_create_offscreen(_w, _h);
+  _scale = Fl_Graphics_Driver::default_driver().scale();
+  return _offscreen != 0;
+}
+
+void Canvas::drawArc(int xc, int yc, double r, double start, double end, double aspect) {
+  fl_begin_offscreen(_offscreen);
+  fl_end_offscreen();
+}
+
+void Canvas::drawEllipse(int xc, int yc, int rx, int ry, bool fill) {
+  fl_begin_offscreen(_offscreen);
+  fl_end_offscreen();
+}
+
+void Canvas::drawLine(int startX, int startY, int endX, int endY) {
+  fl_begin_offscreen(_offscreen);
+  fl_end_offscreen();
+}
+
+void Canvas::drawPixel(int posX, int posY) {
+  fl_begin_offscreen(_offscreen);
+  fl_end_offscreen();
+}
+
+void Canvas::drawRGB(const MAPoint2d *dstPoint, const void *src, const MARect *srcRect, int opacity, int bytesPerLine) {
+  fl_begin_offscreen(_offscreen);
+  fl_end_offscreen();
 }
 
 void Canvas::drawRegion(Canvas *src, const MARect *srcRect, int destX, int destY) {
-  int srcH = srcRect->height;
-  if (srcRect->top + srcRect->height > src->_h) {
-    srcH = src->_h - srcRect->top;
-  }
-  for (int y = 0; y < srcH && destY < _h; y++, destY++) {
-    pixel_t *line = src->getLine(y + srcRect->top) + srcRect->left;
-    pixel_t *dstLine = getLine(destY) + destX;
-    memcpy(dstLine, line, srcRect->width * sizeof(pixel_t));
-  }
+  fl_begin_offscreen(_offscreen);
+  fl_end_offscreen();
 }
 
-void Canvas::fillRect(int left, int top, int width, int height, pixel_t drawColor) {
-  int dtX = x();
-  int dtY = y();
-  uint8_t dR, dG, dB;
+void Canvas::drawText(int left, int top, const char *str, int len) {
+  fl_begin_offscreen(_offscreen);
+  fl_end_offscreen();
+}
 
-  GET_RGB(drawColor, dR, dG, dB);
-  if (left == 0 && _w == width && top < _h && top > -1 &&
-      dR == dG && dR == dB) {
-    // contiguous block of uniform colour
-    unsigned blockH = height;
-    if (top + height > _h) {
-      blockH = height - top;
-    }
-    memset(getLine(top), drawColor, 4 * width * blockH);
-  } else {
-    for (int y = 0; y < height; y++) {
-      int posY = y + top;
-      if (posY == _h) {
-        break;
-      } else if (posY >= dtY) {
-        pixel_t *line = getLine(posY);
-        for (int x = 0; x < width; x++) {
-          int posX = x + left;
-          if (posX == _w) {
-            break;
-          } else if (posX >= dtX) {
-            line[posX] = drawColor;
-          }
-        }
-      }
-    }
-  }
+void Canvas::fillRect(int left, int top, int width, int height, Fl_Color drawColor) {
+  fl_begin_offscreen(_offscreen);
+  fl_color(drawColor);
+  fl_rectf(left, top, width, height);
+  fl_end_offscreen();
+}
+
+void Canvas::getImageData(Canvas *canvas, uint8_t *image, const MARect *srcRect, int bytesPerLine) {
+
+}
+
+int Canvas::getPixel(int x, int y) {
+  return 0;
 }
 
 void Canvas::setClip(int x, int y, int w, int h) {
@@ -112,7 +109,12 @@ void Canvas::setClip(int x, int y, int w, int h) {
 // Graphics implementation
 //
 GraphicsWidget::GraphicsWidget(int x, int y, int w, int h, int defsize) :
-  Fl_Widget(x, y, w, h), ui::Graphics(), _defsize(defsize) {
+  Fl_Widget(x, y, w, h),
+  _defsize(defsize),
+  _screen(NULL),
+  _drawTarget(NULL),
+  _font(NULL),
+  _drawColor(0) {
 }
 
 GraphicsWidget::~GraphicsWidget() {
@@ -122,35 +124,40 @@ GraphicsWidget::~GraphicsWidget() {
 
 bool GraphicsWidget::construct(const char *font, const char *boldFont) {
   logEntered();
-
-  bool result = loadFonts(font, boldFont);
-  if (result) {
-    _screen = new Canvas();
-    _ansiWidget = new AnsiWidget(w(), h());
-    g_system = new System(_ansiWidget);
-    if (_screen != NULL && _ansiWidget != NULL && g_system != NULL) {
-      result = _screen->create(w(), h()) && _ansiWidget->construct();
-      _ansiWidget->setTextColor(DEFAULT_FOREGROUND, DEFAULT_BACKGROUND);
-      _ansiWidget->setFontSize(_defsize);
-      maSetColor(DEFAULT_BACKGROUND);
-    }
+  bool result;
+  _screen = new Canvas();
+  _ansiWidget = new AnsiWidget(w(), h());
+  g_system = new System(_ansiWidget);
+  if (_screen != NULL && _ansiWidget != NULL && g_system != NULL) {
+    result = _screen->create(w(), h()) && _ansiWidget->construct();
+    _ansiWidget->setTextColor(DEFAULT_FOREGROUND, DEFAULT_BACKGROUND);
+    _ansiWidget->setFontSize(_defsize);
+    maSetColor(DEFAULT_BACKGROUND);
+    result = true;
   } else {
     result = false;
   }
   return result;
 }
 
+void GraphicsWidget::deleteFont(Font *font) {
+  if (font == _font) {
+    _font = NULL;
+  }
+  delete font;
+}
+
 void GraphicsWidget::draw() {
-  if (_screen && _screen->_img) {
-    _screen->_img->draw(x(), y(), w(), h());
+  if (_screen && _screen->_offscreen) {
+    if (_screen->_scale != Fl_Graphics_Driver::default_driver().scale()) {
+      fl_rescale_offscreen(_screen->_offscreen);
+      _screen->_scale = Fl_Graphics_Driver::default_driver().scale();
+    }
+    fl_copy_offscreen(x(), y(), w(), h(), _screen->_offscreen, 0, 0);
   } else {
     fl_color(fl_rgb_color(128, 128, 200));
     fl_rectf(x(), y(), w(), h());
   }
-}
-
-void GraphicsWidget::redraw() {
-  Fl_Widget::redraw();
 }
 
 void GraphicsWidget::resize(int w, int h) {
@@ -162,14 +169,168 @@ void GraphicsWidget::resize(int w, int h) {
   _drawTarget = drawScreen ? _screen : NULL;
 }
 
-bool GraphicsWidget::loadFonts(const char *font, const char *boldFont) {
-  return (!FT_Init_FreeType(&_fontLibrary) &&
-          loadFont(font, _fontFace) &&
-          loadFont(boldFont, _fontFaceB));
+MAHandle GraphicsWidget::setDrawTarget(MAHandle maHandle) {
+  MAHandle result = (MAHandle) _drawTarget;
+  if (maHandle == (MAHandle) HANDLE_SCREEN ||
+      maHandle == (MAHandle) HANDLE_SCREEN_BUFFER) {
+    _drawTarget = _screen;
+  } else {
+    _drawTarget = (Canvas *)maHandle;
+  }
+  delete _drawTarget->_clip;
+  _drawTarget->_clip = NULL;
+  return result;
 }
 
-bool GraphicsWidget::loadFont(const char *filename, FT_Face &face) {
-  bool result = !FT_New_Face(_fontLibrary, filename, 0, &face);
-  trace("load font %s = %d", filename, result);
+//
+// maapi implementation
+//
+MAHandle maCreatePlaceholder(void) {
+  MAHandle maHandle = (MAHandle) new Canvas();
+  return maHandle;
+}
+
+int maFontDelete(MAHandle maHandle) {
+  if (maHandle != -1) {
+    graphics->deleteFont((Font *)maHandle);
+  }
+  return RES_FONT_OK;
+}
+
+int maSetColor(int c) {
+  graphics->setColor(GET_FROM_RGB888(c));
+  return c;
+}
+
+void maSetClipRect(int left, int top, int width, int height) {
+  Canvas *canvas = graphics->getDrawTarget();
+  if (canvas) {
+    canvas->setClip(left, top, width, height);
+  }
+}
+
+void maPlot(int posX, int posY) {
+  Canvas *canvas = graphics->getDrawTarget();
+  if (canvas) {
+    canvas->drawPixel(posX, posY);
+  }
+}
+
+void maLine(int startX, int startY, int endX, int endY) {
+  Canvas *canvas = graphics->getDrawTarget();
+  if (canvas) {
+    canvas->drawLine(startX, startY, endX, endY);
+  }
+}
+
+void maFillRect(int left, int top, int width, int height) {
+  Canvas *canvas = graphics->getDrawTarget();
+  if (canvas) {
+    canvas->fillRect(left, top, width, height, graphics->getDrawColor());
+  }
+}
+
+void maArc(int xc, int yc, double r, double start, double end, double aspect) {
+  Canvas *canvas = graphics->getDrawTarget();
+  if (canvas) {
+    canvas->drawArc(xc, yc, r, start, end, aspect);
+  }
+}
+
+void maEllipse(int xc, int yc, int rx, int ry, int fill) {
+  Canvas *canvas = graphics->getDrawTarget();
+  if (canvas) {
+    canvas->drawEllipse(xc, yc, rx, ry, fill);
+  }
+}
+
+void maDrawText(int left, int top, const char *str, int length) {
+  Canvas *canvas = graphics->getDrawTarget();
+  if (canvas && str && str[0]) {
+    canvas->drawText(left, top, str, length);
+  }
+}
+
+void maDrawRGB(const MAPoint2d *dstPoint, const void *src, const MARect *srcRect, int opacity, int bytesPerLine) {
+  Canvas *canvas = graphics->getDrawTarget();
+  if (canvas) {
+    canvas->drawRGB(dstPoint, src, srcRect, opacity, bytesPerLine);
+  }
+}
+
+MAExtent maGetTextSize(const char *str) {
+  MAExtent result;
+  if (str && str[0]) {
+    double width = fl_width(str);
+    // TODO: fixme
+  } else {
+    result = 0;
+  }
   return result;
+}
+
+MAExtent maGetScrSize(void) {
+  short width = graphics->getWidth();
+  short height = graphics->getHeight();
+  return (MAExtent)((width << 16) + height);
+}
+
+MAHandle maFontLoadDefault(int type, int style, int size) {
+  Fl_Font font = FL_COURIER;
+  if (style & FONT_STYLE_BOLD) {
+    font += FL_BOLD;
+  }
+  if (style & FONT_STYLE_ITALIC) {
+    font += FL_ITALIC;
+  }
+  return (MAHandle)new Font(font, size);
+}
+
+MAHandle maFontSetCurrent(MAHandle maHandle) {
+  if (graphics) {
+    graphics->setFont((Font *)maHandle);
+  }
+  return maHandle;
+}
+
+void maDrawImageRegion(MAHandle maHandle, const MARect *srcRect, const MAPoint2d *dstPoint, int transformMode) {
+  Canvas *canvas = graphics->getDrawTarget();
+  Canvas *src = (Canvas *)maHandle;
+  if (canvas && canvas != src) {
+    canvas->drawRegion(src, srcRect, dstPoint->x, dstPoint->y);
+  }
+}
+
+void maDestroyPlaceholder(MAHandle maHandle) {
+  Canvas *canvas = (Canvas *)maHandle;
+  delete canvas;
+}
+
+void maGetImageData(MAHandle maHandle, void *dst, const MARect *srcRect, int bytesPerLine) {
+  Canvas *canvas = (Canvas *)maHandle;
+  if (srcRect->width == 1 && srcRect->height == 1) {
+    *((int *)dst) = canvas->getPixel(srcRect->left, srcRect->top);
+  } else {
+    canvas->getImageData(canvas, (uint8_t *)dst, srcRect, bytesPerLine);
+  }
+}
+
+MAHandle maSetDrawTarget(MAHandle maHandle) {
+  return graphics->setDrawTarget(maHandle);
+}
+
+int maCreateDrawableImage(MAHandle maHandle, int width, int height) {
+  int result = RES_OK;
+  int maxSize = MAX(graphics->getWidth(), graphics->getHeight());
+  if (height > maxSize * MAX_CANVAS_SIZE) {
+    result -= 1;
+  } else {
+    Canvas *drawable = (Canvas *)maHandle;
+    result = drawable->create(width, height) ? RES_OK : -1;
+  }
+  return result;
+}
+
+void maUpdateScreen(void) {
+  ((::GraphicsWidget *)graphics)->redraw();
 }

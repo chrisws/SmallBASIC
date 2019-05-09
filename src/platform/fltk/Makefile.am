@@ -19,7 +19,6 @@ bin_PROGRAMS = sbasici
 
 sbasici_SOURCES =                 \
   ../../ui/ansiwidget.cpp         \
-  ../../ui/graphics.cpp           \
   ../../ui/window.cpp             \
   ../../ui/screen.cpp             \
   ../../ui/form.cpp               \
@@ -42,8 +41,10 @@ sbasici_LDADD = -L$(top_srcdir)/src/common -lsb_common @PACKAGE_LIBS@
 
 sbasici_DEPENDENCIES = $(top_srcdir)/src/common/libsb_common.a
 
-iconsdir = $(datadir)/icons/hicolor/32x32/apps
-icons_DATA = ../../../images/sb-desktop-32x32.png
+iconsdir = $(datadir)/icons/hicolor/128x128/apps
+icons_DATA = ../../../images/sb-desktop-128x128.png
+desktopdir = $(datadir)/applications
+desktop_DATA = ../sdl/smallbasic.desktop
 
 if WITH_WIN32
 sbasici_LDADD += win.res

@@ -21,7 +21,6 @@
 #include "common/keymap.h"
 #include "common/fs_socket_client.h"
 
-extern ui::Graphics *graphics;
 extern MainWindow *wnd;
 System *g_system;
 AnsiWidget *ansiWidget;
@@ -118,7 +117,7 @@ MAEvent System::processEvents(bool wait) {
 }
 
 void System::systemPrint(const char *message, ...) {
-  // TODO: fixme
+  wnd->tty()->print(message);
 }
 
 //
@@ -143,10 +142,6 @@ int maGetEvent(MAEvent *event) {
     }
   }
   return result;
-}
-
-void maUpdateScreen(void) {
-  ((::GraphicsWidget *)graphics)->redraw();
 }
 
 int maShowVirtualKeyboard(void) {

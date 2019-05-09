@@ -24,6 +24,7 @@
 #include <FL/Fl_Shared_Image.H>
 #include <FL/Fl_Slider.H>
 #include <FL/Fl_Value_Input.H>
+#include <FL/Fl_Window.H>
 
 #define Fl_HELP_WIDGET_RESOURCES
 #include "platform/fltk/HelpWidget.h"
@@ -273,12 +274,11 @@ FontNode::FontNode(Fl_Font font, int fontSize, Fl_Color color, bool bold, bool i
   font(font),
   fontSize(fontSize),
   color(color) {
-  // TODO: fixme
   if (this->font && bold) {
-    // this->font = this->font->bold();
+    this->font += FL_BOLD;
   }
   if (this->font && italic) {
-    // this->font = this->font->italic();
+    this->font += FL_ITALIC;
   }
 }
 
@@ -1224,8 +1224,7 @@ static void def_button_callback(Fl_Widget *button, void *buttonId) {
   // supply "onclick=fff" to make it do something useful
   // check for parent of HelpWidget
   if (Fl::modal() == (Fl_Window *)button->parent()->parent()) {
-    // TODO: fixme
-    //Fl_exit_modal();
+    Fl::modal()->set_non_modal();
   }
 }
 
