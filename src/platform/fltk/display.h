@@ -22,6 +22,8 @@
 
 struct Font {
   Font(Fl_Font font, Fl_Fontsize size) :  _font(font),  _size(size) {}
+
+private:
   Fl_Font _font;
   Fl_Fontsize _size;
 };
@@ -31,6 +33,7 @@ struct Canvas {
   virtual ~Canvas();
 
   bool create(int w, int h);
+  void deleteFont(Font *font);
   void drawArc(int xc, int yc, double r, double start, double end, double aspect);
   void drawEllipse(int xc, int yc, int rx, int ry, bool fill);
   void drawLine(int startX, int startY, int endX, int endY);
@@ -38,10 +41,13 @@ struct Canvas {
   void drawRGB(const MAPoint2d *dstPoint, const void *src, const MARect *srcRect, int opacity, int bytesPerLine);
   void drawRegion(Canvas *src, const MARect *srcRect, int dstx, int dsty);
   void drawText(int left, int top, const char *str, int len);
-  void fillRect(int x, int y, int w, int h, pixel_t color);
+  void fillRect(int x, int y, int w, int h, Fl_Color color);
+  Fl_Color getDrawColor() { return _drawColor; }
   void getImageData(Canvas *canvas, uint8_t *image, const MARect *srcRect, int bytesPerLine);
   int  getPixel(int x, int y);
   void setClip(int x, int y, int w, int h);
+  void setColor(Fl_Color color) { _drawColor = color; }
+  void setFont(Font *font) { _font = font; }
 
   int x() { return _clip ? _clip->x() : 0; }
   int y() { return _clip ? _clip->y() : 0; }
@@ -53,6 +59,8 @@ struct Canvas {
   float _scale;
   Fl_Offscreen _offscreen;
   Fl_Rect *_clip;
+  Fl_Color _drawColor;
+  Font *_font;
 };
 
 class GraphicsWidget : public Fl_Widget {
@@ -60,28 +68,20 @@ public:
   GraphicsWidget(int x, int y, int w, int h, int defsize);
   virtual ~GraphicsWidget();
 
-  bool construct(const char *font, const char *boldFont);
-  void deleteFont(Font *font);
   int getHeight() { return _screen->_h; }
   int getWidth() { return _screen->_w; }
-  pixel_t getDrawColor() { return _drawColor; }
   Canvas *getDrawTarget() { return _drawTarget; }
   void resize(int w, int h);
-  void setColor(Fl_Color color) { _drawColor = color; }
   MAHandle setDrawTarget(MAHandle maHandle);
   void setFontSize(int size) { _ansiWidget->setFontSize(size); }
-  void setFont(Font *font) { _font = font; }
 
-  AnsiWidget *_ansiWidget;
-  
 private:
   void draw();
 
+  AnsiWidget *_ansiWidget;
   int _defsize;
   Canvas *_screen;
   Canvas *_drawTarget;
-  Font *_font;
-  Fl_Color _drawColor;
 };
 
 #endif

@@ -259,7 +259,7 @@ void EditorWidget::expand_word(Fl_Widget *w, void *eventData) {
   unsigned fullWordLen = 0;
 
   Fl_Text_Buffer *textbuf = _editor->_textbuf;
-  const char *text = textbuf->text();
+  char *text = textbuf->text();
 
   if (textbuf->selected()) {
     // get word before selection
@@ -279,6 +279,7 @@ void EditorWidget::expand_word(Fl_Widget *w, void *eventData) {
   }
 
   if (start >= end) {
+    free(text);
     return;
   }
 
@@ -331,6 +332,7 @@ void EditorWidget::expand_word(Fl_Widget *w, void *eventData) {
       textbuf->select(end, end + strlen(word + expandWordLen));
       _editor->insert_position(end + strlen(word + expandWordLen));
       free((void *)word);
+      free(text);
       return;
     }
   }
@@ -384,6 +386,7 @@ void EditorWidget::expand_word(Fl_Widget *w, void *eventData) {
     }
     textbuf->select(end, end + strlen(keyword + expandWordLen));
   }
+  free(text);
 }
 
 /**
@@ -1036,11 +1039,6 @@ void EditorWidget::setFontSize(int size) {
  */
 void EditorWidget::setIndentLevel(int level) {
   ((BasicEditor *)_editor)->_indentLevel = level;
-
-  // update environment var for running programs
-  char path[PATH_MAX];
-  sprintf(path, "INDENT_LEVEL=%d", level);
-  putenv(path);
 }
 
 /**
@@ -1150,7 +1148,7 @@ void EditorWidget::addHistory(const char *filename) {
  */
 void EditorWidget::createFuncList() {
   Fl_Text_Buffer *textbuf = _editor->_textbuf;
-  const char *text = textbuf->text();
+  char *text = textbuf->text();
   int len = textbuf->length();
   int curLine = 1;
   const char *keywords[] = {
@@ -1208,6 +1206,7 @@ void EditorWidget::createFuncList() {
       i--;                      // avoid eating the entire next line
     }
   }
+  free(text);
 }
 
 /**
@@ -1230,7 +1229,7 @@ void EditorWidget::doChange(int inserted, int deleted) {
  * handler for the sub/func list selection event
  */
 void EditorWidget::findFunc(const char *find) {
-  const char *text = _editor->_textbuf->text();
+  char *text = _editor->_textbuf->text();
   int findLen = strlen(find);
   int len = _editor->_textbuf->length();
   int lineNo = 1;
@@ -1242,6 +1241,7 @@ void EditorWidget::findFunc(const char *find) {
       lineNo++;
     }
   }
+  free(text);
 }
 
 /**
