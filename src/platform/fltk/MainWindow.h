@@ -16,6 +16,7 @@
 #include <FL/Fl_Menu_Bar.H>
 #include <FL/Fl_Tabs.H>
 #include "platform/fltk/display.h"
+#include "platform/fltk/system.h"
 #include "platform/fltk/EditorWidget.h"
 #include "platform/fltk/HelpWidget.h"
 #include "platform/fltk/Profile.h"
@@ -79,7 +80,7 @@ struct BaseWindow : public Fl_Window {
 
 struct MainWindow : public BaseWindow {
   MainWindow(int w, int h);
-  virtual ~MainWindow() {};
+  virtual ~MainWindow();
 
   bool basicMain(EditorWidget *editWidget, const char *filename, bool toolExec);
   bool isBreakExec(void);       // whether BREAK mode has been entered
@@ -161,8 +162,11 @@ struct MainWindow : public BaseWindow {
   strlib::String _siteHome;
   strlib::String _exportFile;
 
-  // main output
+  // display system
   GraphicsWidget *_out;
+  System *_system;
+
+  // main output
   Fl_Group *_outputGroup;
 
   EditorWidget *_runEditWidget;

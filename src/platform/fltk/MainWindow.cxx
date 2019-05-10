@@ -489,7 +489,7 @@ void MainWindow::font_size_incr(Fl_Widget *w, void *eventData) {
     if (size < MAX_FONT_SIZE) {
       editWidget->setFontSize(size + 1);
       updateConfig(editWidget);
-      _out->setFontSize(size + 1);
+      _system->setFontSize(size + 1);
     }
   } else {
     handle(EVENT_INCREASE_FONT);
@@ -503,7 +503,7 @@ void MainWindow::font_size_decr(Fl_Widget *w, void *eventData) {
     if (size > MIN_FONT_SIZE) {
       editWidget->setFontSize(size - 1);
       updateConfig(editWidget);
-      _out->setFontSize(size - 1);
+      _system->setFontSize(size - 1);
     }
   } else {
     handle(EVENT_DECREASE_FONT);
@@ -1046,7 +1046,8 @@ MainWindow::MainWindow(int w, int h) :
   _outputGroup = new Fl_Group(x1, y1, x2, y2, "Output");
   _outputGroup->labelfont(FL_HELVETICA);
   _outputGroup->user_data((void *)gw_output);
-  _out = new GraphicsWidget(x1, y1, x2, y2, DEF_FONT_SIZE);
+  _out = new GraphicsWidget(x1, y1, x2, y2);
+  _system = new System(x2, y2, DEF_FONT_SIZE);
   _outputGroup->resizable(_out);
   _outputGroup->end();
   _tabGroup->resizable(_outputGroup);
@@ -1054,6 +1055,10 @@ MainWindow::MainWindow(int w, int h) :
 
   end();
   resizable(_tabGroup);
+}
+
+MainWindow::~MainWindow() {
+  delete _system;
 }
 
 Fl_Group *MainWindow::createTab(GroupWidgetEnum groupWidgetEnum, const char *label) {

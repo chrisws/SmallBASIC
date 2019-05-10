@@ -8,15 +8,14 @@
 
 #include "config.h"
 #include <time.h>
+#include <stdint.h>
 #include "ui/utils.h"
+#include "ui/rgb.h"
 #include "platform/fltk/display.h"
-#include "platform/fltk/system.h"
 
-extern System *g_system;
 GraphicsWidget *graphics;
 
 #define MAX_CANVAS_SIZE 20
-#define DEF_BACKGROUND fl_rgb_color(31, 28, 31)
 
 //
 // Canvas implementation
@@ -24,10 +23,11 @@ GraphicsWidget *graphics;
 Canvas::Canvas() :
   _w(0),
   _h(0),
+  _textHeight(0),
   _scale(0),
   _offscreen(0),
   _clip(NULL),
-  _drawColor(FL_BLACK),
+  _drawColor(fl_rgb_color(31, 28, 31)),
   _font(NULL) {
 }
 
@@ -58,16 +58,19 @@ void Canvas::deleteFont(Font *font) {
 
 void Canvas::drawArc(int xc, int yc, double r, double start, double end, double aspect) {
   fl_begin_offscreen(_offscreen);
+  // fl_arc(int x, int y, int w, int h, double a1, double a2)
   fl_end_offscreen();
 }
 
 void Canvas::drawEllipse(int xc, int yc, int rx, int ry, bool fill) {
   fl_begin_offscreen(_offscreen);
+  // fl_arc(int x, int y, int w, int h, double a1, double a2)
   fl_end_offscreen();
 }
 
 void Canvas::drawLine(int startX, int startY, int endX, int endY) {
   fl_begin_offscreen(_offscreen);
+  fl_line(startX, startY, endX, endY);
   fl_end_offscreen();
 }
 
@@ -82,9 +85,9 @@ void Canvas::drawRGB(const MAPoint2d *dstPoint, const void *src, const MARect *s
 }
 
 void Canvas::drawRegion(Canvas *src, const MARect *srcRect, int destX, int destY) {
-  fl_begin_offscreen(_offscreen);
   int width = MIN(_w, srcRect->width);
   int height = MIN(_h, srcRect->height);
+  fl_begin_offscreen(_offscreen);
   fl_copy_offscreen(destX, destY, width, height, src->_offscreen, srcRect->left, srcRect->top);
   fl_end_offscreen();
 }
@@ -94,24 +97,29 @@ void Canvas::drawText(int left, int top, const char *str, int len) {
   if (_font) {
     _font->setCurrent();
   }
+  fl_push_clip(x(), y(), w(), h());
   fl_color(_drawColor);
-  fl_draw(str, len, x() + left, y() + top + fl_height());
+  fl_draw(str, len, x() + left, y() + top + _textHeight);
+  fl_pop_clip();
   fl_end_offscreen();
 }
 
 void Canvas::fillRect(int left, int top, int width, int height, Fl_Color color) {
   fl_begin_offscreen(_offscreen);
   fl_color(color);
+  fl_push_clip(x(), y(), w(), h());
   fl_rectf(left, top, width, height);
+  fl_pop_clip();
   fl_end_offscreen();
 }
 
-void Canvas::getImageData(Canvas *canvas, uint8_t *image, const MARect *srcRect, int bytesPerLine) {
-
-}
-
-int Canvas::getPixel(int x, int y) {
-  return 0;
+void Canvas::getImageData(uint8_t *image, const MARect *srcRect, int bytesPerLine) {
+  Fl_Image_Surface *surface = new Fl_Image_Surface(srcRect->width, srcRect->height, 0, _offscreen);
+  Fl_RGB_Image *rgbImage = surface->image();
+  const char *const *data = rgbImage->data();
+  // TODO
+  delete surface;
+  delete rgbImage;
 }
 
 MAExtent Canvas::getTextSize(const char *str) {
@@ -120,6 +128,7 @@ MAExtent Canvas::getTextSize(const char *str) {
   }
   int height = (int)fl_height();
   int width = (int)fl_width(str);
+  _textHeight = height - fl_descent();
   return (MAExtent)((width << 16) + height);
 }
 
@@ -135,26 +144,17 @@ void Canvas::setClip(int x, int y, int w, int h) {
 //
 // Graphics implementation
 //
-GraphicsWidget::GraphicsWidget(int x, int y, int w, int h, int defsize) :
+GraphicsWidget::GraphicsWidget(int x, int y, int w, int h) :
   Fl_Widget(x, y, w, h),
-  _defsize(defsize),
   _screen(NULL),
   _drawTarget(NULL) {
   logEntered();
-  graphics = this;
   _screen = new Canvas();
-  _ansiWidget = new AnsiWidget(w, h);
-  g_system = new System(_ansiWidget);
-  if (_screen != NULL && _ansiWidget != NULL && g_system != NULL) {
-    _screen->create(w, h);
-    _ansiWidget->construct();
-    _ansiWidget->setTextColor(DEFAULT_FOREGROUND, DEFAULT_BACKGROUND);
-    _ansiWidget->setFontSize(_defsize);
-  }
+  _screen->create(w, h);
+  graphics = this;
 }
 
 GraphicsWidget::~GraphicsWidget() {
-  delete _ansiWidget;
   delete _screen;
 }
 
@@ -320,11 +320,10 @@ void maDestroyPlaceholder(MAHandle maHandle) {
 
 void maGetImageData(MAHandle maHandle, void *dst, const MARect *srcRect, int bytesPerLine) {
   Canvas *canvas = (Canvas *)maHandle;
-  if (srcRect->width == 1 && srcRect->height == 1) {
-    *((int *)dst) = canvas->getPixel(srcRect->left, srcRect->top);
-  } else {
-    canvas->getImageData(canvas, (uint8_t *)dst, srcRect, bytesPerLine);
+  if (canvas == HANDLE_SCREEN) {
+    canvas = graphics->getScreen();
   }
+  canvas->getImageData((uint8_t *)dst, srcRect, bytesPerLine);
 }
 
 MAHandle maSetDrawTarget(MAHandle maHandle) {

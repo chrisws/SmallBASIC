@@ -16,9 +16,6 @@
 #include <FL/Fl_Rect.H>
 #include <FL/Fl_Image_Surface.H>
 #include "lib/maapi.h"
-#include "ui/strlib.h"
-#include "ui/ansiwidget.h"
-#include "ui/rgb.h"
 
 struct Font {
   Font(Fl_Font font, Fl_Fontsize size) :  _font(font),  _size(size) {}
@@ -44,8 +41,7 @@ struct Canvas {
   void drawText(int left, int top, const char *str, int len);
   void fillRect(int x, int y, int w, int h, Fl_Color color);
   Fl_Color getDrawColor() { return _drawColor; }
-  void getImageData(Canvas *canvas, uint8_t *image, const MARect *srcRect, int bytesPerLine);
-  int  getPixel(int x, int y);
+  void getImageData(uint8_t *image, const MARect *srcRect, int bytesPerLine);
   MAExtent getTextSize(const char *str);
   void setClip(int x, int y, int w, int h);
   void setColor(Fl_Color color) { _drawColor = color; }
@@ -58,6 +54,7 @@ struct Canvas {
 
   int _w;
   int _h;
+  int _textHeight;
   float _scale;
   Fl_Offscreen _offscreen;
   Fl_Rect *_clip;
@@ -67,21 +64,19 @@ struct Canvas {
 
 class GraphicsWidget : public Fl_Widget {
 public:
-  GraphicsWidget(int x, int y, int w, int h, int defsize);
+  GraphicsWidget(int x, int y, int w, int h);
   virtual ~GraphicsWidget();
 
   int getHeight() { return _screen->_h; }
   int getWidth() { return _screen->_w; }
   Canvas *getDrawTarget() { return _drawTarget; }
+  Canvas *getScreen() { return _screen; }
   void resize(int w, int h);
   MAHandle setDrawTarget(MAHandle maHandle);
-  void setFontSize(int size) { _ansiWidget->setFontSize(size); }
 
 private:
   void draw();
 
-  AnsiWidget *_ansiWidget;
-  int _defsize;
   Canvas *_screen;
   Canvas *_drawTarget;
 };

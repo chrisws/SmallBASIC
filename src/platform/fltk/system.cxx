@@ -31,9 +31,16 @@ AnsiWidget *ansiWidget;
 //
 // System implementation
 //
-System::System(AnsiWidget *widget) : _ansiWidget(widget) {
+System::System(int w, int h, int defsize) {
+  ansiWidget = new AnsiWidget(w, h);
+  ansiWidget->construct();
+  ansiWidget->setTextColor(DEFAULT_FOREGROUND, DEFAULT_BACKGROUND);
+  ansiWidget->setFontSize(defsize);
   g_system = this;
-  ansiWidget = widget;
+}
+
+System::~System() {
+  delete ansiWidget;
 }
 
 void System::alert(const char *title, const char *message) {
@@ -53,23 +60,20 @@ void System::browseFile(const char *url) {
   ::browseFile(url);
 }
 
-void System::setClipboardText(const char *text) {
-  Fl::copy(text, strlen(text), true);
-}
-
-void System::setWindowSize(int width, int height) {
-}
-
 char *System::getClipboardText() {
   return NULL;
 }
 
-bool System::isRunning() {
-  return wnd->isRunning();
+AnsiWidget *System::getOutput() {
+  return ansiWidget;
 }
 
 bool System::isBreak() {
   return wnd->isBreakExec();
+}
+
+bool System::isRunning() {
+  return wnd->isRunning();
 }
 
 void System::optionsBox(StringList *items) {
@@ -114,6 +118,18 @@ MAEvent System::processEvents(bool wait) {
     event.key = keymap_kbpeek();
   }
   return event;
+}
+
+void System::setClipboardText(const char *text) {
+  Fl::copy(text, strlen(text), true);
+}
+
+void System::setFontSize(int size) {
+  ansiWidget->setFontSize(size);
+}
+
+void System::setWindowSize(int width, int height) {
+  // TODO
 }
 
 void System::systemPrint(const char *message, ...) {
@@ -161,7 +177,6 @@ void maWait(int timeout) {
 //
 int osd_devinit() {
   wnd->resetPen();
-  os_graphics = 1;
 
   // allow the application to set the preferred width and height
   if ((opt_pref_width || opt_pref_height) && wnd->isIdeHidden()) {
@@ -177,26 +192,22 @@ int osd_devinit() {
     int h = opt_pref_height + delta_y;
     wnd->_outputGroup->resize(0, 0, w, h);
   }
-  // show the output-group in case it's the full-screen container. a possible
-  // bug with fltk on x11 prevents resize after the window has been shown
+
+  // show the output-group in case it's the full-screen container.
   if (wnd->isInteractive() && !wnd->logPrint()) {
     wnd->_outputGroup->show();
   }
 
   dev_fgcolor = -DEFAULT_FOREGROUND;
   dev_bgcolor = -DEFAULT_BACKGROUND;
-
   os_graf_mx = ansiWidget->getWidth();
   os_graf_my = ansiWidget->getHeight();
-
   setsysvar_int(SYSVAR_XMAX, os_graf_mx - 1);
   setsysvar_int(SYSVAR_YMAX, os_graf_my - 1);
-
   osd_cls();
   dev_clrkb();
   ansiWidget->reset();
   ansiWidget->setAutoflush(!opt_show_page);
-
   return 1;
 }
 

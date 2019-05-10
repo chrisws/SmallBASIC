@@ -9,25 +9,27 @@
 #ifndef FLTK_SYSTEM_H
 #define FLTK_SYSTEM_H
 
+#include "ui/ansiwidget.h"
+
 struct System {
-  System(AnsiWidget *ansiWidget);
+  System(int w, int h, int defSize);
+  ~System();
 
   void alert(const char *title, const char *message);
   int ask(const char *title, const char *prompt, bool cancel=true);
   void browseFile(const char *url);
-  void setClipboardText(const char *text);
-  void setWindowSize(int width, int height);
   char *getClipboardText();
+  AnsiWidget *getOutput();
   bool isBreak();
   bool isRunning();
-  void setLoadPath(const char *url) {}
-  void setLoadBreak(const char *url) {}
-  MAEvent processEvents(bool wait);
   void optionsBox(StringList *items);
+  MAEvent processEvents(bool wait);
+  void setClipboardText(const char *text);
+  void setFontSize(int size);
+  void setLoadBreak(const char *url) {}
+  void setLoadPath(const char *url) {}
+  void setWindowSize(int width, int height);
   void systemPrint(const char *message, ...);
-  AnsiWidget *getOutput() { return _ansiWidget; }
-
-  private: AnsiWidget *_ansiWidget;
 };
 
 #endif
