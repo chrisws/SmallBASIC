@@ -46,7 +46,6 @@ bool Canvas::create(int w, int h) {
   _h = h;
   _offscreen = fl_create_offscreen(_w, _h);
   _scale = Fl_Graphics_Driver::default_driver().scale();
-  fillRect(x(), y(), w, h, DEF_BACKGROUND);
   return _offscreen != 0;
 }
 
@@ -92,8 +91,11 @@ void Canvas::drawRegion(Canvas *src, const MARect *srcRect, int destX, int destY
 
 void Canvas::drawText(int left, int top, const char *str, int len) {
   fl_begin_offscreen(_offscreen);
+  if (_font) {
+    _font->setCurrent();
+  }
   fl_color(_drawColor);
-  fl_draw(str, len, x() + left, y() + top);
+  fl_draw(str, len, x() + left, y() + top + fl_height());
   fl_end_offscreen();
 }
 
@@ -110,6 +112,15 @@ void Canvas::getImageData(Canvas *canvas, uint8_t *image, const MARect *srcRect,
 
 int Canvas::getPixel(int x, int y) {
   return 0;
+}
+
+MAExtent Canvas::getTextSize(const char *str) {
+  if (_font) {
+    _font->setCurrent();
+  }
+  int height = (int)fl_height();
+  int width = (int)fl_width(str);
+  return (MAExtent)((width << 16) + height);
 }
 
 void Canvas::setClip(int x, int y, int w, int h) {
@@ -260,9 +271,9 @@ void maDrawRGB(const MAPoint2d *dstPoint, const void *src, const MARect *srcRect
 
 MAExtent maGetTextSize(const char *str) {
   MAExtent result;
-  if (str && str[0]) {
-    double width = fl_width(str);
-    // TODO: fixme
+  Canvas *canvas = graphics->getDrawTarget();
+  if (str && str[0] && canvas) {
+    result = canvas->getTextSize(str);
   } else {
     result = 0;
   }

@@ -22,7 +22,8 @@
 
 struct Font {
   Font(Fl_Font font, Fl_Fontsize size) :  _font(font),  _size(size) {}
-
+  void setCurrent() { fl_font(_font, _size); }
+  
 private:
   Fl_Font _font;
   Fl_Fontsize _size;
@@ -45,6 +46,7 @@ struct Canvas {
   Fl_Color getDrawColor() { return _drawColor; }
   void getImageData(Canvas *canvas, uint8_t *image, const MARect *srcRect, int bytesPerLine);
   int  getPixel(int x, int y);
+  MAExtent getTextSize(const char *str);
   void setClip(int x, int y, int w, int h);
   void setColor(Fl_Color color) { _drawColor = color; }
   void setFont(Font *font) { _font = font; }
