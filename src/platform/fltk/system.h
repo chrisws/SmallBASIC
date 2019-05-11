@@ -20,6 +20,7 @@ struct System {
   void browseFile(const char *url);
   char *getClipboardText();
   AnsiWidget *getOutput();
+  int handle(int event);
   bool isBreak();
   bool isRunning();
   void optionsBox(StringList *items);

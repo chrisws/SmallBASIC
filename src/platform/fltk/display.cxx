@@ -117,6 +117,7 @@ void Canvas::getImageData(uint8_t *image, const MARect *srcRect, int bytesPerLin
   Fl_Image_Surface *surface = new Fl_Image_Surface(srcRect->width, srcRect->height, 0, _offscreen);
   Fl_RGB_Image *rgbImage = surface->image();
   const char *const *data = rgbImage->data();
+  fprintf(stderr, "here\n");
   // TODO
   delete surface;
   delete rgbImage;

@@ -1520,6 +1520,16 @@ void MainWindow::execLink(strlib::String &link) {
   }
 }
 
+int MainWindow::handle(int e) {
+  int result;
+  if (getSelectedTab() == _outputGroup && _system->handle(e)) {
+    result = 1;
+  } else {
+    result = BaseWindow::handle(e);
+  }
+  return result;
+}
+
 /**
  * loads the desktop icon
  */

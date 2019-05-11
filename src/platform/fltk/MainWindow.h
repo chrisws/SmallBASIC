@@ -93,6 +93,7 @@ struct MainWindow : public BaseWindow {
   void busyMessage();
   bool execHelp();
   void execLink(strlib::String &file);
+  int  handle(int e);
   void loadIcon(const char *prefix, int resourceId);
   void pathMessage(const char *file);
   void resetPen();

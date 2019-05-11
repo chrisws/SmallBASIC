@@ -95,15 +95,10 @@ void Profile::restore(MainWindow *wnd) {
 //
 void Profile::restoreAppPosition(Fl_Window *wnd) {
   if (_appPosition.w() && _appPosition.h()) {
-    /*
-      TODO: fixme
-    wnd->w(_appPosition.w());
-    wnd->h(_appPosition.h());
-    if (_appPosition.x() != 0) {
-      wnd->x(_appPosition.x());
-      wnd->y(_appPosition.y());
-    }
-    */
+    int x = _appPosition.x() != 0 ? _appPosition.x() : wnd->x();
+    int y = _appPosition.y() != 0 ? _appPosition.y() : wnd->y();
+    fprintf(stderr, "xy = %d %d\n", x, y);
+    wnd->resize(x, y, _appPosition.w(), _appPosition.h());
   }
 }
 
@@ -121,8 +116,8 @@ void Profile::save(MainWindow *wnd) {
       saveStyles(fp);
       saveTabs(fp, wnd);
       saveRect(fp, appPositionKey, &_appPosition);
-      // TODO: fixme
-      //saveRect(fp, windowPosKey, wnd);
+      Fl_Rect wndRect(wnd->x(), wnd->y(), wnd->w(), wnd->h());
+      saveRect(fp, windowPosKey, &wndRect);
       fclose(fp);
     }
   }
@@ -200,8 +195,7 @@ void Profile::restoreStyles(Properties<String *> *profile) {
 void Profile::restoreTabs(MainWindow *wnd, Properties<String *> *profile) {
   bool usedEditor = false;
   strlib::List<String *> paths;
-  // TODO: fixme
-  //profile->get(pathKey, &paths);
+  profile->get(pathKey, &paths);
 
   List_each(String*, it, paths) {
     String *nextString = (*it);

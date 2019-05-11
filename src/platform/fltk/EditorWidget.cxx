@@ -156,8 +156,8 @@ EditorWidget::EditorWidget(Fl_Widget *rect, Fl_Menu_Bar *menuBar) :
   _rowStatus->callback(goto_line_cb, 0);
 
   // setup icons
-  _gotoLineBn->label("G");  // right arrow (goto)
-  _hideIdeBn->label("X");   // large dot
+  _gotoLineBn->label("B");  // right arrow (goto)
+  _hideIdeBn->label("W");   // large dot
   _lockBn->label("J");      // vertical bars
   _logPrintBn->label("T");  // italic bold T
 
@@ -767,6 +767,10 @@ bool EditorWidget::focusWidget() {
 
   case 'w':
     setHideIde(!isHideIDE());
+    return true;
+
+  case 'j':
+    setScrollLock(!isScrollLock());
     return true;
   }
   return false;

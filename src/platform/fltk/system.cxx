@@ -24,6 +24,7 @@
 extern MainWindow *wnd;
 System *g_system;
 AnsiWidget *ansiWidget;
+bool mouseActive;
 
 #define EVT_PAUSE_TIME 0.005
 #define RX_BUFFER_SIZE 1024
@@ -136,6 +137,40 @@ void System::systemPrint(const char *message, ...) {
   wnd->tty()->print(message);
 }
 
+int System::handle(int e) {
+  MAEvent event;
+
+  switch (e) {
+  case FL_PUSH:
+    event.point.x = Fl::event_x();
+    event.point.y = Fl::event_y();
+    mouseActive = ansiWidget->pointerTouchEvent(event);
+    return mouseActive;
+
+  case FL_DRAG:
+  case FL_MOVE:
+    event.point.x = Fl::event_x();
+    event.point.y = Fl::event_y();
+    if (mouseActive && ansiWidget->pointerMoveEvent(event)) {
+      fl_cursor(FL_CURSOR_HAND);
+      return 1;
+    }
+    break;
+
+  case FL_RELEASE:
+    if (mouseActive) {
+      mouseActive = false;
+      fl_cursor(FL_CURSOR_DEFAULT);
+      event.point.x = Fl::event_x();
+      event.point.y = Fl::event_y();
+      ansiWidget->pointerReleaseEvent(event);
+    }
+    break;
+  }
+
+  return 0;
+}
+
 //
 // maapi implementation
 //
@@ -239,6 +274,7 @@ int osd_events(int wait_flag) {
     break;
   case 2:
     // pause
+    ansiWidget->flush(false);    
     Fl::wait(EVT_PAUSE_TIME);
     break;
   default:
@@ -249,8 +285,6 @@ int osd_events(int wait_flag) {
   if (wnd->isBreakExec()) {
     return -2;
   }
-
-  ansiWidget->flush(false);
 
   return 0;
 }
