@@ -28,12 +28,9 @@
  #include <android/log.h>
  #define deviceLog(...) __android_log_print(ANDROID_LOG_INFO, \
                         "smallbasic", __VA_ARGS__)
-#elif defined(_SDL)
+#elif defined(_SDL) || defined(_FLTK)
  void appLog(const char *format, ...);
  #define deviceLog(...) appLog(__VA_ARGS__)
-#elif defined(_FLTK)
- extern "C" void trace(const char *format, ...);
- #define deviceLog trace
 #endif
 
 #if defined(_DEBUG)

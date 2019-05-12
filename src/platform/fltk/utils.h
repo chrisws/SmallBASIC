@@ -10,6 +10,8 @@
 #define FLTK_UTILS_H
 
 #include <stdint.h>
+#include "common/pproc.h"
+#include "common/fs_socket_client.h"
 #include <FL/Fl.H>
 
 #define DAMAGE_HIGHLIGHT FL_DAMAGE_USER1
@@ -32,5 +34,7 @@
 #endif
 
 void split_color(Fl_Color i, uint8_t& r, uint8_t& g, uint8_t& b);
+void getHomeDir(char *fileName, size_t size, bool appendSlash = true);
+bool cacheLink(dev_file_t *df, char *localFile, size_t size);
 
 #endif

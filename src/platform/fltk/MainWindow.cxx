@@ -12,6 +12,7 @@
 #include "platform/fltk/EditorWidget.h"
 #include "platform/fltk/HelpWidget.h"
 #include "platform/fltk/FileWidget.h"
+#include "platform/fltk/utils.h"
 #include "ui/strlib.h"
 #include "common/sbapp.h"
 #include "common/sys.h"
@@ -52,9 +53,6 @@ const char *aboutText =
   "redistribute it and/or modify it under the terms of the "
   "GNU General Public License version 2 as published by "
   "the Free Software Foundation.<br><br>" "<i>Press F1 for help";
-
-// in system.cxx
-bool cacheLink(dev_file_t *df, char *localFile, size_t size);
 
 #define CHOICE_EXIT  2
 #define CHOICE_BREAK 1
@@ -1047,7 +1045,7 @@ MainWindow::MainWindow(int w, int h) :
   _outputGroup->labelfont(FL_HELVETICA);
   _outputGroup->user_data((void *)gw_output);
   _out = new GraphicsWidget(x1, y1, x2, y2);
-  _system = new System(x2, y2, DEF_FONT_SIZE);
+  _system = new Runtime(x2, y2, DEF_FONT_SIZE);
   _outputGroup->resizable(_out);
   _outputGroup->end();
   _tabGroup->resizable(_outputGroup);

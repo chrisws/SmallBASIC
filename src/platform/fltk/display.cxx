@@ -70,7 +70,10 @@ void Canvas::drawEllipse(int xc, int yc, int rx, int ry, bool fill) {
 
 void Canvas::drawLine(int startX, int startY, int endX, int endY) {
   fl_begin_offscreen(_offscreen);
+  fl_push_clip(x(), y(), w(), h());
+  fl_color(_drawColor);
   fl_line(startX, startY, endX, endY);
+  fl_pop_clip();
   fl_end_offscreen();
 }
 
@@ -345,4 +348,8 @@ int maCreateDrawableImage(MAHandle maHandle, int width, int height) {
 
 void maUpdateScreen(void) {
   ((::GraphicsWidget *)graphics)->redraw();
+}
+
+int maShowVirtualKeyboard(void) {
+  return 0;
 }

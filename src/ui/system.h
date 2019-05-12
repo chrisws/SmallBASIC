@@ -16,10 +16,6 @@
 
 void reset_image_cache();
 
-#if defined(_FLTK)
-  #include "platform/fltk/system.h"
-#else
-
 struct Cache : public strlib::Properties<String *> {
   Cache(int size) : Properties(size * 2), _index(0) {}
   void add(const char *key, const char *value);
@@ -146,6 +142,5 @@ protected:
   uint32_t _modifiedTime;
 };
 
-#endif
 #endif
 

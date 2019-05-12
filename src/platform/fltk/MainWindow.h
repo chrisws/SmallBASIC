@@ -16,7 +16,7 @@
 #include <FL/Fl_Menu_Bar.H>
 #include <FL/Fl_Tabs.H>
 #include "platform/fltk/display.h"
-#include "platform/fltk/system.h"
+#include "platform/fltk/runtime.h"
 #include "platform/fltk/EditorWidget.h"
 #include "platform/fltk/HelpWidget.h"
 #include "platform/fltk/Profile.h"
@@ -24,9 +24,6 @@
 
 #define MENU_HEIGHT 24
 #define NUM_RECENT_ITEMS 9
-
-// in system.cxx
-void getHomeDir(char *filename, size_t size, bool appendSlash = true);
 
 enum ExecState {
   init_state,
@@ -165,7 +162,7 @@ struct MainWindow : public BaseWindow {
 
   // display system
   GraphicsWidget *_out;
-  System *_system;
+  Runtime *_system;
 
   // main output
   Fl_Group *_outputGroup;

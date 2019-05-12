@@ -6,31 +6,33 @@
 // Download the GNU Public License (GPL) from www.gnu.org
 //
 
-#ifndef FLTK_SYSTEM_H
-#define FLTK_SYSTEM_H
+#ifndef FLTK_RUNTIME_H
+#define FLTK_RUNTIME_H
 
 #include "ui/ansiwidget.h"
+#include "ui/system.h"
 
-struct System {
-  System(int w, int h, int defSize);
-  ~System();
+struct Runtime : public System {
+  Runtime(int w, int h, int defSize);
+  ~Runtime();
 
+  void addShortcut(const char *) {}
   void alert(const char *title, const char *message);
   int ask(const char *title, const char *prompt, bool cancel=true);
   void browseFile(const char *url);
   char *getClipboardText();
-  AnsiWidget *getOutput();
+  void enableCursor(bool enabled);
   int handle(int event);
-  bool isBreak();
-  bool isRunning();
   void optionsBox(StringList *items);
-  MAEvent processEvents(bool wait);
+  MAEvent processEvents(int waitFlag);
   void setClipboardText(const char *text);
   void setFontSize(int size);
   void setLoadBreak(const char *url) {}
   void setLoadPath(const char *url) {}
   void setWindowSize(int width, int height);
-  void systemPrint(const char *message, ...);
+  void setWindowTitle(const char *title);
+  void share(const char *path) {}
+  void showCursor(CursorType cursorType);
 };
 
 #endif
