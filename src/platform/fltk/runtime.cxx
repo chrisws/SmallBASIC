@@ -105,15 +105,12 @@ void Runtime::optionsBox(StringList *items) {
   Fl_Menu_Item menu[items->size() + 1];
   int index = 0;
   int width = 0;
+  int height = 0;
   int charWidth = _output->getCharWidth();
 
   List_each(String *, it, *items) {
+    int w, h;
     char *str = (char *)(* it)->c_str();
-    int w = (strlen(str) * charWidth);
-    if (w > width) {
-      width = w;
-    }
-
     menu[index].text = str;
     menu[index].shortcut_ = 0;
     menu[index].callback_ = 0;
@@ -123,6 +120,13 @@ void Runtime::optionsBox(StringList *items) {
     menu[index].labelfont_ = FL_HELVETICA;
     menu[index].labelsize_ = FL_NORMAL_SIZE;
     menu[index].labelcolor_ = FL_FOREGROUND_COLOR;
+    menu[index].measure(&h, NULL);
+
+    height += h + 1;
+    w = (strlen(str) * charWidth);
+    if (w > width) {
+      width = w;
+    }
     index++;
   }
 
@@ -130,24 +134,29 @@ void Runtime::optionsBox(StringList *items) {
   menu[index].text = NULL;
   width += (charWidth * OPTIONS_BOX_WIDTH_EXTRA);
 
-  int charHeight = fl_height() + fl_descent();
-  int textHeight = charHeight + (charHeight / 2);
-  int height = textHeight * items->size();
   int menuX = Fl::event_x();
   int menuY = Fl::event_y();
+  int maxWidth = wnd->_out->w() - wnd->_out->x();
+  int maxHeight =  wnd->h() - height - (wnd->_out->y() - wnd->_tabGroup->y());
 
-  if (menuX + width >= _output->getWidth()) {
-    menuX = _output->getWidth() - width;
+  if (menuX + width >= maxWidth) {
+    menuX = maxWidth - width;
   }
 
-  if (menuY + height >= _output->getHeight()) {
-    menuY = _output->getHeight() - height - (height / 2);
+  if (menuY + height >= maxHeight) {
+    menuY = maxHeight - height;
   }
 
   Fl_Menu_Button popup(menuX, menuY, width, height, "&popup");
   popup.menu(menu);
-  popup.popup();
 
+  const Fl_Menu_Item *result = popup.popup();
+  if (result && result->text) {
+    MAEvent event;
+    event.type = EVENT_TYPE_OPTIONS_BOX_BUTTON_CLICKED;
+    event.optionsBoxButtonIndex = (intptr_t)(void *)result->user_data_;
+    handleEvent(event);
+  }
 }
 
 MAEvent Runtime::processEvents(int waitFlag) {
