@@ -423,6 +423,7 @@ void System::handleEvent(MAEvent &event) {
     if (_output->overMenu(_touchX, _touchY)) {
       showMenu();
     } else {
+      fprintf(stderr, "not over menu\n");
       dev_pushkey(SB_KEY_MK_PUSH);
       _buttonPressed = _output->pointerTouchEvent(event);
       showCursor(get_focus_edit() != NULL ? kIBeam : kHand);

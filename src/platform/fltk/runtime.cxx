@@ -20,9 +20,13 @@
 #include "platform/fltk/MainWindow.h"
 #include "platform/fltk/runtime.h"
 #include <FL/fl_ask.H>
+#include <FL/Fl_Menu_Button.H>
+#include <FL/Fl_Menu_Item.H>
 
 extern MainWindow *wnd;
 extern System *g_system;
+
+#define OPTIONS_BOX_WIDTH_EXTRA 4
 
 void setMotionEvent(MAEvent &event, int type) {
   event.type = type;
@@ -71,57 +75,79 @@ char *Runtime::getClipboardText() {
 
 int Runtime::handle(int e) {
   MAEvent event;
+  int result = 1;
 
   switch (e) {
   case FL_PUSH:
     setMotionEvent(event, EVENT_TYPE_POINTER_PRESSED);
     handleEvent(event);
-    return _buttonPressed;
+    break;
 
-  case FL_MOVE:
+  case FL_DRAG:
     setMotionEvent(event, EVENT_TYPE_POINTER_DRAGGED);
     handleEvent(event);
-    if (_buttonPressed) {
-      return 1;
-    }
     break;
 
   case FL_RELEASE:
     setMotionEvent(event, EVENT_TYPE_POINTER_RELEASED);
     handleEvent(event);
     break;
+
+  default:
+    result = 0;
+    break;
   }
-  return 0;
+
+  return result;
 }
 
 void Runtime::optionsBox(StringList *items) {
-  /*
-  int y = 0;
+  Fl_Menu_Item menu[items->size() + 1];
   int index = 0;
-  int selectedIndex = -1;
-  int screenId = widget->_ansiWidget->insetTextScreen(20,20,80,80);
+  int width = 0;
+  int charWidth = _output->getCharWidth();
+
   List_each(String *, it, *items) {
     char *str = (char *)(* it)->c_str();
-    int w = Fl_getwidth(str) + 20;
-    FormInput *item = new MenuButton(index, selectedIndex, str, 2, y, w, 22);
-    widget->_ansiWidget->addInput(item);
-    index++;
-    y += 24;
-  }
-
-  while (g_system->isRunning() && selectedIndex == -1) {
-    g_system->processEvents(true);
-  }
-
-  widget->_ansiWidget->removeInputs();
-  widget->_ansiWidget->selectScreen(screenId);
-  if (!g_system->isBreak()) {
-    if (!form_ui::optionSelected(selectedIndex)) {
-      dev_pushkey(selectedIndex);
+    int w = (strlen(str) * charWidth);
+    if (w > width) {
+      width = w;
     }
+
+    menu[index].text = str;
+    menu[index].shortcut_ = 0;
+    menu[index].callback_ = 0;
+    menu[index].user_data_ = (void *)(intptr_t)index;
+    menu[index].flags = 0;
+    menu[index].labeltype_ = 0;
+    menu[index].labelfont_ = FL_HELVETICA;
+    menu[index].labelsize_ = FL_NORMAL_SIZE;
+    menu[index].labelcolor_ = FL_FOREGROUND_COLOR;
+    index++;
   }
-  widget->redraw();
-  */
+
+  menu[index].flags = 0;
+  menu[index].text = NULL;
+  width += (charWidth * OPTIONS_BOX_WIDTH_EXTRA);
+
+  int charHeight = fl_height() + fl_descent();
+  int textHeight = charHeight + (charHeight / 2);
+  int height = textHeight * items->size();
+  int menuX = Fl::event_x();
+  int menuY = Fl::event_y();
+
+  if (menuX + width >= _output->getWidth()) {
+    menuX = _output->getWidth() - width;
+  }
+
+  if (menuY + height >= _output->getHeight()) {
+    menuY = _output->getHeight() - height - (height / 2);
+  }
+
+  Fl_Menu_Button popup(menuX, menuY, width, height, "&popup");
+  popup.menu(menu);
+  popup.popup();
+
 }
 
 MAEvent Runtime::processEvents(int waitFlag) {
@@ -279,7 +305,11 @@ void appLog(const char *format, ...) {
       buf[i--] = '\0';
     }
     strcat(buf, "\r\n");
-    wnd->tty()->print(buf);
+    if (wnd && wnd->tty()) {
+      wnd->tty()->print(buf);
+    } else {
+      fprintf(stderr, "%s", buf);
+    }
     free(buf);
   }
 }
