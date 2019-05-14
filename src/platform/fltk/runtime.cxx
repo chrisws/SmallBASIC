@@ -7,21 +7,12 @@
 //
 
 #include <config.h>
-#include <sys/socket.h>
-#include "common/sys.h"
-#include "common/smbas.h"
 #include "common/osd.h"
-#include "common/device.h"
-#include "common/keymap.h"
-#include "common/inet.h"
-#include "common/pproc.h"
 #include "lib/maapi.h"
-#include "ui/utils.h"
 #include "platform/fltk/MainWindow.h"
 #include "platform/fltk/runtime.h"
 #include <FL/fl_ask.H>
 #include <FL/Fl_Menu_Button.H>
-#include <FL/Fl_Menu_Item.H>
 
 extern MainWindow *wnd;
 extern System *g_system;
@@ -75,7 +66,6 @@ char *Runtime::getClipboardText() {
 
 int Runtime::handle(int e) {
   MAEvent event;
-  int result = 1;
 
   switch (e) {
   case FL_PUSH:
@@ -94,11 +84,10 @@ int Runtime::handle(int e) {
     break;
 
   default:
-    result = 0;
     break;
   }
 
-  return result;
+  return 0;
 }
 
 void Runtime::optionsBox(StringList *items) {
@@ -137,7 +126,7 @@ void Runtime::optionsBox(StringList *items) {
   int menuX = Fl::event_x();
   int menuY = Fl::event_y();
   int maxWidth = wnd->_out->w() - wnd->_out->x();
-  int maxHeight =  wnd->h() - height - (wnd->_out->y() - wnd->_tabGroup->y());
+  int maxHeight =  wnd->h() - height - MENU_HEIGHT;
 
   if (menuX + width >= maxWidth) {
     menuX = maxWidth - width;
@@ -181,11 +170,11 @@ void Runtime::setFontSize(int size) {
 }
 
 void Runtime::setWindowSize(int width, int height) {
-  // TODO
+  wnd->size(width, height);
 }
 
 void Runtime::setWindowTitle(const char *title) {
-
+  wnd->label(title);
 }
 
 void Runtime::showCursor(CursorType cursorType) {
