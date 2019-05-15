@@ -19,20 +19,28 @@ extern System *g_system;
 
 #define OPTIONS_BOX_WIDTH_EXTRA 4
 
+int event_x() {
+  return Fl::event_x();
+}
+
+int event_y() {
+  return Fl::event_y() - wnd->_out->y() - 2;
+}
+
 void setMotionEvent(MAEvent &event, int type) {
   event.type = type;
-  event.point.x = Fl::event_x();
-  event.point.y = Fl::event_y();
+  event.point.x = event_x();
+  event.point.y = event_y();;
 }
 
 //
 // Runtime implementation
 //
 Runtime::Runtime(int w, int h, int defsize) : System() {
-  _output = new AnsiWidget(w, h);
+  _output = new AnsiWidget(w, h - 1);
   _output->construct();
   _output->setTextColor(DEFAULT_FOREGROUND, DEFAULT_BACKGROUND);
-  _output->setFontSize(defsize);
+  _output->setFont(defsize, false, false);
 }
 
 Runtime::~Runtime() {
@@ -40,16 +48,17 @@ Runtime::~Runtime() {
 }
 
 void Runtime::alert(const char *title, const char *message) {
-  //fl_alert(message);
+  fl_alert("%s", message);
 }
 
 int Runtime::ask(const char *title, const char *prompt, bool cancel) {
-  //if (cancel) {
-  //    return Fl_choice(prompt, "Yes", "No", "Cancel");
-  //  } else {
-  //    return Fl_choice(prompt, "Yes", "No", "");
-  //  }
-  return 0;
+  int result;
+  if (cancel) {
+    result = fl_choice(prompt, "Yes", "No", "Cancel", NULL);
+  } else {
+    result = fl_choice(prompt, "Yes", "No", "", NULL);
+  }
+  return result;
 }
 
 void Runtime::browseFile(const char *url) {
@@ -70,7 +79,9 @@ int Runtime::handle(int e) {
   switch (e) {
   case FL_PUSH:
     setMotionEvent(event, EVENT_TYPE_POINTER_PRESSED);
-    handleEvent(event);
+    if (event.point.y >= 0) {
+      handleEvent(event);
+    }
     break;
 
   case FL_DRAG:
@@ -123,10 +134,10 @@ void Runtime::optionsBox(StringList *items) {
   menu[index].text = NULL;
   width += (charWidth * OPTIONS_BOX_WIDTH_EXTRA);
 
-  int menuX = Fl::event_x();
-  int menuY = Fl::event_y();
+  int menuX = event_x();
+  int menuY = event_y();
   int maxWidth = wnd->_out->w() - wnd->_out->x();
-  int maxHeight =  wnd->h() - height - MENU_HEIGHT;
+  int maxHeight = wnd->h() - height - MENU_HEIGHT;
 
   if (menuX + width >= maxWidth) {
     menuX = maxWidth - width;
@@ -134,6 +145,8 @@ void Runtime::optionsBox(StringList *items) {
 
   if (menuY + height >= maxHeight) {
     menuY = maxHeight - height;
+  } else {
+    menuY -= wnd->_out->y();
   }
 
   Fl_Menu_Button popup(menuX, menuY, width, height, "&popup");

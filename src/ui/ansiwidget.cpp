@@ -590,7 +590,7 @@ void AnsiWidget::doSwipe(int start, bool moveDown, int distance, int maxScroll) 
 
 // draws the focus screen's active button
 void AnsiWidget::drawActiveButton() {
-#if defined(_SDL)
+#if defined(_SDL) || defined(_FLTK)
   if (_focus != NULL && !_activeButton->hasHover()) {
     MAHandle currentHandle = maSetDrawTarget(HANDLE_SCREEN);
     _focus->drawShape(_activeButton);
@@ -620,7 +620,7 @@ void AnsiWidget::drawActiveButton() {
 }
 
 bool AnsiWidget::drawHoverLink(MAEvent &event) {
-#if defined(_SDL)
+#if defined(_SDL) || defined(_FLTK)
   if (_front != _screens[MENU_SCREEN]) {
     int dx = _front->_x;
     int dy = _front->_y - _front->_scrollY;

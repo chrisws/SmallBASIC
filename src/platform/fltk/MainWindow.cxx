@@ -155,7 +155,7 @@ bool MainWindow::basicMain(EditorWidget *editWidget,
       fullScreen->resizable(fullScreen);
       setTitle(fullScreen, filename);
       _outputGroup = fullScreen;
-      _out->resize(w(), h());
+      resizeDisplay(w(), h());
       hide();
     } else {
       setTitle(this, filename);
@@ -183,7 +183,7 @@ bool MainWindow::basicMain(EditorWidget *editWidget,
 
     _outputGroup = oldOutputGroup;
     _outputGroup->add(_out);
-    _out->resize(old_w, old_h);
+    resizeDisplay(old_w, old_h);
     show();
   } else {
     copy_label("SmallBASIC");
@@ -1653,7 +1653,7 @@ int BaseWindow::handle(int e) {
 bool BaseWindow::handleKeyEvent() {
   int k = Fl::event_key();
   bool key_pushed = true;
- 
+
   switch (k) {
   case FL_Tab:
     dev_pushkey(SB_KEY_TAB);
