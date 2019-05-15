@@ -157,7 +157,7 @@ void GraphicsWidget::draw() {
       fl_rescale_offscreen(_screen->_offscreen);
       _screen->_scale = Fl_Graphics_Driver::default_driver().scale();
     }
-    fl_copy_offscreen(x(), y() + 1, w(), h() - 1, _screen->_offscreen, 0, 0);
+    fl_copy_offscreen(x(), y(), w(), h(), _screen->_offscreen, 0, 0);
   }
 }
 

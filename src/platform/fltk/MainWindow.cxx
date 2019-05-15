@@ -1044,8 +1044,8 @@ MainWindow::MainWindow(int w, int h) :
   _outputGroup = new Fl_Group(x1, y1, x2, y2, "Output");
   _outputGroup->labelfont(FL_HELVETICA);
   _outputGroup->user_data((void *)gw_output);
-  _out = new GraphicsWidget(x1, y1, x2, y2);
-  _system = new Runtime(x2, y2, DEF_FONT_SIZE);
+  _out = new GraphicsWidget(x1, y1 + 1, x2, y2 -1);
+  _system = new Runtime(x2, y2 - 1, DEF_FONT_SIZE);
   _outputGroup->resizable(_out);
   _outputGroup->end();
   _tabGroup->resizable(_outputGroup);
@@ -1396,6 +1396,11 @@ void MainWindow::resetPen() {
   _penDownX = 0;
   _penDownY = 0;
   _penMode = 0;
+}
+
+void MainWindow::resizeDisplay(int w, int h) {
+  _out->resize(w, h - 1);
+  _system->resize(w, h - 1);
 }
 
 /**
