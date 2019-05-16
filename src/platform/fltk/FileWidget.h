@@ -13,7 +13,7 @@
 #include "platform/fltk/HelpWidget.h"
 #include "platform/fltk/EditorWidget.h"
 
-struct FileWidget:public HelpWidget {
+struct FileWidget : public HelpWidget {
   FileWidget(Fl_Widget *rect);
   ~FileWidget();
 

@@ -4,7 +4,7 @@
 //
 // This program is distributed under the terms of the GPL v2.0 or later
 // Download the GNU Public License (GPL) from www.gnu.org
-// 
+//
 
 #include <config.h>
 #include <dirent.h>
@@ -24,12 +24,12 @@ bool sortDesc;
 
 struct FileNode {
   FileNode(const char *arg_name, time_t arg_m_time,
-           off_t arg_size, bool arg_isdir) : 
+           off_t arg_size, bool arg_isdir) :
     name(arg_name, strlen(arg_name)),
-    m_time(arg_m_time), 
-    size(arg_size), 
+    m_time(arg_m_time),
+    size(arg_size),
     isdir(arg_isdir) {
-  } 
+  }
   String name;
   time_t m_time;
   off_t size;
@@ -142,7 +142,7 @@ const char *FileWidget::splitPath(const char *filename, char *path) {
     result = filename;
   } else {
     // skip slash
-    result++; 
+    result++;
   }
 
   if (path) {
@@ -351,7 +351,7 @@ void FileWidget::displayPath() {
       files.add(new FileNode(name, stbuf.st_mtime, stbuf.st_size, true));
     } else if (strncasecmp(name + len - 4, ".htm", 4) == 0 ||
                strncasecmp(name + len - 5, ".html", 5) == 0 ||
-               strncasecmp(name + len - 4, ".bas", 4) == 0 || 
+               strncasecmp(name + len - 4, ".bas", 4) == 0 ||
                strncasecmp(name + len - 4, ".txt", 4) == 0) {
       files.add(new FileNode(name, stbuf.st_mtime, stbuf.st_size, false));
     }
@@ -509,10 +509,9 @@ void FileWidget::saveAs() {
         strcat(savepath, enteredPath);
       }
       const char *msg = "%s\n\nFile already exists.\nDo you want to replace it?";
-      //TODO: fixme
-      //if (access(savepath, 0) != 0 || fl_choice(msg, savepath)) {
-      //_saveEditorAs->doSaveFile(savepath);
-      //}
+      if (access(savepath, 0) != 0 || fl_choice(msg, "Yes", "No", 0, savepath) == 0) {
+        _saveEditorAs->doSaveFile(savepath);
+        }
     }
   }
 }

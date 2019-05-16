@@ -211,7 +211,7 @@ struct TtyWidget : public Fl_Group {
   // inherited methods
   void draw();
   int handle(int e);
-  void layout();
+  void resize(int x, int y, int w, int h);
 
   // public api
   void clearScreen();

@@ -54,9 +54,6 @@ const char *aboutText =
   "GNU General Public License version 2 as published by "
   "the Free Software Foundation.<br><br>" "<i>Press F1 for help";
 
-#define CHOICE_EXIT  2
-#define CHOICE_BREAK 1
-
 void vsncat(char *buffer, size_t size, ...) {
   va_list args;
   va_start(args, size);
@@ -289,11 +286,10 @@ void MainWindow::quit(Fl_Widget *w, void *eventData) {
     }
     exit(0);
   } else {
-    int n = fl_choice("Terminate running program?", "*Exit", "Break", "Cancel");
-    switch (n) {
-    case CHOICE_EXIT:
+    switch (fl_choice("Terminate running program?", "*Exit", "Break", "Cancel")) {
+    case 0:
       exit(0);
-    case CHOICE_BREAK:
+    case 1:
       setBreak();
     default:
       break;
@@ -1808,11 +1804,8 @@ LineInput::LineInput(int x, int y, int w, int h) :
 /**
  * veto the layout changes
  */
-void LineInput::layout() {
-  x(orig_x);
-  y(orig_y);
-  w(orig_w);
-  h(orig_h);
+void LineInput::resize(int x, int y, int w, int h) {
+  Fl_Input::resize(orig_x, orig_y, orig_w, orig_h);
 }
 
 int LineInput::handle(int event) {

@@ -43,7 +43,7 @@ enum GroupWidgetEnum {
 
 struct LineInput : public Fl_Input {
   LineInput(int x, int y, int w, int h);
-  void layout();
+  void resize(int x, int y, int w, int h);
   int handle(int event);
 
 private:

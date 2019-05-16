@@ -149,7 +149,7 @@ protected:
   void getKeywords(strlib::List<String *> &keywords);
   uint32_t getModifiedTime();
   void handleFileChange();
-  void layout();
+  void resize(int x, int y, int w, int h);
   void newFile();
   void reloadFile();
   int replaceAll(const char *find, const char *replace, bool restorePos, bool matchWord);

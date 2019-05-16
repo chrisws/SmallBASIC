@@ -1289,11 +1289,10 @@ void EditorWidget::handleFileChange() {
 /**
  * prevent the tty and browser from growing when the outer window is resized
  */
-void EditorWidget::layout() {
+void EditorWidget::resize(int x, int y, int w, int h) {
   Fl_Group *tile = _editor->parent();
   tile->resizable(_editor);
-  // TODO: fixme
-  //Fl_Group::layout();
+  Fl_Group::resize(x, y, w, h);
 
   // when set to editor the tile is not resizable using the mouse
   tile->resizable(NULL);

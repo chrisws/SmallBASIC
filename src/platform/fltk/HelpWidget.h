@@ -101,12 +101,13 @@ protected:
 
   // fltk methods
   void draw();
-  void layout();
+  void resize(int x, int y, int w, int h);
   int onMove(int event);
   int onPush(int event);
   int handle(int event);
 
 private:
+  bool exposed() { return (damage() & (FL_DAMAGE_EXPOSE | FL_DAMAGE_ALL)); }
   Fl_Color background, foreground;
   Fl_Scrollbar *scrollbar;
   int16_t vscroll, hscroll;

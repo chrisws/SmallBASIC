@@ -56,7 +56,7 @@ int Runtime::ask(const char *title, const char *prompt, bool cancel) {
   if (cancel) {
     result = fl_choice(prompt, "Yes", "No", "Cancel", NULL);
   } else {
-    result = fl_choice(prompt, "Yes", "No", "", NULL);
+    result = fl_choice(prompt, "Yes", "No", 0, NULL);
   }
   return result;
 }

@@ -30,7 +30,7 @@
 #include "platform/fltk/HelpWidget.h"
 
 #define FOREGROUND_COLOR fl_rgb_color(0x65, 0x7b, 0x83)
-#define BACKGROUND_COLOR fl_rgb_color(0, 0x2b, 0x36)
+#define BACKGROUND_COLOR fl_rgb_color(192, 192, 192)
 #define ANCHOR_COLOR fl_rgb_color(0,0,128)
 #define BUTTON_COLOR fl_rgb_color(0,0,128)
 #define DEFAULT_INDENT 2
@@ -978,8 +978,8 @@ void TableNode::display(Display *out) {
       out->measure = true;
     }
     cleanup();
-    columns = (uint16_t *) malloc(sizeof(uint16_t) *cols);
-    sizes = (int16_t *) malloc(sizeof(int16_t) *cols);
+    columns = (uint16_t *)malloc(sizeof(uint16_t) * cols);
+    sizes = (int16_t *)malloc(sizeof(int16_t) * cols);
     int cellW = width / cols;
     for (int i = 0; i < cols; i++) {
       columns[i] = cellW * (i + 1);
@@ -1572,7 +1572,7 @@ void HelpWidget::reloadPage() {
   cleanup();
   init();
   compile();
-  damage(FL_DAMAGE_ALL | FL_DAMAGE_CHILD);
+  redraw();
   pushedAnchor = 0;
 }
 
@@ -1705,7 +1705,7 @@ void HelpWidget::scrollTo(const char *anchorName) {
       } else {
         vscroll = -p->getY();
       }
-      damage(FL_DAMAGE_ALL | FL_DAMAGE_CHILD);
+      redraw();
       return;
     }
   }
@@ -1715,13 +1715,14 @@ void HelpWidget::scrollTo(int scroll) {
   // called from the scrollbar using scrollbar units
   if (vscroll != scroll) {
     vscroll = -(scroll * scrollHeight / SCROLL_SIZE);
-    damage(FL_DAMAGE_ALL);
+    redraw();
   }
 }
 
-void HelpWidget::layout() {
-  scrollbar->resize(w() - SCROLL_W, 0, SCROLL_W, h());
+void HelpWidget::resize(int x, int y, int w, int h) {
+  scrollbar->resize(w - SCROLL_W, 0, SCROLL_W, h);
   endSelection();
+  Fl_Group::resize(x, y, w, h);
 }
 
 void HelpWidget::draw() {
@@ -1745,7 +1746,7 @@ void HelpWidget::draw() {
   out.x2 = w() - (DEFAULT_INDENT + SCROLL_W) + hscroll;
   out.content = false;
   out.measure = false;
-  out.exposed = (damage() & FL_DAMAGE_EXPOSE) ? 1 : 0;
+  out.exposed = exposed();
   out.tableLevel = 0;
   out.imgY = -1;
   out.imgIndent = out.indent;
@@ -1782,7 +1783,7 @@ void HelpWidget::draw() {
   }
   // must call setfont() before getascent() etc
   fl_font(out.font, out.fontSize);
-  out.y1 = x() + fl_height();
+  out.y1 = y() + fl_height();
   out.lineHeight = out.y1 + fl_descent();
   out.y1 += vscroll;
 
@@ -1796,7 +1797,7 @@ void HelpWidget::draw() {
   }
   // draw the background
   fl_color(out.background);
-  fl_rectf(x(), y(), w() - SCROLL_W, out.y2);
+  fl_rectf(x(), y(), w() - SCROLL_W, h());
   fl_color(out.color);
 
   out.background = NO_COLOR;
@@ -1825,7 +1826,7 @@ void HelpWidget::draw() {
         out.nodeId = j;
         p->display(&out);
       }
-      out.exposed = (damage() & FL_DAMAGE_EXPOSE) ? 1 : 0;
+      out.exposed = exposed();
     }
     if (out.exposed == false && out.tableLevel == 0 && out.y1 - out.lineHeight > out.y2) {
       // clip remaining content
@@ -2442,7 +2443,6 @@ int HelpWidget::handle(int event) {
   if (handled && event != FL_MOVE) {
     return handled;
   }
-
   switch (event) {
   case EVENT_INCREASE_FONT:
     if (getFontSize() < MAX_FONT_SIZE) {
@@ -2483,7 +2483,7 @@ int HelpWidget::handle(int event) {
     return 1;
 
   case FL_SHOW:
-    focus(this);
+    take_focus();
     break;
 
   case FL_FOCUS:
@@ -2592,7 +2592,7 @@ bool HelpWidget::find(const char *s, bool matchCase) {
     vscroll = -scrollHeight;
   }
 
-  damage(FL_DAMAGE_ALL | FL_DAMAGE_CHILD);
+  redraw();
   return true;
 }
 
