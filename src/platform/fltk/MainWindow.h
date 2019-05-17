@@ -10,7 +10,7 @@
 #define MAIN_WINDOW_H
 
 #include <stdint.h>
-#include <FL/Fl_Window.H>
+#include <FL/Fl_Double_Window.H>
 #include <FL/Fl_Group.H>
 #include <FL/Fl_Value_Input.H>
 #include <FL/Fl_Menu_Bar.H>
@@ -64,8 +64,8 @@ extern ExecState runMode;
     wnd->FN(w, v);                               \
   }
 
-struct BaseWindow : public Fl_Window {
-  BaseWindow(int w, int h) : Fl_Window(w, h, "SmallBASIC") {}
+struct BaseWindow : public Fl_Double_Window {
+  BaseWindow(int w, int h) : Fl_Double_Window(w, h, "SmallBASIC") {}
   virtual ~BaseWindow() {};
   int handle(int e);
   bool handleKeyEvent();

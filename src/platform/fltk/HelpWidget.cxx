@@ -33,6 +33,7 @@
 #define BACKGROUND_COLOR fl_rgb_color(192, 192, 192)
 #define ANCHOR_COLOR fl_rgb_color(0,0,128)
 #define BUTTON_COLOR fl_rgb_color(0,0,128)
+#define SELECTION_COLOR fl_rgb_color(0x58, 0x6e, 0x75)
 #define DEFAULT_INDENT 2
 #define LI_INDENT 18
 #define FONT_SIZE_H1 23
@@ -609,13 +610,12 @@ struct TextNode : public BaseNode {
   void drawSelection(const char *s, uint16_t len, uint16_t width, Display *out);
   int indexOf(const char *sFind, uint8_t matchCase);
   void getText(strlib::String *s);
-
   int getY();
 
-  const char *s;                // 4
-  uint16_t textlen;                  // 4
-  uint16_t width;                    // 4
-  int16_t ybegin;                   // 4
+  const char *s;
+  uint16_t textlen;
+  uint16_t width;
+  int16_t ybegin;
 };
 
 TextNode::TextNode(const char *s, uint16_t textlen) :
@@ -639,7 +639,7 @@ void TextNode::drawSelection(const char *s, uint16_t len, uint16_t width, Displa
     return;                     // selection below text
   }
 
-  Fl_Rect rc(out->x1, out_y, width, out->lineHeight);
+  Fl_Rect rc(out->x1, out_y, width, out->lineHeight + fl_descent());
   int selBegin = 0;             // selection index into the draw string
   int selEnd = len;
 
@@ -676,7 +676,7 @@ void TextNode::drawSelection(const char *s, uint16_t len, uint16_t width, Displa
               left = false;
             }
           } else if (s[i] == ' ' && x > rightX) {
-            //rc.w(x - rc.x() - width);
+            rc.w(x - rc.x() - width);
             selEnd = i;
             break;
           }
@@ -693,7 +693,7 @@ void TextNode::drawSelection(const char *s, uint16_t len, uint16_t width, Displa
               left = false;
             }
           } else if (x > rightX) {
-            //rc.w(x - rc.x());
+            rc.w(x - rc.x());
             selEnd = i + 1;
             break;
           }
@@ -727,7 +727,7 @@ void TextNode::drawSelection(const char *s, uint16_t len, uint16_t width, Displa
       for (int i = 0; i < len; i++) {
         x += fl_width(s + i, 1);
         if (x > rightX) {
-          //rc.w(x - rc.x());
+          rc.w(x - rc.x());
           selEnd = i + 1;
           break;
         }
@@ -741,7 +741,7 @@ void TextNode::drawSelection(const char *s, uint16_t len, uint16_t width, Displa
     out->selection->append(s + selBegin, selEnd - selBegin);
   }
 
-  fl_color(fl_rgb_color(0x58, 0x6e, 0x75));
+  fl_color(SELECTION_COLOR);
   fl_rectf(rc.x(), rc.y(), rc.w(), rc.h());
   fl_color(out->color);
 }
@@ -925,7 +925,7 @@ struct TableNode : public BaseNode {
   uint16_t nextRow;
   uint16_t width;
   uint16_t nodeId;
-  uint16_t initX, initY;             // start of table
+  uint16_t initX, initY;            // start of table
   int16_t maxY;                     // end of table
   int16_t border;
 };
@@ -1217,7 +1217,7 @@ struct NamedInput {
 //--InputNode-------------------------------------------------------------------
 
 static void onclick_callback(Fl_Widget *button, void *buttonId) {
-  ((HelpWidget *) button->parent())->onclick(button);
+  ((HelpWidget *)button->parent())->onclick(button);
 }
 
 static void def_button_callback(Fl_Widget *button, void *buttonId) {
@@ -1287,7 +1287,7 @@ InputNode::InputNode(Fl_Group *parent, Attributes *a, const char *s, int len) :
   } else {
     button = new Fl_Input(0, 0, INPUT_WIDTH, 0);
     button->argument(ID_TEXTAREA);
-    ((Fl_Input *) button)->value(s, len);
+    ((Fl_Input *)button)->value(s, len);
   }
   parent->end();
 }
@@ -1345,7 +1345,7 @@ void InputNode::update(strlib::List<NamedInput *> *names, Properties<String *> *
     }
     break;
   case ID_RANGEVAL:
-    valuator = (Fl_Valuator *) button;
+    valuator = (Fl_Valuator *)button;
     valuator->minimum(a->getMin());
     valuator->maximum(a->getMax());
     valuator->step(1);
@@ -1356,7 +1356,7 @@ void InputNode::update(strlib::List<NamedInput *> *names, Properties<String *> *
     break;
   case ID_TEXTBOX:
     button->box(FL_NO_BOX);
-    input = (Fl_Input *) button;
+    input = (Fl_Input *)button;
     if (value && value->length()) {
       input->value(value->c_str());
     }
@@ -1499,30 +1499,45 @@ struct EnvNode : public TextNode {
 //--HelpWidget------------------------------------------------------------------
 
 static void scrollbar_callback(Fl_Widget *scrollBar, void *helpWidget) {
-  ((HelpWidget *) helpWidget)->scrollTo(((Fl_Scrollbar *) scrollBar)->value());
+  ((HelpWidget *)helpWidget)->scrollTo(((Fl_Scrollbar *)scrollBar)->value());
 }
 
 static void anchor_callback(Fl_Widget *helpWidget, void *target) {
-  ((HelpWidget *) helpWidget)->navigateTo((const char *)target);
+  ((HelpWidget *)helpWidget)->navigateTo((const char *)target);
 }
 
 HelpWidget::HelpWidget(Fl_Widget *rect, int defsize) :
   Fl_Group(rect->x(), rect->y(), rect->w(), rect->h()),
-  nodeList(100), namedInputs(5), inputs(5), anchors(5), images(5) {
+  background(0),
+  foreground(0),
+  vscroll(0),
+  hscroll(0),
+  scrollHeight(0),
+  markX(0),
+  markY(0),
+  pointX(0),
+  pointY(0),
+  scrollY(0),
+  mouseMode(mm_select),
+  nodeList(100),
+  namedInputs(5),
+  inputs(5),
+  anchors(5),
+  images(5),
+  cookies(NULL) {
   begin();
   scrollbar = new Fl_Scrollbar(rect->w() - SCROLL_W, rect->y(), SCROLL_W, rect->h());
   scrollbar->type(FL_VERTICAL);
   scrollbar->value(0, 1, 0, SCROLL_SIZE);
   scrollbar->user_data(this);
   scrollbar->callback(scrollbar_callback);
+  scrollbar->box(FL_NO_BOX);
   scrollbar->show();
   end();
   callback(anchor_callback);    // default callback
   init();
-  cookies = 0;
   docHome.clear();
   labelsize(defsize);
-  mouseMode = mm_select;
 }
 
 HelpWidget::~HelpWidget() {
@@ -1595,17 +1610,17 @@ const char *HelpWidget::getInputValue(Fl_Widget *widget) {
   switch (widget->argument()) {
   case ID_TEXTBOX:
   case ID_TEXTAREA:
-    return ((Fl_Input *) widget)->value();
+    return ((Fl_Input *)widget)->value();
   case ID_RADIO:
   case ID_CHKBOX:
-    return ((Fl_Radio_Button *) widget)->value()? truestr : falsestr;
+    return ((Fl_Radio_Button *)widget)->value() ? truestr : falsestr;
   case ID_SELECT:
     // TODO: fixme
-    //widget = ((Fl_Choice *) widget)->item();
+    //widget = ((Fl_Choice *)widget)->item();
     //return widget ? widget->label() : NULL;
     return NULL;
   case ID_RANGEVAL:
-    sprintf(rangeValue, "%f", ((Fl_Valuator *) widget)->value());
+    sprintf(rangeValue, "%f", ((Fl_Valuator *)widget)->value());
     return rangeValue;
   case ID_HIDDEN:
   case ID_READONLY:
@@ -1669,22 +1684,22 @@ bool HelpWidget::setInputValue(const char *assignment) {
       switch (button->argument()) {
       case ID_TEXTBOX:
       case ID_TEXTAREA:
-        ((Fl_Input *) button)->value(value.c_str());
+        ((Fl_Input *)button)->value(value.c_str());
         break;
       case ID_RADIO:
       case ID_CHKBOX:
-        ((Fl_Radio_Button *) button)->value(value.equals(truestr) || value.equals("1"));
+        ((Fl_Radio_Button *)button)->value(value.equals(truestr) || value.equals("1"));
         break;
       case ID_SELECT:
         // TODO: fixme
-        //choice = (Fl_Choice *) button;
+        //choice = (Fl_Choice *)button;
         //item = choice->find(value.c_str());
         //if (item) {
         //choice->set_focus(item);
         //}
         break;
       case ID_RANGEVAL:
-        ((Fl_Valuator *) button)->value(value.toNumber());
+        ((Fl_Valuator *)button)->value(value.toNumber());
         break;
       case ID_READONLY:
         button->copy_label(value.c_str());
@@ -1817,7 +1832,7 @@ void HelpWidget::draw() {
     p->display(&out);
     if (out.nodeId < id) {
       // perform second pass on previous outer table
-      TableNode *table = (TableNode *) nodeList[out.nodeId];
+      TableNode *table = (TableNode *)nodeList[out.nodeId];
       out.x1 = table->initX;
       out.y1 = table->initY;
       out.exposed = false;
@@ -1850,10 +1865,12 @@ void HelpWidget::draw() {
     } else {
       int value = SCROLL_SIZE * -vscroll / scrollH;
       int sliderH = height * height / pageHeight;
+      int lineSize = SCROLL_SIZE * out.lineHeight / scrollH;
+      int windowSize = lineSize * height / out.lineHeight;
       scrollHeight = scrollH;
       scrollbar->activate();
-      scrollbar->value(value, 1, 0, SCROLL_SIZE);
-      scrollbar->linesize(SCROLL_SIZE * out.lineHeight / scrollH);
+      scrollbar->value(value, windowSize, 0, SCROLL_SIZE);
+      scrollbar->linesize(lineSize);
       scrollbar->slider_size(MAX(10, MIN(sliderH, height - 40)));
       if (height - vscroll > pageHeight) {
         vscroll = -(pageHeight - height);
@@ -2092,15 +2109,15 @@ void HelpWidget::compile() {
           uline = false;
           nodeList.add(new StyleNode(uline, center));
         } else if (0 == strncasecmp(tag, "td", 2)) {
-          nodeList.add(new TdEndNode((TdNode *) tdStack.pop()));
+          nodeList.add(new TdEndNode((TdNode *)tdStack.pop()));
           text = skipWhite(tagEnd + 1);
         } else if (0 == strncasecmp(tag, "tr", 2)) {
-          node = new TrEndNode((TrNode *) trStack.pop());
+          node = new TrEndNode((TrNode *)trStack.pop());
           nodeList.add(node);
           padlines = false;
           text = skipWhite(tagEnd + 1);
         } else if (0 == strncasecmp(tag, "table", 5)) {
-          node = new TableEndNode((TableNode *) tableStack.pop());
+          node = new TableEndNode((TableNode *)tableStack.pop());
           nodeList.add(node);
           padlines = false;
           text = skipWhite(tagEnd + 1);
@@ -2165,14 +2182,14 @@ void HelpWidget::compile() {
         } else if (0 == strncasecmp(tag, "td", 2)) {
           p.removeAll();
           p.load(tag + 2, taglen - 2);
-          node = new TdNode((TrNode *) trStack.peek(), &p);
+          node = new TdNode((TrNode *)trStack.peek(), &p);
           nodeList.add(node);
           tdStack.push((TdNode *)node);
           text = skipWhite(tagEnd + 1);
         } else if (0 == strncasecmp(tag, "tr", 2)) {
           p.removeAll();
           p.load(tag + 2, taglen - 2);
-          node = new TrNode((TableNode *) tableStack.peek(), &p);
+          node = new TrNode((TableNode *)tableStack.peek(), &p);
           nodeList.add(node);
           trStack.push((TrNode *)node);
           text = skipWhite(tagEnd + 1);
@@ -2203,7 +2220,7 @@ void HelpWidget::compile() {
           uline = true;
           nodeList.add(new StyleNode(uline, center));
         } else if (0 == strncasecmp(tag, "li>", 3)) {
-          node = new LiNode((UlNode *) olStack.peek());
+          node = new LiNode((UlNode *)olStack.peek());
           nodeList.add(node);
           padlines = false;
           text = skipWhite(tagEnd + 1);
@@ -2306,7 +2323,7 @@ void HelpWidget::compile() {
   tdStack.clear();
   trStack.clear();
   while (tableStack.peek()) {
-    node = new TableEndNode((TableNode *) tableStack.pop());
+    node = new TableEndNode((TableNode *)tableStack.pop());
     nodeList.add(node);
   }
 }
@@ -2443,6 +2460,7 @@ int HelpWidget::handle(int event) {
   if (handled && event != FL_MOVE) {
     return handled;
   }
+
   switch (event) {
   case EVENT_INCREASE_FONT:
     if (getFontSize() < MAX_FONT_SIZE) {
@@ -2470,15 +2488,13 @@ int HelpWidget::handle(int event) {
 
   case EVENT_PG_DOWN:
     if (scrollbar->active()) {
-      // TODO: fixme
-      //scrollbar->handle_drag(scrollbar->value() + scrollbar->pagesize());
+      scrollbar->value(scrollbar->value() + scrollbar->slider_size());
     }
     return 1;
 
   case EVENT_PG_UP:
     if (scrollbar->active()) {
-      // TODO: fixme
-      //scrollbar->handle_drag(scrollbar->value() - scrollbar->pagesize());
+      scrollbar->value(scrollbar->value() - scrollbar->slider_size());
     }
     return 1;
 
@@ -2490,7 +2506,10 @@ int HelpWidget::handle(int event) {
     return 1;                   // aquire focus
 
   case FL_PUSH:
-    return onPush(event);
+    if (Fl::event_x() < w() - SCROLL_W) {
+      return onPush(event);
+    }
+    break;
 
   case FL_ENTER:
     return 1;
@@ -2528,10 +2547,9 @@ int HelpWidget::handle(int event) {
         return 1;
       case 'b':                // break popup
       case 'q':
-        // TODO: fixme
-        //if (Fl::modal() == parent()) {
-          //Fl_exit_modal();
-        //}
+        if (Fl::modal() == parent()) {
+          Fl::modal()->set_non_modal();
+        }
         break;                  // handle in default
       }
     }

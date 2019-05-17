@@ -30,7 +30,7 @@ int event_y() {
 void setMotionEvent(MAEvent &event, int type) {
   event.type = type;
   event.point.x = event_x();
-  event.point.y = event_y();;
+  event.point.y = event_y();
 }
 
 //
