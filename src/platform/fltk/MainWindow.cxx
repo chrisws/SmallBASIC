@@ -1428,7 +1428,7 @@ void MainWindow::execLink(strlib::String &link) {
 
   char *file = (char *)link.c_str();
   EditorWidget *editWidget = getEditor(true);
-  _siteHome.empty();
+  _siteHome.clear();
   bool execFile = false;
   if (file[0] == '!' || file[0] == '|') {
     execFile = true;            // exec flag passed with name

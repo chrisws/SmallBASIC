@@ -85,7 +85,7 @@ static void anchorClick_event(void *) {
 
 static void anchorClick_cb(Fl_Widget *w, void *v) {
   if (fileWidget) {
-    click.empty();
+    click.clear();
     click.append((char *)v);
     Fl::add_check(anchorClick_event); // post message
   }
@@ -239,7 +239,7 @@ void FileWidget::anchorClick() {
   }
 
   if (_saveEditorAs) {
-    Fl_Input *input = (Fl_Input *) getInput("saveas");
+    Fl_Input *input = (Fl_Input *)getInput("saveas");
     input->value(target);
   } else {
     setDocHome(docHome);

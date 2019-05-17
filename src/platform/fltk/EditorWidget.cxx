@@ -418,7 +418,7 @@ void EditorWidget::command(Fl_Widget *w, void *eventData) {
     break;
 
   case cmd_replace:
-    _commandBuffer.empty();
+    _commandBuffer.clear();
     _commandBuffer.append(_commandText->value());
     setCommand(cmd_replace_with);
     break;
@@ -720,12 +720,12 @@ void EditorWidget::fileChanged(bool loadfile) {
         // shift items downwards
         for (int i = NUM_RECENT_ITEMS - 1; i > 0; i--) {
           //_menuBar->replace(recentMenu[i], _menuBar->text(recentMenu[i]));
-          recentPath[i].empty();
+          recentPath[i].clear();
           recentPath[i].append(recentPath[i - 1]);
         }
         // create new item in first position
         const char *label = FileWidget::splitPath(filename, NULL);
-        recentPath[0].empty();
+        recentPath[0].clear();
         recentPath[0].append(filename);
         _menuBar->replace(recentMenu[0], label);
       }

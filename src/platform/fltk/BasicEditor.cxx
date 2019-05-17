@@ -165,7 +165,6 @@ BasicEditor::BasicEditor(int x, int y, int w, int h, StatusBar *status) :
 }
 
 BasicEditor::~BasicEditor() {
-  delete _textbuf;
   delete _stylebuf;
 }
 

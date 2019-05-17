@@ -29,7 +29,7 @@
 #define Fl_HELP_WIDGET_RESOURCES
 #include "platform/fltk/HelpWidget.h"
 
-#define FOREGROUND_COLOR fl_rgb_color(0x65, 0x7b, 0x83)
+#define FOREGROUND_COLOR fl_rgb_color(0x12, 0x12, 0x12)
 #define BACKGROUND_COLOR fl_rgb_color(192, 192, 192)
 #define ANCHOR_COLOR fl_rgb_color(0,0,128)
 #define BUTTON_COLOR fl_rgb_color(0,0,128)
@@ -264,40 +264,38 @@ struct FontNode : public BaseNode {
   FontNode(Fl_Font font, int fontSize, Fl_Color color, bool bold, bool italic);
   void display(Display *out);
 
-  Fl_Font font; // includes face,bold,italic
-  uint16_t fontSize;
-  Fl_Color color;
+  Fl_Font _font;
+  uint16_t _fontSize;
+  Fl_Color _color;
 };
 
 FontNode::FontNode(Fl_Font font, int fontSize, Fl_Color color, bool bold, bool italic) :
   BaseNode(),
-  font(font),
-  fontSize(fontSize),
-  color(color) {
-  if (this->font && bold) {
-    this->font += FL_BOLD;
+  _font(font),
+  _fontSize(fontSize),
+  _color(color) {
+  if (bold) {
+    _font += FL_BOLD;
   }
-  if (this->font && italic) {
-    this->font += FL_ITALIC;
+  if (italic) {
+    _font += FL_ITALIC;
   }
 }
 
 void FontNode::display(Display *out) {
-  if (font) {
-    fl_font(font, fontSize);
-  }
-  if (color == (Fl_Color) - 1) {
+  fl_font(_font, _fontSize);
+  if (_color == (Fl_Color) - 1) {
     fl_color(out->color);       // </font> restores color
-  } else if (color != 0) {
-    fl_color(color);
+  } else if (_color != 0) {
+    fl_color(_color);
   }
   int oldLineHeight = out->lineHeight;
   out->lineHeight = fl_height();
   if (out->lineHeight > oldLineHeight) {
     out->y1 += (out->lineHeight - oldLineHeight);
   }
-  out->font = font;
-  out->fontSize = fontSize;
+  out->font = _font;
+  out->fontSize = _fontSize;
 }
 
 //--BrNode----------------------------------------------------------------------
@@ -966,7 +964,7 @@ void TableNode::display(Display *out) {
   if (out->content) {
     // update table initial row position- we remember content
     // state on re-visiting the table via the value of initY
-    initY += out->lineHeight;
+    initY += out->lineHeight + CELL_SPACING;
     maxY = initY;
   }
   out->content = false;
@@ -1176,7 +1174,9 @@ void TdNode::display(Display *out) {
 
   if (out->measure == false) {
     Fl_Rect rc(out->indent - CELL_SPACING,
-                       tr->y1 - fl_height(), out->x2 - out->indent + (CELL_SPACING * 2), out->lineHeight);
+               tr->y1 - fl_height() + fl_descent(),
+               out->x2 - out->indent + (CELL_SPACING * 2),
+               out->lineHeight);
     out->drawBackground(rc);
     if (table->border > 0) {
       Fl_Color oldColor = fl_color();
@@ -1520,7 +1520,7 @@ HelpWidget::HelpWidget(Fl_Widget *rect, int defsize) :
   callback(anchor_callback);    // default callback
   init();
   cookies = 0;
-  docHome.empty();
+  docHome.clear();
   labelsize(defsize);
   mouseMode = mm_select;
 }
@@ -1541,7 +1541,7 @@ void HelpWidget::init() {
 void HelpWidget::endSelection() {
   markX = pointX = -1;
   markY = pointY = -1;
-  selection.empty();
+  selection.clear();
 }
 
 void HelpWidget::setFontSize(int i) {
@@ -1565,7 +1565,7 @@ void HelpWidget::cleanup() {
   images.clear();
   nodeList.removeAll();
   namedInputs.removeAll();
-  title.empty();
+  title.clear();
 }
 
 void HelpWidget::reloadPage() {
@@ -1778,7 +1778,7 @@ void HelpWidget::draw() {
     if (damage() == DAMAGE_HIGHLIGHT) {
       // capture new selection text
       out.selection = &selection;
-      out.selection->empty();
+      out.selection->clear();
     }
   }
   // must call setfont() before getascent() etc
@@ -2124,7 +2124,7 @@ void HelpWidget::compile() {
           option->append(tagPair, tagBegin - tagPair);
           options.add(option);  // continue scan for more options
         } else if (0 == strncasecmp(tag, "title", 5) && tagPair) {
-          title.empty();
+          title.clear();
           title.append(tagPair, tagBegin - tagPair);
           tagPair = 0;
         } else if (0 == strncasecmp(tag, "script", 6) ||
@@ -2316,7 +2316,7 @@ void HelpWidget::onclick(Fl_Widget *button) {
   List_each(InputNode *, it, inputs) {
     InputNode *p = (*it);
     if (p->button == button) {
-      this->event.empty();
+      this->event.clear();
       this->event.append(p->onclick.c_str());
       user_data((void *)this->event.c_str());
       do_callback();
@@ -2548,7 +2548,7 @@ int HelpWidget::handle(int event) {
       pushedAnchor->pushed = false;
       damage(DAMAGE_PUSHED);
       if (pushed) {
-        this->event.empty();
+        this->event.clear();
         this->event.append(pushedAnchor->href.c_str());
         if (this->event.length()) {
           // href has been set
@@ -2604,7 +2604,7 @@ void HelpWidget::selectAll() {
   markX = markY = 0;
   pointX = w();
   pointY = scrollHeight + h();
-  selection.empty();
+  selection.clear();
   getText(&selection);
   redraw();
 }
@@ -2642,8 +2642,8 @@ void HelpWidget::loadFile(const char *f, bool useDocHome) {
   FILE *fp;
   long len;
 
-  fileName.empty();
-  htmlStr.empty();
+  fileName.clear();
+  htmlStr.clear();
 
   if (docHome.length() != 0 && useDocHome) {
     fileName.append(docHome);
@@ -2704,7 +2704,7 @@ void HelpWidget::reloadImages() {
 }
 
 void HelpWidget::setDocHome(const char *s) {
-  docHome.empty();
+  docHome.clear();
   docHome.append(s);
   if (s && s[strlen(s) - 1] != '/') {
     docHome.append("/");
