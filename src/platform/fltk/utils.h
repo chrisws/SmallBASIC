@@ -33,7 +33,8 @@
 #define makedir(f) mkdir(f, 0700)
 #endif
 
-void split_color(Fl_Color i, uint8_t& r, uint8_t& g, uint8_t& b);
+Fl_Color get_color(const char *name, Fl_Color def);
+Fl_Font get_font(const char *name);
 void getHomeDir(char *fileName, size_t size, bool appendSlash = true);
 bool cacheLink(dev_file_t *df, char *localFile, size_t size);
 

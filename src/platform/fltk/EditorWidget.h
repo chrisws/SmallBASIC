@@ -137,6 +137,7 @@ public:
   void selectAll() { _editor->_textbuf->select(0, _editor->_textbuf->length()); }
   const char *data() { return _editor->_textbuf->text(); }
   int dataLength() { return _editor->_textbuf->length(); }
+  int top_line() { return _editor->top_line(); }
   Fl_Text_Editor *getEditor() { return _editor; }
   TtyWidget *getTty() { return _tty; }
 

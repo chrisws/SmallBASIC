@@ -13,7 +13,7 @@
 #include "platform/fltk/MainWindow.h"
 #include "platform/fltk/utils.h"
 
-const char *configFile = "config.txt";
+const char *configFile = "fl_config.txt";
 const char *pathKey = "path";
 const char *indentLevelKey = "indentLevel";
 const char *fontNameKey = "fontName";
@@ -97,7 +97,6 @@ void Profile::restoreAppPosition(Fl_Window *wnd) {
   if (_appPosition.w() && _appPosition.h()) {
     int x = _appPosition.x() != 0 ? _appPosition.x() : wnd->x();
     int y = _appPosition.y() != 0 ? _appPosition.y() : wnd->y();
-    fprintf(stderr, "xy = %d %d\n", x, y);
     wnd->resize(x, y, _appPosition.w(), _appPosition.h());
   }
 }
@@ -165,19 +164,16 @@ void Profile::restoreStyles(Properties<String *> *profile) {
   restoreValue(profile, fontSizeKey, &_fontSize);
   String *fontName = profile->get(fontNameKey);
   if (fontName) {
-    // TODO: fixme
-    //_font = fl_rgb_font(fontName->c_str());
+    _font = get_font(fontName->c_str());
   }
 
   for (int i = 0; i <= st_background; i++) {
     char buffer[4];
     sprintf(buffer, "%02d", i);
-    /*
-      // TODO: fixme
     String *color = profile->get(buffer);
     if (color) {
-      Fl_Color c = fl_rgb_color(color->c_str());
-      if (c != NO_COLOR) {
+      Fl_Color c = get_color(color->c_str(), NO_COLOR);
+      if (c != (Fl_Color)NO_COLOR) {
         if (i == st_background) {
           this->_color = c;
         } else {
@@ -185,7 +181,6 @@ void Profile::restoreStyles(Properties<String *> *profile) {
         }
       }
     }
-    */
   }
 }
 
@@ -261,13 +256,10 @@ void Profile::restoreWindowPos(MainWindow *wnd, Fl_Rect &rc) {
   int y = rc.y();
   int w = rc.w();
   int h = rc.h();
-
   if (x > 0 && y > 0 && w > 100 && h > 100) {
-    //TODO: fixme
-    //const Monitor & monitor = Monitor::all();
-    //if (x < monitor.w() && y < monitor.h()) {
-    //wnd->resize(x, y, w, h);
-    //}
+    if (x < Fl::w() && y < Fl::h()) {
+      wnd->resize(x, y, w, h);
+    }
   }
 }
 
@@ -285,11 +277,10 @@ void Profile::saveStyles(FILE *fp) {
   uint8_t r, g, b;
 
   saveValue(fp, fontSizeKey, (int)styletable[0].size);
-  // TODO: fixme
-  //saveValue(fp, fontNameKey, styletable[0].font->name());
+  saveValue(fp, fontNameKey, styletable[0].font);
 
   for (int i = 0; i <= st_background; i++) {
-    split_color(i == st_background ? _color : styletable[i].color, r, g, b);
+    Fl::get_color(i == st_background ? _color : styletable[i].color, r, g, b);
     fprintf(fp, "%02d=#%02x%02x%02x\n", i, r, g, b);
   }
 }
@@ -309,7 +300,7 @@ void Profile::saveTabs(FILE *fp, MainWindow *wnd) {
       bool hideIde = editWidget->isHideIDE();
       bool gotoLine = editWidget->isBreakToLine();
       int insertPos = editWidget->getEditor()->insert_position();
-      int topLineNo = 0; // TODO: fixme editWidget->editor->top_line();
+      int topLineNo = editWidget->top_line();
 
       fprintf(fp, "%s='%d;%d;%d;%d;%d;%d;%s'\n", pathKey,
               logPrint, scrollLock, hideIde, gotoLine, insertPos, topLineNo, editWidget->getFilename());

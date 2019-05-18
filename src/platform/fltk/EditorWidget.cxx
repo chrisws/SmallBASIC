@@ -570,10 +570,10 @@ void EditorWidget::set_color(Fl_Widget *w, void *eventData) {
   StyleField styleField = (StyleField) (intptr_t) eventData;
   if (styleField == st_background || styleField == st_background_def) {
     uint8_t r, g, b;
-    // TODO: fixme
-    split_color(_editor->color(), r, g, b);
+    Fl::get_color(_editor->color(), r, g, b);
     if (fl_color_chooser(w->label(), r, g, b)) {
       Fl_Color c = fl_rgb_color(r, g, b);
+      // TODO: fixme
       //set_color_index(FL_FREE_COLOR + styleField, c);
       setEditorColor(c, styleField == st_background_def);
       _editor->styleChanged();
@@ -1395,10 +1395,10 @@ bool EditorWidget::searchBackward(const char *text, int startPos,
  */
 void EditorWidget::setColor(const char *label, StyleField field) {
   uint8_t r, g, b;
-  // TODO: fixme
-  split_color(styletable[field].color, r, g, b);
+  Fl::get_color(styletable[field].color, r, g, b);
   if (fl_color_chooser(label, r, g, b)) {
     Fl_Color c = fl_rgb_color(r, g, b);
+    //TODO: fixme
     //set_color_index(FL_FREE_COLOR + field, c);
     styletable[field].color = c;
     _editor->styleChanged();

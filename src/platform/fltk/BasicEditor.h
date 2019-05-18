@@ -45,6 +45,7 @@ struct BasicEditor : public Fl_Text_Editor {
   void styleParse(const char *text, char *style, int length);
   int hor_offset() { return mHorizOffset; }
   int maxSize() { return mMaxsize; }
+  int top_line() { return mTopLineNum; }
 
   bool _readonly;
   int _indentLevel;

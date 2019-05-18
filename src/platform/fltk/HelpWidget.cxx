@@ -2219,21 +2219,20 @@ void HelpWidget::compile() {
           color = getColor(p.get("color"), 0);
           prop = p.get("font-size");
           if (prop != NULL) {
-            // TODO: fixme
             // convert from points to pixels
-            //const Fl_Monitor &monitor = Fl_Monitor::all();
-            //fontSize = (int)(prop->toInteger() * monitor.dpi_y() / 72.0);
+            float h, v;
+            Fl::screen_dpi(h, v);
+            fontSize = (int)(prop->toInteger() * v  / 72.0);
           } else {
             prop = p.get("size");
             if (prop != NULL) {
               fontSize = 7 + (prop->toInteger() * 2);
             }
           }
-          // TODO: fixme
-          //prop = p.get("face");
-          //if (prop != NULL) {
-          //font = fl_font(prop->c_str());
-          //}
+          prop = p.get("face");
+          if (prop != NULL) {
+            font = get_font(prop->c_str());
+          }
           node = new FontNode(font, fontSize, color, bold, italic);
           nodeList.add(node);
         } else if (taglen == 2 && 0 == strncasecmp(tag, "h", 1)) {
@@ -2868,55 +2867,13 @@ const char *skipWhite(const char *s) {
 }
 
 Fl_Color getColor(strlib::String *s, Fl_Color def) {
-  if (s == 0 || s->length() == 0) {
-    return def;
+  Fl_Color result;
+  if (s != NULL && s->length()) {
+    result = get_color(s->c_str(), def);
+  } else {
+    result = def;
   }
-
-  const char *n = s->c_str();
-  if (n[0] == '#') {
-    // do hex color lookup
-    int rgb = strtol(n + 1, NULL, 16);
-    int r = rgb >> 16;
-    int g = (rgb >> 8) & 255;
-    int b = rgb & 255;
-    return fl_rgb_color((uchar) r, (uchar) g, (uchar) b);
-  } else if (strcasecmp(n, "black") == 0) {
-    return FL_BLACK;
-  } else if (strcasecmp(n, "red") == 0) {
-    return FL_RED;
-  } else if (strcasecmp(n, "green") == 0) {
-    return fl_rgb_color(0, 0x80, 0);
-  } else if (strcasecmp(n, "yellow") == 0) {
-    return FL_YELLOW;
-  } else if (strcasecmp(n, "blue") == 0) {
-    return FL_BLUE;
-  } else if (strcasecmp(n, "magenta") == 0 ||
-             strcasecmp(n, "fuchsia") == 0) {
-    return FL_MAGENTA;
-  } else if (strcasecmp(n, "cyan") == 0 ||
-             strcasecmp(n, "aqua") == 0) {
-    return FL_CYAN;
-  } else if (strcasecmp(n, "white") == 0) {
-    return FL_WHITE;
-  } else if (strcasecmp(n, "gray") == 0 ||
-             strcasecmp(n, "grey") == 0) {
-    return fl_rgb_color(0x80, 0x80, 0x80);
-  } else if (strcasecmp(n, "lime") == 0) {
-    return FL_GREEN;
-  } else if (strcasecmp(n, "maroon") == 0) {
-    return fl_rgb_color(0x80, 0, 0);
-  } else if (strcasecmp(n, "navy") == 0) {
-    return fl_rgb_color(0, 0, 0x80);
-  } else if (strcasecmp(n, "olive") == 0) {
-    return fl_rgb_color(0x80, 0x80, 0);
-  } else if (strcasecmp(n, "purple") == 0) {
-    return fl_rgb_color(0x80, 0, 0x80);
-  } else if (strcasecmp(n, "silver") == 0) {
-    return fl_rgb_color(0xc0, 0xc0, 0xc0);
-  } else if (strcasecmp(n, "teal") == 0) {
-    return fl_rgb_color(0, 0x80, 0x80);
-  }
-  return def;
+  return result;
 }
 
 // image factory based on file extension

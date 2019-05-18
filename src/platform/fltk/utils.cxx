@@ -13,16 +13,68 @@
 
 #define RX_BUFFER_SIZE 1024
 
-/**
- * Set r,g,b to the 8-bit components of this color. If it is an indexed
- * color they are looked up in the table, otherwise they are simply copied
- * out of the color number.
- */
-void split_color(Fl_Color i, uint8_t& r, uint8_t& g, uint8_t& b) {
-  uint8_t c = Fl::get_color(i);
-  r = c >> 24;
-  g = c >> 16;
-  b = c >> 8;
+Fl_Color get_color(const char *name, Fl_Color def) {
+  Fl_Color result = def;
+  if (!name || name[0] == '\0') {
+    result = def;
+  } else if (name[0] == '#') {
+    // do hex color lookup
+    int rgb = strtol(name + 1, NULL, 16);
+    if (!rgb) {
+      result = FL_BLACK;
+    } else {
+      uchar r = rgb >> 16;
+      uchar g = (rgb >> 8) & 255;
+      uchar b = rgb & 255;
+      result = fl_rgb_color(r, g, b);
+    }
+  } else if (strcasecmp(name, "black") == 0) {
+    result = FL_BLACK;
+  } else if (strcasecmp(name, "red") == 0) {
+    result = FL_RED;
+  } else if (strcasecmp(name, "green") == 0) {
+    result = fl_rgb_color(0, 0x80, 0);
+  } else if (strcasecmp(name, "yellow") == 0) {
+    result = FL_YELLOW;
+  } else if (strcasecmp(name, "blue") == 0) {
+    result = FL_BLUE;
+  } else if (strcasecmp(name, "magenta") == 0 ||
+             strcasecmp(name, "fuchsia") == 0) {
+    result = FL_MAGENTA;
+  } else if (strcasecmp(name, "cyan") == 0 ||
+             strcasecmp(name, "aqua") == 0) {
+    result = FL_CYAN;
+  } else if (strcasecmp(name, "white") == 0) {
+    result = FL_WHITE;
+  } else if (strcasecmp(name, "gray") == 0 ||
+             strcasecmp(name, "grey") == 0) {
+    result = fl_rgb_color(0x80, 0x80, 0x80);
+  } else if (strcasecmp(name, "lime") == 0) {
+    result = FL_GREEN;
+  } else if (strcasecmp(name, "maroon") == 0) {
+    result = fl_rgb_color(0x80, 0, 0);
+  } else if (strcasecmp(name, "navy") == 0) {
+    result = fl_rgb_color(0, 0, 0x80);
+  } else if (strcasecmp(name, "olive") == 0) {
+    result = fl_rgb_color(0x80, 0x80, 0);
+  } else if (strcasecmp(name, "purple") == 0) {
+    result = fl_rgb_color(0x80, 0, 0x80);
+  } else if (strcasecmp(name, "silver") == 0) {
+    result = fl_rgb_color(0xc0, 0xc0, 0xc0);
+  } else if (strcasecmp(name, "teal") == 0) {
+    result = fl_rgb_color(0, 0x80, 0x80);
+  }
+  return result;
+}
+
+Fl_Font get_font(const char *name) {
+  Fl_Font result = FL_COURIER;
+  if (strcasecmp(name, "helvetica") == 0) {
+    result = FL_HELVETICA;
+  } else if (strcasecmp(name, "times") == 0) {
+    result = FL_TIMES;
+  }
+  return result;
 }
 
 void getHomeDir(char *fileName, size_t size, bool appendSlash) {
