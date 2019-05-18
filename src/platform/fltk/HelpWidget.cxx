@@ -1532,7 +1532,6 @@ HelpWidget::HelpWidget(Fl_Widget *rect, int defsize) :
   scrollbar->value(0, 1, 0, SCROLL_SIZE);
   scrollbar->user_data(this);
   scrollbar->callback(scrollbar_callback);
-  scrollbar->box(FL_NO_BOX);
   scrollbar->deactivate();
   scrollbar->show();
   end();
@@ -1547,8 +1546,9 @@ HelpWidget::~HelpWidget() {
 }
 
 void HelpWidget::init() {
+  scrollHeight = 0;
+  scrollWindowHeight = 0;
   hscroll = 0;
-  scrollHeight = h();
   background = BACKGROUND_COLOR;
   foreground = FOREGROUND_COLOR;
   endSelection();
@@ -2456,53 +2456,40 @@ int HelpWidget::handleKeys() {
       result = 1;
     }
     break;
-  case FL_Page_Up:
-    vscroll(-scrollWindowHeight);
-    result = 1;
-    break;
-  case FL_Page_Down:
-    vscroll(scrollWindowHeight);
-    result = 1;
-    break;
   default:
     break;
   }
 
   if (!result && Fl::event_state(FL_CTRL)) {
+    result = 1;
     switch (Fl::event_key()) {
     case 'u':
       vscroll(-scrollWindowHeight);
-      result = 1;
       break;
     case 'd':
       vscroll(scrollWindowHeight);
-      result = 1;
       break;
-    case 'r':                // reload
+    case 'r':
       reloadPage();
-      result = 1;
       break;
-    case 'f':                // find
+    case 'f':
       find(fl_input("Find:"), false);
-      result = 1;
       break;
-    case 'a':                // select-all
+    case 'a':
       selectAll();
-      result = 1;
       break;
     case FL_Insert:
-    case 'c':                // copy
+    case 'c':
       copySelection();
-      result = 1;
       break;
-    case 'b':                // break popup
+    case 'b':
     case 'q':
       if (Fl::modal() == parent()) {
         Fl::modal()->set_non_modal();
       }
-      result = 1;
       break;
     default:
+      result = 0;
       break;
     }
   }
@@ -2584,7 +2571,8 @@ int HelpWidget::handle(int event) {
       return 1;
     }
   }
-  return 0;
+
+  return scrollbar->active() ? scrollbar->handle(event) : 0;
 }
 
 bool HelpWidget::find(const char *s, bool matchCase) {
@@ -2610,7 +2598,7 @@ bool HelpWidget::find(const char *s, bool matchCase) {
     return false;
   }
 
-  scroll = -foundRow;
+  scroll = foundRow;
 
   // check scroll bounds
   if (foundRow) {
@@ -2669,7 +2657,6 @@ void HelpWidget::loadBuffer(const char *str) {
 
 void HelpWidget::loadFile(const char *f, bool useDocHome) {
   FILE *fp;
-  long len;
 
   fileName.clear();
   htmlStr.clear();
@@ -2684,7 +2671,7 @@ void HelpWidget::loadFile(const char *f, bool useDocHome) {
   }
 
   const char *target = strrchr(f, '#');
-  len = target != NULL ? target - f : strlen(f);
+  long len = target != NULL ? target - f : strlen(f);
   fileName.append(f, len);
   fileName.replaceAll('\\', '/');
 

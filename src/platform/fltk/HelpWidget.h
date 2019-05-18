@@ -108,7 +108,7 @@ private:
 
   Fl_Color background, foreground;
   Fl_Scrollbar *scrollbar;
-  uint16_t scrollHeight, scrollWindowHeight;
+  int32_t scrollHeight, scrollWindowHeight;
   int16_t markX, markY, pointX, pointY;
   int16_t hscroll, scrollY;
   enum { mm_select, mm_page, mm_scroll } mouseMode;
