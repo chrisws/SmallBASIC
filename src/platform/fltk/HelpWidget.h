@@ -106,8 +106,8 @@ private:
   bool exposed() { return (damage() & (FL_DAMAGE_EXPOSE | FL_DAMAGE_ALL)); }
   void vscroll(int offs);
 
-  Fl_Color background, foreground;
   Fl_Scrollbar *scrollbar;
+  Fl_Color background, foreground;
   int32_t scrollHeight, scrollWindowHeight;
   int16_t markX, markY, pointX, pointY;
   int16_t hscroll, scrollY;

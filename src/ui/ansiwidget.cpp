@@ -62,6 +62,8 @@ AnsiWidget::AnsiWidget(int width, int height) :
   _back(NULL),
   _front(NULL),
   _focus(NULL),
+  _activeButton(NULL),
+  _hoverInput(NULL),
   _width(width),
   _height(height),
   _xTouch(-1),
@@ -70,9 +72,7 @@ AnsiWidget::AnsiWidget(int width, int height) :
   _yMove(-1),
   _touchTime(0),
   _swipeExit(false),
-  _autoflush(true),
-  _activeButton(NULL),
-  _hoverInput(NULL) {
+  _autoflush(true) {
   for (int i = 0; i < MAX_SCREENS; i++) {
     _screens[i] = NULL;
   }

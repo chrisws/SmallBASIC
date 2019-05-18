@@ -114,6 +114,8 @@ private:
   Screen *_back;   // screen being painted/written
   Screen *_front;  // screen to display
   Screen *_focus;  // screen with the active button
+  FormInput *_activeButton;
+  FormInput *_hoverInput;
   int _width;      // device screen width
   int _height;     // device screen height
   int _fontSize;   // font height based on screen size
@@ -124,8 +126,6 @@ private:
   int _touchTime;  // last move time
   bool _swipeExit; // last touch-down was swipe exit
   bool _autoflush; // flush internally
-  FormInput *_activeButton;
-  FormInput *_hoverInput;
 };
 
 #endif // ANSIWIDGET_H

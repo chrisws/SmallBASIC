@@ -65,15 +65,22 @@ char rangeValue[20];
 //--Display---------------------------------------------------------------------
 
 struct Display {
-  int16_t x1, x2, y1, y2;
+  strlib::String *selection;
+  Fl_Group *wnd;
+  AnchorNode *anchor;
+  Fl_Font font;
+  Fl_Color color;
+  Fl_Color background;
+  int16_t  x1, x2, y1, y2;
   uint16_t tabW, tabH;
   uint16_t lineHeight;
   uint16_t indent;
   uint16_t fontSize;
   uint16_t tableLevel;
   uint16_t nodeId;
-  int16_t imgY;
+  int16_t  imgY;
   uint16_t imgIndent;
+  int16_t markX, markY, pointX, pointY;
   uint8_t uline;
   uint8_t center;
   uint8_t content;
@@ -81,13 +88,7 @@ struct Display {
   uint8_t measure;
   uint8_t selected;
   uint8_t invertedSel;
-  int16_t markX, markY, pointX, pointY;
-  strlib::String *selection;
-  Fl_Font font;
-  Fl_Color color;
-  Fl_Color background;
-  Fl_Group *wnd;
-  AnchorNode *anchor;
+  uint8_t __padding[3];
 
   void drawBackground(Fl_Rect &rc) {
     if (background != NO_COLOR) {
@@ -146,8 +147,8 @@ private:
 //--Attributes------------------------------------------------------------------
 
 struct Value {
-  bool relative;
   int value;
+  bool relative;
 };
 
 struct Attributes : public Properties<String *> {
@@ -267,15 +268,15 @@ struct FontNode : public BaseNode {
   void display(Display *out);
 
   Fl_Font _font;
-  uint16_t _fontSize;
   Fl_Color _color;
+  uint16_t _fontSize;
 };
 
 FontNode::FontNode(Fl_Font font, int fontSize, Fl_Color color, bool bold, bool italic) :
   BaseNode(),
   _font(font),
-  _fontSize(fontSize),
-  _color(color) {
+  _color(color),
+  _fontSize(fontSize) {
   if (bold) {
     _font += FL_BOLD;
   }
@@ -361,12 +362,13 @@ struct AnchorNode : public BaseNode {
     return y1;
   }
 
-  strlib::String name;
-  strlib::String href;
   int16_t x1, x2, y1, y2;
   uint16_t lineHeight;
   uint8_t wrapxy;  // begin on page boundary
   uint8_t pushed;
+  uint8_t __padding[4];
+  strlib::String name;
+  strlib::String href;
 };
 
 AnchorNode *pushedAnchor = 0;
@@ -417,8 +419,8 @@ struct UlNode : public BaseNode {
     out->newRow(1);
     out->indent += LI_INDENT;
   }
-  bool ordered;
   int nextId;
+  bool ordered;
 };
 
 struct UlEndNode : public BaseNode {
@@ -467,10 +469,11 @@ struct ImageNode : public BaseNode {
   void reload();
   void display(Display *out);
   Fl_Image *image;
-  strlib::String path, url;
   Value w, h;
   uint8_t background, fixed;
   uint8_t valign; // 0=top, 1=center, 2=bottom
+  uint8_t __padding[5];
+  strlib::String path, url;
 };
 
 ImageNode::ImageNode(strlib::String *docHome, Attributes *a) :
@@ -881,9 +884,9 @@ struct TrNode : public BaseNode {
   void display(Display *out);
 
   TableNode *table;
-  uint16_t cols;
-  int16_t y1, height;
   Fl_Color background, foreground;
+  uint16_t cols, __padding1;
+  int16_t y1, height;
 };
 
 struct TrEndNode : public BaseNode {
@@ -898,8 +901,8 @@ struct TdNode : public BaseNode {
   void display(Display *out);
 
   TrNode *tr;
-  Fl_Color background, foreground;
   Value width;
+  Fl_Color background, foreground;
   uint16_t colspan;
 };
 
@@ -1237,8 +1240,8 @@ struct InputNode : public BaseNode {
   void display(Display *out);
 
   Fl_Widget *button;
+  uint32_t rows, cols;
   strlib::String onclick;
-  uint16_t rows, cols;
 };
 
 // creates either a text, checkbox, radio, hidden or button control
