@@ -38,6 +38,7 @@
 #define LI_INDENT 18
 #define FONT_SIZE_H1 23
 #define SCROLL_W 15
+#define SCROLL_X SCROLL_W - 2
 #define CELL_SPACING 4
 #define INPUT_WIDTH 90
 #define BUTTON_WIDTH 20
@@ -1499,7 +1500,7 @@ struct EnvNode : public TextNode {
 //--HelpWidget------------------------------------------------------------------
 
 static void scrollbar_callback(Fl_Widget *scrollBar, void *helpWidget) {
-  ((HelpWidget *)helpWidget)->scrollTo(((Fl_Scrollbar *)scrollBar)->value());
+  ((HelpWidget *)helpWidget)->redraw();
 }
 
 static void anchor_callback(Fl_Widget *helpWidget, void *target) {
@@ -1510,13 +1511,13 @@ HelpWidget::HelpWidget(Fl_Widget *rect, int defsize) :
   Fl_Group(rect->x(), rect->y(), rect->w(), rect->h()),
   background(0),
   foreground(0),
-  vscroll(0),
-  hscroll(0),
   scrollHeight(0),
+  scrollWindowHeight(0),
   markX(0),
   markY(0),
   pointX(0),
   pointY(0),
+  hscroll(0),
   scrollY(0),
   mouseMode(mm_select),
   nodeList(100),
@@ -1526,12 +1527,13 @@ HelpWidget::HelpWidget(Fl_Widget *rect, int defsize) :
   images(5),
   cookies(NULL) {
   begin();
-  scrollbar = new Fl_Scrollbar(rect->w() - SCROLL_W, rect->y(), SCROLL_W, rect->h());
+  scrollbar = new Fl_Scrollbar(rect->w() - SCROLL_X, rect->y(), SCROLL_W, rect->h());
   scrollbar->type(FL_VERTICAL);
   scrollbar->value(0, 1, 0, SCROLL_SIZE);
   scrollbar->user_data(this);
   scrollbar->callback(scrollbar_callback);
   scrollbar->box(FL_NO_BOX);
+  scrollbar->deactivate();
   scrollbar->show();
   end();
   callback(anchor_callback);    // default callback
@@ -1545,7 +1547,6 @@ HelpWidget::~HelpWidget() {
 }
 
 void HelpWidget::init() {
-  vscroll = 0;
   hscroll = 0;
   scrollHeight = h();
   background = BACKGROUND_COLOR;
@@ -1716,9 +1717,9 @@ void HelpWidget::scrollTo(const char *anchorName) {
     AnchorNode *p = (*it);
     if (p->name.equals(anchorName)) {
       if (p->getY() > scrollHeight) {
-        vscroll = -scrollHeight;
+        vscroll(-scrollHeight);
       } else {
-        vscroll = -p->getY();
+        vscroll(-p->getY());
       }
       redraw();
       return;
@@ -1726,26 +1727,14 @@ void HelpWidget::scrollTo(const char *anchorName) {
   }
 }
 
-void HelpWidget::scrollTo(int scroll) {
-  // called from the scrollbar using scrollbar units
-  if (vscroll != scroll) {
-    vscroll = -(scroll * scrollHeight / SCROLL_SIZE);
-    redraw();
-  }
-}
-
 void HelpWidget::resize(int x, int y, int w, int h) {
-  scrollbar->resize(w - SCROLL_W, 0, SCROLL_W, h);
+  scrollbar->resize(w - SCROLL_X, 0, SCROLL_W, h);
   endSelection();
   Fl_Group::resize(x, y, w, h);
 }
 
 void HelpWidget::draw() {
-  if (damage() == FL_DAMAGE_CHILD) {
-    Fl_Group::draw();
-    return;
-  }
-
+  int vscroll = -scrollbar->value();
   Display out;
   out.uline = false;
   out.center = false;
@@ -1758,7 +1747,7 @@ void HelpWidget::draw() {
   out.y2 = h();
   out.indent = DEFAULT_INDENT + hscroll;
   out.x1 = x() + out.indent;
-  out.x2 = w() - (DEFAULT_INDENT + SCROLL_W) + hscroll;
+  out.x2 = w() - (DEFAULT_INDENT + SCROLL_X) + hscroll;
   out.content = false;
   out.measure = false;
   out.exposed = exposed();
@@ -1799,20 +1788,20 @@ void HelpWidget::draw() {
   // must call setfont() before getascent() etc
   fl_font(out.font, out.fontSize);
   out.y1 = y() + fl_height();
-  out.lineHeight = out.y1 + fl_descent();
+  out.lineHeight = fl_height() + fl_descent();
   out.y1 += vscroll;
 
-  fl_push_clip(x(), y(), w(), h());
+  fl_push_clip(x(), y(), w() - SCROLL_X, h());
   bool havePushedAnchor = false;
   if (pushedAnchor && (damage() == DAMAGE_PUSHED)) {
     // just draw the anchor-push
     int h = (pushedAnchor->y2 - pushedAnchor->y1) + pushedAnchor->lineHeight;
-    fl_push_clip(0, pushedAnchor->y1, out.x2, h);
+    fl_push_clip(x(), y() + pushedAnchor->y1, out.x2, h);
     havePushedAnchor = true;
   }
   // draw the background
   fl_color(out.background);
-  fl_rectf(x(), y(), w() - SCROLL_W, h());
+  fl_rectf(x(), y(), w() - SCROLL_X, h());
   fl_color(out.color);
 
   out.background = NO_COLOR;
@@ -1851,48 +1840,42 @@ void HelpWidget::draw() {
   }
 
   if (out.exposed) {
-    // size has changed or need to recombob scrollbar
+    // size has changed or need to recalculate scrollbar
     int pageHeight = (out.y1 - vscroll) + out.lineHeight;
-    int height = h() - out.lineHeight;
-    int scrollH = pageHeight - height;
-    if (scrollH < 1) {
-      // nothing to scroll
-      scrollHeight = height;
-      scrollbar->deactivate();
-      scrollbar->slider_size(10);
-      scrollbar->value(0, 1, 0, SCROLL_SIZE);
-      vscroll = 0;
-    } else {
-      int value = SCROLL_SIZE * -vscroll / scrollH;
-      int sliderH = height * height / pageHeight;
-      int lineSize = SCROLL_SIZE * out.lineHeight / scrollH;
-      int windowSize = lineSize * height / out.lineHeight;
+    int windowHeight = h() - out.lineHeight;
+    int scrollH = pageHeight - windowHeight;
+    if (scrollH != scrollHeight || windowHeight != scrollWindowHeight) {
+      scrollWindowHeight = windowHeight;
       scrollHeight = scrollH;
-      scrollbar->activate();
-      scrollbar->value(value, windowSize, 0, SCROLL_SIZE);
-      scrollbar->linesize(lineSize);
-      scrollbar->slider_size(MAX(10, MIN(sliderH, height - 40)));
-      if (height - vscroll > pageHeight) {
-        vscroll = -(pageHeight - height);
+      if (scrollHeight < 1) {
+        // nothing to scroll
+        scrollHeight = 0;
+        scrollbar->deactivate();
+        scrollbar->value(0, 1, 0, 1);
+      } else {
+        scrollbar->activate();
+        scrollbar->value(-vscroll, scrollWindowHeight, 0, scrollHeight);
+        scrollbar->linesize(out.lineHeight);
       }
+      scrollbar->redraw();
     }
   }
+  if (havePushedAnchor) {
+    fl_pop_clip();
+  }
+  fl_pop_clip();
+
   // draw child controls
   draw_child(*scrollbar);
 
   // prevent other child controls from drawing over the scrollbar
-  fl_push_clip(0, 0, w() - SCROLL_W, h());
+  fl_push_clip(x(), y(), w() - SCROLL_X, h());
   int numchildren = children();
   for (int n = 0; n < numchildren; n++) {
     Fl_Widget &w = *child(n);
     if (&w != scrollbar) {
       draw_child(w);
     }
-  }
-  fl_pop_clip();
-
-  if (havePushedAnchor) {
-    fl_pop_clip();
   }
   fl_pop_clip();
 }
@@ -2365,6 +2348,7 @@ int HelpWidget::onMove(int event) {
     fl_cursor(FL_CURSOR_DEFAULT);
   }
 
+  int vscroll = scrollbar->value();
   if (event == FL_DRAG) {
     switch (mouseMode) {
     case mm_select:
@@ -2403,7 +2387,7 @@ int HelpWidget::onPush(int event) {
   pushedAnchor = 0;
   int ex = Fl::event_x();
   int ey = Fl::event_y();
-  int16_t scroll = vscroll;
+  int16_t scroll = scrollbar->value();
 
   List_each(AnchorNode *, it, anchors) {
     AnchorNode *p = (*it);
@@ -2421,10 +2405,10 @@ int HelpWidget::onPush(int event) {
     // begin/continue text selection
     if (Fl::event_state(FL_SHIFT)) {
       pointX = (ex - hscroll);
-      pointY = (ey - vscroll);
+      pointY = (ey - scrollbar->value());
     } else {
       markX = pointX = (ex - hscroll);
-      markY = pointY = (ey - vscroll);
+      markY = pointY = (ey - scrollbar->value());
     }
     damage(DAMAGE_HIGHLIGHT);
     break;
@@ -2446,13 +2430,83 @@ int HelpWidget::onPush(int event) {
     } else if (-scroll > scrollHeight) {
       scroll = -scrollHeight;   // too far down
     }
-    if (scroll != vscroll) {
-      vscroll = scroll;
+    if (scroll != scrollbar->value()) {
+      scrollbar->value(scroll);
       damage(FL_DAMAGE_EXPOSE);
     }
     break;
   }
   return 1;                     // return 1 to become the belowmouse
+}
+
+int HelpWidget::handleKeys() {
+  int result = 0;
+  switch (Fl::event_key()) {
+  case FL_Right:
+    if (-hscroll < w() / 2) {
+      hscroll -= HSCROLL_STEP;
+      redraw();
+      result = 1;
+    }
+    break;
+  case FL_Left:
+    if (hscroll < 0) {
+      hscroll += HSCROLL_STEP;
+      redraw();
+      result = 1;
+    }
+    break;
+  case FL_Page_Up:
+    vscroll(-scrollWindowHeight);
+    result = 1;
+    break;
+  case FL_Page_Down:
+    vscroll(scrollWindowHeight);
+    result = 1;
+    break;
+  default:
+    break;
+  }
+
+  if (!result && Fl::event_state(FL_CTRL)) {
+    switch (Fl::event_key()) {
+    case 'u':
+      vscroll(-scrollWindowHeight);
+      result = 1;
+      break;
+    case 'd':
+      vscroll(scrollWindowHeight);
+      result = 1;
+      break;
+    case 'r':                // reload
+      reloadPage();
+      result = 1;
+      break;
+    case 'f':                // find
+      find(fl_input("Find:"), false);
+      result = 1;
+      break;
+    case 'a':                // select-all
+      selectAll();
+      result = 1;
+      break;
+    case FL_Insert:
+    case 'c':                // copy
+      copySelection();
+      result = 1;
+      break;
+    case 'b':                // break popup
+    case 'q':
+      if (Fl::modal() == parent()) {
+        Fl::modal()->set_non_modal();
+      }
+      result = 1;
+      break;
+    default:
+      break;
+    }
+  }
+  return result;
 }
 
 int HelpWidget::handle(int event) {
@@ -2486,18 +2540,6 @@ int HelpWidget::handle(int event) {
     find(fl_input("Find:"), false);
     return 1;
 
-  case EVENT_PG_DOWN:
-    if (scrollbar->active()) {
-      scrollbar->value(scrollbar->value() + scrollbar->slider_size());
-    }
-    return 1;
-
-  case EVENT_PG_UP:
-    if (scrollbar->active()) {
-      scrollbar->value(scrollbar->value() - scrollbar->slider_size());
-    }
-    return 1;
-
   case FL_SHOW:
     take_focus();
     break;
@@ -2506,7 +2548,7 @@ int HelpWidget::handle(int event) {
     return 1;                   // aquire focus
 
   case FL_PUSH:
-    if (Fl::event_x() < w() - SCROLL_W) {
+    if (Fl::event_x() < w() - SCROLL_X) {
       return onPush(event);
     }
     break;
@@ -2515,43 +2557,8 @@ int HelpWidget::handle(int event) {
     return 1;
 
   case FL_KEYDOWN:
-    if (Fl::event_key(FL_Right) && -hscroll < w() / 2) {
-      hscroll -= HSCROLL_STEP;
-      redraw();
+    if (handleKeys()) {
       return 1;
-    }
-    if (Fl::event_key(FL_Left) && hscroll < 0) {
-      hscroll += HSCROLL_STEP;
-      redraw();
-      return 1;
-    }
-    if ((Fl::event_key(FL_Left) || Fl::event_key(FL_Right))
-        && Fl::event_state(FL_CTRL)) {
-      switch (Fl::event_key()) {
-      case 'u':
-        return handle(EVENT_PG_UP);
-      case 'd':
-        return handle(EVENT_PG_DOWN);
-      case 'r':                // reload
-        reloadPage();
-        return 1;
-      case 'f':                // find
-        find(fl_input("Find:"), false);
-        return 1;
-      case 'a':                // select-all
-        selectAll();
-        return 1;
-      case FL_Insert:
-      case 'c':                // copy
-        copySelection();
-        return 1;
-      case 'b':                // break popup
-      case 'q':
-        if (Fl::modal() == parent()) {
-          Fl::modal()->set_non_modal();
-        }
-        break;                  // handle in default
-      }
     }
     break;
 
@@ -2577,7 +2584,7 @@ int HelpWidget::handle(int event) {
       return 1;
     }
   }
-  return scrollbar->active()? scrollbar->handle(event) : 0;
+  return 0;
 }
 
 bool HelpWidget::find(const char *s, bool matchCase) {
@@ -2591,25 +2598,29 @@ bool HelpWidget::find(const char *s, bool matchCase) {
   List_each(BaseNode *, it, nodeList) {
     BaseNode *p = (*it);
     if (p->indexOf(s, matchCase) != -1) {
-      foundRow = p->getY() - vscroll;
-      if (foundRow > -vscroll + lineHeight) {
+      foundRow = p->getY() - scrollbar->value();
+      if (foundRow > -scrollbar->value() + lineHeight) {
         break;
       }
     }
   }
-  if (-vscroll == foundRow) {
+
+  int scroll = scrollbar->value();
+  if (-scroll == foundRow) {
     return false;
   }
 
-  vscroll = -foundRow;
+  scroll = -foundRow;
+
   // check scroll bounds
   if (foundRow) {
-    vscroll += lineHeight;
+    scroll += lineHeight;
   }
-  if (-vscroll > scrollHeight) {
-    vscroll = -scrollHeight;
+  if (-scroll > scrollHeight) {
+    scroll = -scrollHeight;
   }
 
+  scrollbar->value(scroll);
   redraw();
   return true;
 }
@@ -2752,6 +2763,13 @@ bool HelpWidget::isHtmlFile() {
   int len = strlen(filename);
   return (strcasecmp(filename + len - 4, ".htm") == 0 ||
           strcasecmp(filename + len - 5, ".html") == 0);
+}
+
+void HelpWidget::vscroll(int offs) {
+  if (scrollbar->active()) {
+    int value = scrollbar->value() + offs;
+    scrollbar->value(value);
+  }
 }
 
 //--Helper functions------------------------------------------------------------

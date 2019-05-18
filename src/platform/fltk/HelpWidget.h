@@ -37,8 +37,6 @@
 #define EVENT_COPY_TEXT     102
 #define EVENT_SEL_ALL_TEXT  103
 #define EVENT_FIND          104
-#define EVENT_PG_DOWN       105
-#define EVENT_PG_UP         106
 
 using namespace strlib;
 
@@ -60,9 +58,6 @@ public:
   void loadFile(const char *fileName, bool useDocHome = false);
   void navigateTo(const char *fileName);
   void scrollTo(const char *anchorName);
-  void scrollTo(int vscroll);
-  int getVScroll() { return vscroll; }
-  int getHScroll() { return hscroll; }
   bool find(const char *s, bool matchCase);
   Fl_Widget *getInput(const char *name);
   const char *getInputValue(Fl_Widget *button);
@@ -105,15 +100,17 @@ protected:
   int onMove(int event);
   int onPush(int event);
   int handle(int event);
+  int handleKeys();
 
 private:
   bool exposed() { return (damage() & (FL_DAMAGE_EXPOSE | FL_DAMAGE_ALL)); }
+  void vscroll(int offs);
+
   Fl_Color background, foreground;
   Fl_Scrollbar *scrollbar;
-  int16_t vscroll, hscroll;
-  uint16_t scrollHeight;
+  uint16_t scrollHeight, scrollWindowHeight;
   int16_t markX, markY, pointX, pointY;
-  int16_t scrollY;
+  int16_t hscroll, scrollY;
   enum { mm_select, mm_page, mm_scroll } mouseMode;
   strlib::List<BaseNode *> nodeList;
   strlib::List<NamedInput *> namedInputs;
