@@ -37,8 +37,6 @@
 #define DEFAULT_INDENT 2
 #define LI_INDENT 18
 #define FONT_SIZE_H1 23
-#define SCROLL_W 15
-#define SCROLL_X SCROLL_W - 2
 #define CELL_SPACING 4
 #define INPUT_WIDTH 90
 #define BUTTON_WIDTH 20
@@ -707,11 +705,14 @@ void TextNode::drawSelection(const char *s, uint16_t len, uint16_t width, Displa
       // top row multiline - find the left margin
       int16_t leftX = out->invertedSel ? out->pointX : out->markX;
       if (leftX > out->x1 + width) {
-        return;                 // selection left of text
+        // selection left of text
+        return;
       }
       int x = out->x1;
+      int char_w = 0;
       for (int i = 0; i < len; i++) {
-        x += fl_width(s + i, 1);
+        char_w = fl_width(s + i, 1);
+        x += char_w;
         if (x < leftX) {
           rc.x(x);
           selBegin = i;
@@ -719,6 +720,8 @@ void TextNode::drawSelection(const char *s, uint16_t len, uint16_t width, Displa
           break;
         }
       }
+      // subtract the left non-selected segement length from the right side
+      rc.w(rc.w() - (x - out->x1) + char_w);
     }
   } else {
     if (out->pointY < out_y + out->lineHeight) {
@@ -1846,7 +1849,7 @@ void HelpWidget::draw() {
     // size has changed or need to recalculate scrollbar
     int pageHeight = (out.y1 - vscroll) + out.lineHeight;
     int windowHeight = h() - out.lineHeight;
-    int scrollH = pageHeight - windowHeight;
+    int scrollH = pageHeight;
     if (scrollH != scrollHeight || windowHeight != scrollWindowHeight) {
       scrollWindowHeight = windowHeight;
       scrollHeight = scrollH;
@@ -2350,7 +2353,7 @@ int HelpWidget::onMove(int event) {
     fl_cursor(FL_CURSOR_DEFAULT);
   }
 
-  int vscroll = scrollbar->value();
+  int vscroll = -scrollbar->value();
   if (event == FL_DRAG) {
     switch (mouseMode) {
     case mm_select:
@@ -2389,7 +2392,8 @@ int HelpWidget::onPush(int event) {
   pushedAnchor = 0;
   int ex = Fl::event_x();
   int ey = Fl::event_y();
-  int16_t scroll = scrollbar->value();
+  int vscroll = -scrollbar->value();
+  int16_t scroll = vscroll;
 
   List_each(AnchorNode *, it, anchors) {
     AnchorNode *p = (*it);
@@ -2407,10 +2411,10 @@ int HelpWidget::onPush(int event) {
     // begin/continue text selection
     if (Fl::event_state(FL_SHIFT)) {
       pointX = (ex - hscroll);
-      pointY = (ey - scrollbar->value());
+      pointY = (ey - vscroll);
     } else {
       markX = pointX = (ex - hscroll);
-      markY = pointY = (ey - scrollbar->value());
+      markY = pointY = (ey - vscroll);
     }
     damage(DAMAGE_HIGHLIGHT);
     break;

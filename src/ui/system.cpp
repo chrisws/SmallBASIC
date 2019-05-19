@@ -1,6 +1,6 @@
 // This file is part of SmallBASIC
 //
-// Copyright(C) 2001-2017 Chris Warren-Smith.
+// Copyright(C) 2001-2019 Chris Warren-Smith.
 //
 // This program is distributed under the terms of the GPL v2.0 or later
 // Download the GNU Public License (GPL) from www.gnu.org
@@ -74,10 +74,12 @@ void Cache::add(const char *key, const char *value) {
 }
 
 System::System() :
-  _output(NULL),
-  _state(kInitState),
-  _editor(NULL),
   _cache(MAX_CACHE),
+  _output(NULL),
+  _editor(NULL),
+  _systemMenu(NULL),
+  _programSrc(NULL),
+  _state(kInitState),
   _touchX(-1),
   _touchY(-1),
   _touchCurX(-1),
@@ -85,13 +87,11 @@ System::System() :
   _initialFontSize(0),
   _fontScale(100),
   _userScreenId(-1),
-  _systemMenu(NULL),
+  _modifiedTime(0),
   _mainBas(false),
   _buttonPressed(false),
   _srcRendered(false),
-  _menuActive(false),
-  _programSrc(NULL),
-  _modifiedTime(0) {
+  _menuActive(false) {
   g_system = this;
 }
 

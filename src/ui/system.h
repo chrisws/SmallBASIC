@@ -100,11 +100,18 @@ protected:
   void showSystemScreen(bool showSrc);
   void waitForBack();
   void waitForChange(bool error);
-  AnsiWidget *_output;
 
   // platform static virtual
   bool getPen3();
   void completeKeyword(int index);
+
+  strlib::Stack<String *> _history;
+  StackTrace _stackTrace;
+  Cache _cache;
+  AnsiWidget *_output;
+  TextEditInput *_editor;
+  int *_systemMenu;
+  char *_programSrc;
 
   enum {
     kInitState = 0,// thread not active
@@ -120,12 +127,6 @@ protected:
     kDoneState     // thread has terminated
   } _state;
 
-  strlib::Stack<String *> _history;
-  strlib::String _loadPath;
-  strlib::String _activeFile;
-  StackTrace _stackTrace;
-  TextEditInput *_editor;
-  Cache _cache;
   int _touchX;
   int _touchY;
   int _touchCurX;
@@ -133,13 +134,13 @@ protected:
   int _initialFontSize;
   int _fontScale;
   int _userScreenId;
-  int *_systemMenu;
+  uint32_t _modifiedTime;
   bool _mainBas;
   bool _buttonPressed;
   bool _srcRendered;
   bool _menuActive;
-  char *_programSrc;
-  uint32_t _modifiedTime;
+  strlib::String _loadPath;
+  strlib::String _activeFile;
 };
 
 #endif

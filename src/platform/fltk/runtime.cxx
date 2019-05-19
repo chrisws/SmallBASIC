@@ -149,7 +149,7 @@ void Runtime::optionsBox(StringList *items) {
     menuY -= wnd->_out->y();
   }
 
-  Fl_Menu_Button popup(menuX, menuY, width, height, NULL);
+  Fl_Menu_Button popup(menuX, menuY, width, height, "@popup");
   popup.menu(menu);
 
   const Fl_Menu_Item *result = popup.popup();
