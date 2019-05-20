@@ -13,6 +13,7 @@
 #include <sys/stat.h>
 #include <FL/fl_ask.H>
 #include <FL/Fl_Color_Chooser.H>
+#include <FL/Fl_Tile.H>
 #include "platform/fltk/MainWindow.h"
 #include "platform/fltk/EditorWidget.h"
 #include "platform/fltk/FileWidget.h"
@@ -73,14 +74,14 @@ EditorWidget::EditorWidget(Fl_Widget *rect, Fl_Menu_Bar *menuBar) :
   const int bn_w = 28;
   const int st_h = MENU_HEIGHT + 4;
   const int choice_w = 80;
-  const int tileHeight = rect->h();;
+  const int tileHeight = rect->h();
   const int ttyHeight = rect->h() / 8;
-  const int browserWidth = rect->w() / 8;
+  const int browserWidth = rect->w() / 5;
   const int editHeight = tileHeight - ttyHeight - st_h;
   const int editWidth = rect->w() - browserWidth;
   const int st_y = rect->y() + editHeight + ttyHeight;
 
-  Fl_Group *tile = new Fl_Group(rect->x(), rect->y(), rect->w(), tileHeight);
+  Fl_Group *tile = new Fl_Tile(rect->x(), rect->y(), rect->w(), tileHeight);
   _editor = new BasicEditor(rect->x(), rect->y(), editWidth, editHeight, this);
   _editor->linenumber_width(40);
   _editor->wrap_mode(true, 0);
