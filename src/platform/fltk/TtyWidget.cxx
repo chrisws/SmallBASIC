@@ -10,6 +10,10 @@
 #include <FL/Fl_Rect.H>
 #include "platform/fltk/TtyWidget.h"
 
+static void scrollbar_callback(Fl_Widget *scrollBar, void *widget) {
+  ((Fl_Group *)widget)->redraw();
+}
+
 //
 // TtyWidget constructor
 //
@@ -23,20 +27,23 @@ TtyWidget::TtyWidget(int x, int y, int w, int h, int numRows) :
   head = tail = 0;
   markX = markY = pointX = pointY = 0;
 
-  setfont(FL_COURIER, 12);
+  setfont(FL_COURIER, 13);
   scrollLock = false;
 
   begin();
   // vertical scrollbar scrolls in row units
-  vscrollbar = new Fl_Scrollbar(w - SCROLL_W, y + 1, x + SCROLL_W, h);
+  vscrollbar = new Fl_Scrollbar(w - SCROLL_W, y, x + SCROLL_W, h);
   vscrollbar->type(FL_VERTICAL);
   vscrollbar->user_data(this);
+  vscrollbar->callback(scrollbar_callback);
 
   // horizontal scrollbar scrolls in pixel units
   hscrollbar = new Fl_Scrollbar(w - HSCROLL_W - SCROLL_W, 1, HSCROLL_W, SCROLL_H);
   vscrollbar->user_data(this);
+  vscrollbar->callback(scrollbar_callback);
 
   end();
+  resize(x, y, w, h);
 }
 
 TtyWidget::~TtyWidget() {
@@ -48,7 +55,7 @@ TtyWidget::~TtyWidget() {
 //
 void TtyWidget::draw() {
   // get the text drawing rectangle
-  Fl_Rect rc = Fl_Rect(x(), y(), w(), h() + 1);
+  Fl_Rect rc = Fl_Rect(x(), y(), w(), h());
   if (vscrollbar->visible()) {
     rc.w(rc.w() - vscrollbar->w());
   }
@@ -71,13 +78,13 @@ void TtyWidget::draw() {
   fl_rectf(rc.x(), rc.y(), rc.w(), rc.h());
   fl_push_clip(rc.x(), rc.y(), rc.w(), rc.h());
   fl_color(labelcolor());
-  fl_font(labelfont(), (int)labelsize());
+  fl_font(labelfont(), labelsize());
 
   int pageWidth = 0;
   for (int row = firstRow, rows = 0, y = rc.y() + lineHeight; rows < numRows; row++, rows++, y += lineHeight) {
     TtyRow *line = getLine(row);   // next logical row
     TtyTextSeg *seg = line->head;
-    int x = 2 - hscroll;
+    int x = rc.x() + 2 - hscroll;
     while (seg != NULL) {
       if (seg->escape(&bold, &italic, &underline, &invert)) {
         setfont(bold, italic);
@@ -259,7 +266,7 @@ void TtyWidget::resize(int x, int y, int w, int h) {
       // prevent value from extending beyond the buffer range
       value = textRows - pageRows;
     }
-    vscrollbar->resize(w - SCROLL_W, 1, SCROLL_W, h);
+    vscrollbar->resize(w - SCROLL_W, y, SCROLL_W, h);
     vscrollbar->value(value, pageRows, 0, textRows);
     hscrollX -= SCROLL_W;
     hscrollW -= SCROLL_W;
@@ -270,7 +277,7 @@ void TtyWidget::resize(int x, int y, int w, int h) {
 
   if (width > hscrollW) {
     hscrollbar->set_visible();
-    hscrollbar->resize(hscrollX, 1, HSCROLL_W, SCROLL_H);
+    hscrollbar->resize(hscrollX, y, HSCROLL_W, SCROLL_H);
     hscrollbar->value(hscrollbar->value(), hscrollW, 0, width);
   } else {
     hscrollbar->clear_visible();
@@ -393,7 +400,9 @@ void TtyWidget::print(const char *str) {
   if (!scrollLock) {
     vscrollbar->value(getTextRows() - getPageRows());
   }
+
   // schedule a layout and redraw
+  resize(x(), y(), w(), h());
   redraw();
 }
 
@@ -579,10 +588,10 @@ void TtyWidget::setGraphicsRendition(TtyTextSeg *segment, int c) {
 void TtyWidget::setfont(bool bold, bool italic) {
   Fl_Font font = labelfont();
   if (bold) {
-    //font = font->bold();
+    font += FL_BOLD;
   }
   if (italic) {
-    //font = font->italic();
+    font += FL_ITALIC;
   }
   fl_font(font, labelsize());
 }
@@ -595,9 +604,8 @@ void TtyWidget::setfont(Fl_Font font, int size) {
     labelfont(font);
   }
   if (size) {
-    //labelsize(size);
+    labelsize(size);
   }
   fl_font(labelfont(), labelsize());
   lineHeight = fl_height() + fl_descent();
 }
-

@@ -277,6 +277,13 @@ int osd_devinit() {
   return 1;
 }
 
+void osd_write(const char *str) {
+  if (wnd->tty() && wnd->logPrint()) {
+    wnd->tty()->print(str);
+  }
+  g_system->getOutput()->print(str);
+}
+
 int osd_devrestore() {
   g_system->setRunning(false);
   return 1;

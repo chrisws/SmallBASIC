@@ -18,10 +18,6 @@
 #include "ui/strlib.h"
 #include "platform/fltk/utils.h"
 
-#define SCROLL_W 15
-#define SCROLL_H 15
-#define HSCROLL_W 80
-
 using namespace strlib;
 
 struct Point {

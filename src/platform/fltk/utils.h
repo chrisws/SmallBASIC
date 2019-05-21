@@ -17,7 +17,9 @@
 #define DAMAGE_HIGHLIGHT FL_DAMAGE_USER1
 #define DAMAGE_PUSHED    FL_DAMAGE_USER2
 #define SCROLL_W 15
+#define SCROLL_H 15
 #define SCROLL_X SCROLL_W - 2
+#define HSCROLL_W 80
 
 #define C_LINKAGE_BEGIN extern "C" {
 #define C_LINKAGE_END }

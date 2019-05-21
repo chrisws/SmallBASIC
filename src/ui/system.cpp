@@ -1258,11 +1258,13 @@ int osd_textwidth(const char *str) {
   return EXTENT_X(textSize);
 }
 
+#if !defined(_FLTK)
 void osd_write(const char *str) {
   if (!g_system->isClosing()) {
     g_system->getOutput()->print(str);
   }
 }
+#endif
 
 void lwrite(const char *str) {
   if (!(str[0] == '\n' && str[1] == '\0') && !g_system->isClosing()) {
