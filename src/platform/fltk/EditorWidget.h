@@ -125,7 +125,7 @@ public:
   void setIndentLevel(int level);
   void setLogPrint(bool b) { _logPrintBn->value(b); if (b) setHideIde(!b); }
   void setRowCol(int row, int col);
-  void setScrollLock(bool b) { _lockBn->value(b); }
+  void setScrollLock(bool b) { _lockBn->value(b); _tty->setScrollLock(b); }
   void showPath();
   void statusMsg(const char *msg);
   void updateConfig(EditorWidget *current);

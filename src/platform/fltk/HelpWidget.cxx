@@ -1853,7 +1853,7 @@ void HelpWidget::draw() {
     if (scrollH != scrollHeight || windowHeight != scrollWindowHeight) {
       scrollWindowHeight = windowHeight;
       scrollHeight = scrollH;
-      if (scrollHeight < 1) {
+      if (scrollHeight < scrollWindowHeight) {
         // nothing to scroll
         scrollHeight = 0;
         scrollbar->deactivate();
