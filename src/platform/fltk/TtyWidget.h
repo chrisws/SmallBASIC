@@ -214,11 +214,11 @@ struct TtyWidget : public Fl_Group {
   bool copySelection();
   void print(const char *str);
   void setFont(Fl_Font font) {
-    fl_font(font, 0);
+    setfont(font, 0);
     redraw();
   };
   void setFontSize(int size) {
-    fl_font(0, size);
+    setfont(0, size);
     redraw();
   };
   void setScrollLock(bool b) {
@@ -245,7 +245,7 @@ private:
 
   // returns the selected row within the circular buffer
   int rowEvent() {
-    return (Fl::event_y() / lineHeight) + tail + vscrollbar->value();
+    return ((Fl::event_y() - y()) / lineHeight) + tail + vscrollbar->value();
   }
 
   // buffer management
