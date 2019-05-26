@@ -905,7 +905,7 @@ void System::showMenu() {
         _systemMenu[index++] = MENU_PASTE;
         _systemMenu[index++] = MENU_SELECT_ALL;
       }
-#if defined(_SDL)
+#if defined(_SDL) || defined(_FLTK)
       items->add(new String("Back"));
       _systemMenu[index++] = MENU_BACK;
 #else
@@ -927,7 +927,7 @@ void System::showMenu() {
         items->add(new String("Restart"));
         _systemMenu[index++] = MENU_RESTART;
       }
-#if !defined(_SDL)
+#if !defined(_SDL) && !defined(_FLTK)
       items->add(new String("Show keypad"));
       _systemMenu[index++] = MENU_KEYPAD;
 #endif
@@ -944,7 +944,7 @@ void System::showMenu() {
         items->add(new String(buffer));
         _systemMenu[index++] = MENU_EDITMODE;
       }
-#if !defined(_SDL)
+#if !defined(_SDL) && !defined(_FLTK)
       if (!_mainBas && !_activeFile.empty()) {
         items->add(new String("Desktop Shortcut"));
         items->add(new String("Share"));
@@ -955,7 +955,7 @@ void System::showMenu() {
       sprintf(buffer, "Audio [%s]", (opt_mute_audio ? "OFF" : "ON"));
       items->add(new String(buffer));
       _systemMenu[index++] = MENU_AUDIO;
-#if defined(_SDL)
+#if defined(_SDL) || defined(_FLTK)
       items->add(new String("Back"));
       _systemMenu[index++] = MENU_BACK;
 #endif

@@ -40,7 +40,7 @@ Runtime::Runtime(int w, int h, int defsize) : System() {
   _output = new AnsiWidget(w, h);
   _output->construct();
   _output->setTextColor(DEFAULT_FOREGROUND, DEFAULT_BACKGROUND);
-  _output->setFont(defsize, false, false);
+  _output->setFontSize(defsize);
 }
 
 Runtime::~Runtime() {
