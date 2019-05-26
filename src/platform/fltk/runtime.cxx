@@ -174,6 +174,12 @@ MAEvent Runtime::processEvents(int waitFlag) {
   return event;
 }
 
+void Runtime::resize(int w, int h) {
+  if (w != _output->getWidth() || h != _output->getHeight()) {
+    _output->resize(w, h);
+  }
+}
+
 void Runtime::setClipboardText(const char *text) {
   Fl::copy(text, strlen(text), true);
 }

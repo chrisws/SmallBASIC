@@ -25,14 +25,14 @@ struct Runtime : public System {
   int handle(int event);
   void optionsBox(StringList *items);
   MAEvent processEvents(int waitFlag);
-  void resize(int w, int h) { _output->resize(w, h - 1); }
+  void resize(int w, int h);
   void setClipboardText(const char *text);
   void setFontSize(int size);
   void setLoadBreak(const char *url) {}
   void setLoadPath(const char *url) {}
   void setWindowSize(int width, int height);
   void setWindowTitle(const char *title);
-   void share(const char *path) {}
+  void share(const char *path) {}
   void showCursor(CursorType cursorType);
 };
 

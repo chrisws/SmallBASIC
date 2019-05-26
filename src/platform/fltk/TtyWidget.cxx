@@ -29,7 +29,7 @@ TtyWidget::TtyWidget(int x, int y, int w, int h, int numRows) :
   head = tail = 0;
   markX = markY = pointX = pointY = 0;
 
-  setfont(FL_COURIER, 13);
+  setfont(FL_COURIER, DEF_FONT_SIZE);
   scrollLock = false;
 
   begin();

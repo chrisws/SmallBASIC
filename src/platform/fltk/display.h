@@ -66,7 +66,8 @@ public:
   Canvas *getDrawTarget() { return _drawTarget; }
   Canvas *getScreen() { return _screen; }
   MAExtent getTextSize(const char *str);
-  void resize(int w, int h);
+  void layout();
+  void resize(int x, int y, int w, int h);
   MAHandle setDrawTarget(MAHandle maHandle);
   void setFont(Font *font) { _font = font; }
 

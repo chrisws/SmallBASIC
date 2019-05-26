@@ -107,11 +107,34 @@ void Canvas::fillRect(int left, int top, int width, int height, Fl_Color color) 
 }
 
 void Canvas::getImageData(uint8_t *image, const MARect *srcRect, int bytesPerLine) {
-  Fl_Image_Surface *surface = new Fl_Image_Surface(srcRect->width, srcRect->height, 0, _offscreen);
+  int width = MIN(_w, srcRect->width);
+  int height = MIN(_h, srcRect->height);
+  Fl_Image_Surface *surface = new Fl_Image_Surface(width, height, 0, _offscreen);
   Fl_RGB_Image *rgbImage = surface->image();
-  const char *const *data = rgbImage->data();
-  fprintf(stderr, "here\n");
-  // TODO
+  const uchar *data = rgbImage->array;
+  int x_end = srcRect->left + srcRect->width;
+  int y_end = srcRect->top + srcRect->height;
+  int depth = bytesPerLine / width;
+
+  for (int dy = 0, yi = srcRect->top; yi < y_end; yi += 1, dy++) {
+    if (yi >= y() && yi < h()) {
+      int yoffs = (dy * bytesPerLine);
+      int src_line = yi * width * rgbImage->d();
+      int src_offs = 0;
+      for (int dx = 0, xi = srcRect->left; xi < x_end; xi += 1, dx++) {
+        if (xi >= x() && xi < w()) {
+          int offs = yoffs + (dx * depth);
+          const uchar *px = data + src_line + src_offs;
+          src_offs += rgbImage->d();
+          image[offs + 0] = px[0];
+          image[offs + 1] = px[1];
+          image[offs + 2] = px[2];
+          image[offs + 3] = 255;
+        }
+      }
+    }
+  }
+
   delete surface;
   delete rgbImage;
 }
@@ -128,15 +151,15 @@ void Canvas::setClip(int x, int y, int w, int h) {
 //
 // Graphics implementation
 //
-GraphicsWidget::GraphicsWidget(int x, int y, int w, int h) :
-  Fl_Widget(x, y, w, h),
+GraphicsWidget::GraphicsWidget(int xx, int yy, int ww, int hh) :
+  Fl_Widget(xx, yy, ww, hh),
   _screen(NULL),
   _drawTarget(NULL),
   _font(NULL),
   _textOffset(0) {
   logEntered();
   _screen = new Canvas();
-  _screen->create(w, h);
+  _screen->create(ww, hh);
   graphics = this;
 }
 
@@ -177,13 +200,20 @@ MAExtent GraphicsWidget::getTextSize(const char *str) {
   return (MAExtent)((width << 16) + height);
 }
 
-void GraphicsWidget::resize(int w, int h) {
-  logEntered();
-  bool drawScreen = (_drawTarget == _screen);
-  delete _screen;
-  _screen = new ::Canvas();
-  _screen->create(w, h);
-  _drawTarget = drawScreen ? _screen : NULL;
+void GraphicsWidget::resize(int x, int y, int w, int h) {
+  Fl_Widget::resize(x, y, w, h);
+  layout();
+}
+
+void GraphicsWidget::layout() {
+  if (_screen->_w != w() || _screen->_h != h()) {
+    logEntered();
+    bool drawScreen = (_drawTarget == _screen);
+    delete _screen;
+    _screen = new Canvas();
+    _screen->create(w(), h());
+    _drawTarget = drawScreen ? _screen : NULL;
+  }
 }
 
 MAHandle GraphicsWidget::setDrawTarget(MAHandle maHandle) {

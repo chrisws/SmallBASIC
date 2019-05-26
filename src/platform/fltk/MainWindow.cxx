@@ -19,7 +19,6 @@
 #include "common/fs_socket_client.h"
 #include "common/keymap.h"
 
-#define DEF_FONT_SIZE 12
 #define TAB_BORDER 4
 
 char *packageHome;
@@ -1394,8 +1393,13 @@ void MainWindow::resetPen() {
   _penMode = 0;
 }
 
+void MainWindow::resize(int x, int y, int w, int h) {
+  BaseWindow::resize(x, y, w, h);
+  _system->resize(_out->w(), _out->h());
+}
+
 void MainWindow::resizeDisplay(int w, int h) {
-  _out->resize(w, h - 1);
+  _out->resize(_out->x(), _out->y(), w, h - 1);
   _system->resize(w, h - 1);
 }
 

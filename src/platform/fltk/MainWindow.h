@@ -94,6 +94,7 @@ struct MainWindow : public BaseWindow {
   void loadIcon(const char *prefix, int resourceId);
   void pathMessage(const char *file);
   void resetPen();
+  void resize(int x, int y, int w, int h);
   void resizeDisplay(int w, int h);
   void saveEditConfig(EditorWidget *editWidget);
   void scanPlugIns(Fl_Menu_Bar *menu);

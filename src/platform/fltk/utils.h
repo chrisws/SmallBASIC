@@ -20,6 +20,7 @@
 #define SCROLL_H 15
 #define SCROLL_X SCROLL_W - 2
 #define HSCROLL_W 80
+#define DEF_FONT_SIZE 12
 
 #define C_LINKAGE_BEGIN extern "C" {
 #define C_LINKAGE_END }

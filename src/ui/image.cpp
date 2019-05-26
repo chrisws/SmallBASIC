@@ -129,7 +129,7 @@ uint8_t *get_image_data(int x, int y, int w, int h) {
   uint8_t *result = (uint8_t *)malloc(size);
   if (result != NULL) {
     g_system->getOutput()->redraw();
-    maGetImageData(HANDLE_SCREEN, result, &rc, w);
+    maGetImageData(HANDLE_SCREEN, result, &rc, w * 4);
   }
   return result;
 }
@@ -489,7 +489,10 @@ void screen_dump() {
       }
       if (access(file, R_OK) != 0) {
         g_system->systemPrint("Saving screen to %s\n", file);
-        lodepng_encode32_file(file, image, width, height);
+        unsigned error = lodepng_encode32_file(file, image, width, height);
+        if (error) {
+          g_system->systemPrint("Error: %s\n", lodepng_error_text(error));
+        }
         break;
       }
     }
