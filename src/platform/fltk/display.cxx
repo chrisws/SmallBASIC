@@ -7,6 +7,7 @@
 //
 
 #include "config.h"
+#include <math.h>
 #include "ui/utils.h"
 #include "platform/fltk/display.h"
 
@@ -46,13 +47,33 @@ bool Canvas::create(int w, int h) {
 
 void Canvas::drawArc(int xc, int yc, double r, double start, double end, double aspect) {
   fl_begin_offscreen(_offscreen);
-  // fl_arc(int x, int y, int w, int h, double a1, double a2)
+  fl_push_clip(x(), y(), w(), h());
+  fl_color(_drawColor);
+  fl_begin_line();
+  fl_arc(xc, yc, r, 180 + (start * 180.0 / M_PI), 180 + (end * 180.0 / M_PI));
+  fl_end_line();
+  fl_pop_clip();
   fl_end_offscreen();
 }
 
 void Canvas::drawEllipse(int xc, int yc, int rx, int ry, bool fill) {
   fl_begin_offscreen(_offscreen);
-  // fl_arc(int x, int y, int w, int h, double a1, double a2)
+  fl_push_clip(x(), y(), w(), h());
+  fl_color(_drawColor);
+  int x = xc - rx;
+  int y = yc - ry;
+  int w = rx * 2;
+  int h = ry * 2;
+  if (fill) {
+    fl_begin_polygon();
+    fl_pie(x, y, w, h, 0.0, 360.0);
+    fl_end_polygon();
+  } else {
+    fl_begin_line();
+    fl_arc(x, y, w, h, 0.0, 360.0);
+    fl_end_line();
+  }
+  fl_pop_clip();
   fl_end_offscreen();
 }
 
