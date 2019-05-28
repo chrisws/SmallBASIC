@@ -171,6 +171,7 @@ private:
   uint32_t _modifiedTime;
 
   // tool-bar
+  Fl_Group *_statusBar;
   Fl_Input *_commandText;
   Fl_Widget *_rowStatus;
   Fl_Widget *_colStatus;

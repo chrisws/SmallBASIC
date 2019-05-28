@@ -20,6 +20,7 @@
 #include "common/smbas.h"
 
 #define TTY_ROWS 1000
+#define STATUS_HEIGHT (MENU_HEIGHT + 2)
 
 // in MainWindow.cxx
 extern String recentPath[];
@@ -72,12 +73,12 @@ EditorWidget::EditorWidget(Fl_Widget *rect, Fl_Menu_Bar *menuBar) :
 
   const int st_w = 40;
   const int bn_w = 28;
-  const int st_h = MENU_HEIGHT + 4;
+  const int st_h = STATUS_HEIGHT;
   const int choice_w = 80;
-  const int tileHeight = rect->h();
-  const int ttyHeight = rect->h() / 8;
+  const int tileHeight = rect->h() - st_h;
+  const int ttyHeight = tileHeight / 8;
   const int browserWidth = rect->w() / 5;
-  const int editHeight = tileHeight - ttyHeight - st_h;
+  const int editHeight = tileHeight - ttyHeight;
   const int editWidth = rect->w() - browserWidth;
   const int st_y = rect->y() + editHeight + ttyHeight;
 
@@ -107,8 +108,7 @@ EditorWidget::EditorWidget(Fl_Widget *rect, Fl_Menu_Bar *menuBar) :
   tile->end();
 
   // editor status bar
-  Fl_Group *statusBar = new Fl_Group(rect->x(), st_y, rect->w(), st_h);
-
+  _statusBar = new Fl_Group(rect->x(), st_y, rect->w(), st_h);
   _logPrintBn = new Fl_Toggle_Button(rect->w() - bn_w, st_y + 1, bn_w, st_h - 2);
   _lockBn = new Fl_Toggle_Button(_logPrintBn->x() - (bn_w + 2), st_y + 1, bn_w, st_h - 2);
   _hideIdeBn = new Fl_Toggle_Button(_lockBn->x() - (bn_w + 2), st_y + 1, bn_w, st_h - 2);
@@ -123,8 +123,8 @@ EditorWidget::EditorWidget(Fl_Widget *rect, Fl_Menu_Bar *menuBar) :
   _commandText->when(FL_WHEN_ENTER_KEY_ALWAYS);
   _commandText->labelfont(FL_HELVETICA);
 
-  for (int n = 0; n < statusBar->children(); n++) {
-    Fl_Widget *w = statusBar->child(n);
+  for (int n = 0; n < _statusBar->children(); n++) {
+    Fl_Widget *w = _statusBar->child(n);
     w->labelfont(FL_HELVETICA);
     w->box(FL_NO_BOX);
   }
@@ -134,8 +134,8 @@ EditorWidget::EditorWidget(Fl_Widget *rect, Fl_Menu_Bar *menuBar) :
   _hideIdeBn->box(FL_THIN_UP_BOX);
   _gotoLineBn->box(FL_THIN_UP_BOX);
 
-  statusBar->resizable(_commandText);
-  statusBar->end();
+  _statusBar->resizable(_commandText);
+  _statusBar->end();
   resizable(tile);
   end();
 
@@ -1288,15 +1288,17 @@ void EditorWidget::handleFileChange() {
 }
 
 /**
- * prevent the tty and browser from growing when the outer window is resized
+ * resize the heights
  */
 void EditorWidget::resize(int x, int y, int w, int h) {
   Fl_Group *tile = _editor->parent();
   tile->resizable(_editor);
   Fl_Group::resize(x, y, w, h);
-
-  // when set to editor the tile is not resizable using the mouse
+  int status_y = y + h - STATUS_HEIGHT;
+  tile->resize(tile->x(), y, w, h - STATUS_HEIGHT);
   tile->resizable(NULL);
+  _tty->resize(_tty->x(), _tty->y(), _tty->w(), status_y - _tty->y());
+  _statusBar->resize(_statusBar->x(), status_y, _statusBar->w(), STATUS_HEIGHT);
 }
 
 /**

@@ -1872,7 +1872,7 @@ void HelpWidget::draw() {
   fl_pop_clip();
 
   // draw child controls
-  draw_child(*scrollbar);
+  update_child(*scrollbar);
 
   // prevent other child controls from drawing over the scrollbar
   fl_push_clip(x(), y(), w() - SCROLL_X, h());
@@ -1880,7 +1880,7 @@ void HelpWidget::draw() {
   for (int n = 0; n < numchildren; n++) {
     Fl_Widget &w = *child(n);
     if (&w != scrollbar) {
-      draw_child(w);
+      update_child(w);
     }
   }
   fl_pop_clip();
