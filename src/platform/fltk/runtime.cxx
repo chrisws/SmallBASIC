@@ -18,6 +18,7 @@ extern MainWindow *wnd;
 extern System *g_system;
 
 #define OPTIONS_BOX_WIDTH_EXTRA 4
+#define WAIT_INTERVAL 0.005
 
 int event_x() {
   return Fl::event_x();
@@ -162,6 +163,21 @@ void Runtime::optionsBox(StringList *items) {
 }
 
 MAEvent Runtime::processEvents(int waitFlag) {
+  switch (waitFlag) {
+  case 1:
+    // wait for an event
+    _output->flush(true);
+    Fl::wait();
+    break;
+  case 2:
+    _output->flush(false);
+    Fl::wait(WAIT_INTERVAL);
+    break;
+  default:
+    Fl::check();
+    break;
+  }
+
   MAEvent event;
   event.type = 0;
   event.key = 0;
@@ -218,9 +234,13 @@ void System::editSource(strlib::String loadPath, bool restoreOnExit) {
 }
 
 bool System::getPen3() {
-  //SDL_PumpEvents();
-  //return (SDL_BUTTON(SDL_BUTTON_LEFT) && SDL_GetMouseState(&_touchCurX, &_touchCurY));
-  return 0;
+  Fl::check();
+  bool result = Fl::event_state(FL_BUTTON1);
+  if (result) {
+    _touchCurX = event_x();
+    _touchCurY = event_y();
+  }
+  return result;
 }
 
 void System::completeKeyword(int index) {

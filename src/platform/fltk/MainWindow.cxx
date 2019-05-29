@@ -1387,12 +1387,6 @@ bool MainWindow::isIdeHidden() {
   return (opt_ide == IDE_NONE);
 }
 
-void MainWindow::resetPen() {
-  _penDownX = 0;
-  _penDownY = 0;
-  _penMode = 0;
-}
-
 void MainWindow::resize(int x, int y, int w, int h) {
   BaseWindow::resize(x, y, w, h);
   _system->resize(_out->w(), _out->h());
@@ -1793,47 +1787,3 @@ bool BaseWindow::handleKeyEvent() {
   return key_pushed;
 }
 
-LineInput::LineInput(int x, int y, int w, int h) :
-  Fl_Input(x, y, w, h),
-  orig_x(x),
-  orig_y(y),
-  orig_w(w),
-  orig_h(h) {
-  when(FL_WHEN_ENTER_KEY);
-  box(FL_BORDER_BOX);
-  fl_color(fl_rgb_color(220, 220, 220));
-  take_focus();
-}
-
-/**
- * veto the layout changes
- */
-void LineInput::resize(int x, int y, int w, int h) {
-  Fl_Input::resize(orig_x, orig_y, orig_w, orig_h);
-}
-
-int LineInput::handle(int event) {
-  int result;
-  if (event == FL_KEYBOARD) {
-    if (Fl::event_state(FL_CTRL) && Fl::event_key() == 'b') {
-      if (!wnd->isEdit()) {
-        wnd->setBreak();
-      }
-    } else if (Fl::event_key(FL_Escape)) {
-      do_callback();
-    } else {
-      // grow the input box width as text is entered
-      const char *text = value();
-      int strw = fl_width(text) + fl_width(value()) + 4;
-      if (strw > w()) {
-        w(strw);
-        orig_w = strw;
-        redraw();
-      }
-    }
-    result = Fl_Input::handle(event);
-  } else {
-    result = Fl_Input::handle(event);
-  }
-  return result;
-}

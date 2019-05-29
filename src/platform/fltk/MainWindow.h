@@ -41,15 +41,6 @@ enum GroupWidgetEnum {
   gw_file
 };
 
-struct LineInput : public Fl_Input {
-  LineInput(int x, int y, int w, int h);
-  void resize(int x, int y, int w, int h);
-  int handle(int event);
-
-private:
-  int orig_x, orig_y, orig_w, orig_h;
-};
-
 struct MainWindow;
 extern MainWindow *wnd;
 extern ExecState runMode;
@@ -69,10 +60,6 @@ struct BaseWindow : public Fl_Double_Window {
   virtual ~BaseWindow() {};
   int handle(int e);
   bool handleKeyEvent();
-
-  int _penDownX;
-  int _penDownY;
-  int _penMode;   // PEN ON/OFF
 };
 
 struct MainWindow : public BaseWindow {
@@ -93,7 +80,6 @@ struct MainWindow : public BaseWindow {
   int  handle(int e);
   void loadIcon(const char *prefix, int resourceId);
   void pathMessage(const char *file);
-  void resetPen();
   void resize(int x, int y, int w, int h);
   void resizeDisplay(int w, int h);
   void saveEditConfig(EditorWidget *editWidget);

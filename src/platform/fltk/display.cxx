@@ -49,9 +49,28 @@ void Canvas::drawArc(int xc, int yc, double r, double start, double end, double 
   fl_begin_offscreen(_offscreen);
   fl_push_clip(x(), y(), w(), h());
   fl_color(_drawColor);
-  fl_begin_line();
-  fl_arc(xc, yc, r, 180 + (start * 180.0 / M_PI), 180 + (end * 180.0 / M_PI));
-  fl_end_line();
+  if (r < 1) {
+    r = 1;
+  }
+  while (end < start) {
+    end += M_PI * 2.0;
+  }
+  double th = (end - start) / r;
+  double xs = xc + r * cos(start);
+  double ys = yc + r * aspect * sin(start);
+  double xe = xc + r * cos(end);
+  double ye = yc + r * aspect * sin(end);
+  int x = xs;
+  int y = ys;
+  for (int i = 1; i < r; i++) {
+    double ph = start + i * th;
+    xs = xc + r * cos(ph);
+    ys = yc + r * aspect * sin(ph);
+    fl_line(x, y, xs, ys);
+    x = xs;
+    y = ys;
+  }
+  fl_line(x, y, xe, ye);
   fl_pop_clip();
   fl_end_offscreen();
 }
@@ -95,6 +114,7 @@ void Canvas::drawPixel(int posX, int posY) {
 
 void Canvas::drawRGB(const MAPoint2d *dstPoint, const void *src, const MARect *srcRect, int opacity, int bytesPerLine) {
   fl_begin_offscreen(_offscreen);
+  // TODO
   fl_end_offscreen();
 }
 
