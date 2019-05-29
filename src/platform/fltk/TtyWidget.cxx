@@ -256,6 +256,8 @@ int TtyWidget::handle(int e) {
 // update scrollbar positions
 //
 void TtyWidget::resize(int x, int y, int w, int h) {
+  Fl_Group::resize(x, y, w, h);
+
   int pageRows = getPageRows();
   int textRows = getTextRows();
   int hscrollX = w - HSCROLL_W;
@@ -268,7 +270,7 @@ void TtyWidget::resize(int x, int y, int w, int h) {
       // prevent value from extending beyond the buffer range
       value = textRows - pageRows;
     }
-    vscrollbar->resize(w - SCROLL_W, y, SCROLL_W, h);
+    vscrollbar->resize(x + w - SCROLL_W, y, SCROLL_W, h);
     vscrollbar->value(value, pageRows, 0, textRows);
     hscrollX -= SCROLL_W;
     hscrollW -= SCROLL_W;
@@ -276,7 +278,6 @@ void TtyWidget::resize(int x, int y, int w, int h) {
     vscrollbar->clear_visible();
     vscrollbar->value(0);
   }
-
   if (width > hscrollW) {
     hscrollbar->set_visible();
     hscrollbar->resize(hscrollX, y, HSCROLL_W, SCROLL_H);
@@ -285,7 +286,6 @@ void TtyWidget::resize(int x, int y, int w, int h) {
     hscrollbar->clear_visible();
     hscrollbar->value(0);
   }
-  Fl_Group::resize(x, y, w, h);
 }
 
 //

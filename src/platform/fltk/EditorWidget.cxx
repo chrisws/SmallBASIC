@@ -1301,12 +1301,26 @@ void EditorWidget::handleFileChange() {
  */
 void EditorWidget::resize(int x, int y, int w, int h) {
   Fl_Group *tile = _editor->parent();
+  int edit_scale_w = 1 + (_editor->w() * 100 / tile->w());
+  int edit_scale_h = 1 + (_editor->h() * 100 / tile->h());
+  edit_scale_w = MIN(80, edit_scale_w);
+  edit_scale_h = MIN(80, edit_scale_h);
+
   tile->resizable(_editor);
   Fl_Group::resize(x, y, w, h);
-  int status_y = y + h - STATUS_HEIGHT;
   tile->resize(tile->x(), y, w, h - STATUS_HEIGHT);
   tile->resizable(NULL);
-  _tty->resize(_tty->x(), _tty->y(), _tty->w(), status_y - _tty->y());
+
+  int edit_w = tile->w() * edit_scale_w / 100;
+  int edit_h = tile->h() * edit_scale_h / 100;
+  int tty_y = tile->y() + _editor->h();
+  int status_y = y + h - STATUS_HEIGHT;
+  int func_x = tile->x() + _editor->w();
+  int func_w = tile->w() - _editor->w();
+
+  _editor->resize(_editor->x(), _editor->y(), edit_w, edit_h);
+  _funcList->resize(func_x, _funcList->y(), func_w, _editor->h());
+  _tty->resize(_tty->x(), tty_y, _tty->w(), status_y - _tty->y());
   _statusBar->resize(_statusBar->x(), status_y, _statusBar->w(), STATUS_HEIGHT);
 }
 
