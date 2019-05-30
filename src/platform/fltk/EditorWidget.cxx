@@ -1311,16 +1311,17 @@ void EditorWidget::resize(int x, int y, int w, int h) {
   tile->resize(tile->x(), y, w, h - STATUS_HEIGHT);
   tile->resizable(NULL);
 
+  int status_y = y + h - STATUS_HEIGHT;
   int edit_w = tile->w() * edit_scale_w / 100;
   int edit_h = tile->h() * edit_scale_h / 100;
-  int tty_y = tile->y() + _editor->h();
-  int status_y = y + h - STATUS_HEIGHT;
-  int func_x = tile->x() + _editor->w();
-  int func_w = tile->w() - _editor->w();
+  int tty_y = tile->y() + edit_h;
+  int tty_h = status_y - tty_y;
+  int func_x = tile->x() + edit_w;
+  int func_w = tile->w() - edit_w;
 
   _editor->resize(_editor->x(), _editor->y(), edit_w, edit_h);
   _funcList->resize(func_x, _funcList->y(), func_w, _editor->h());
-  _tty->resize(_tty->x(), tty_y, _tty->w(), status_y - _tty->y());
+  _tty->resize(_tty->x(), tty_y, _tty->w(), tty_h);
   _statusBar->resize(_statusBar->x(), status_y, _statusBar->w(), STATUS_HEIGHT);
 }
 

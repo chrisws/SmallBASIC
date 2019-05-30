@@ -332,6 +332,11 @@ function buildFLTK() {
    dnl Checks for FLTK 1.x
    AC_CHECK_PROG(have_fltk, fltk-config, [yes], [no])
 
+   AC_CHECK_PROG(have_xxd, xxd, [yes], [no])
+   if test "${have_xxd}" = "no" ; then
+     AC_MSG_ERROR([xxd command not installed: configure failed.])
+   fi
+
    dnl avoid using MSCRT versions of printf for long double
    case "${host_os}" in
      *mingw* | cygwin*)
@@ -350,6 +355,8 @@ function buildFLTK() {
      ;;
 
      *)
+     (cd images && xxd -i sb-desktop-128x128.png > ../src/platform/fltk/icon.h)
+     xxd
    esac
 
    defaultConditionals

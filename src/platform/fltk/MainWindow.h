@@ -78,7 +78,7 @@ struct MainWindow : public BaseWindow {
   bool execHelp();
   void execLink(strlib::String &file);
   int  handle(int e);
-  void loadIcon(const char *prefix, int resourceId);
+  void loadIcon();
   void pathMessage(const char *file);
   void resize(int x, int y, int w, int h);
   void resizeDisplay(int w, int h);

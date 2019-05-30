@@ -8,6 +8,7 @@
 
 #include <config.h>
 #include <FL/fl_ask.H>
+#include <FL/Fl_PNG_Image.H>
 #include "platform/fltk/MainWindow.h"
 #include "platform/fltk/EditorWidget.h"
 #include "platform/fltk/HelpWidget.h"
@@ -913,7 +914,7 @@ bool initialise(int argc, char **argv) {
   Fl::scheme("gtk+");
   Fl_Window::default_xclass("smallbasic");
   fl_message_title("SmallBASIC");
-  wnd->loadIcon(PACKAGE_PREFIX, 101);
+  wnd->loadIcon();
   Fl::wait(0);
 
   Fl_Window *run_wnd;
@@ -1530,51 +1531,22 @@ int MainWindow::handle(int e) {
 /**
  * loads the desktop icon
  */
-void MainWindow::loadIcon(const char *prefix, int resourceId) {
+void MainWindow::loadIcon() {
   if (!icon()) {
 #if defined(WIN32)
-    HICON ico = (HICON) wnd->icon();
+    HICON ico = (HICON) icon();
     if (!ico) {
-      ico = (HICON) LoadImage(GetModuleHandle(NULL), MAKEINTRESOURCE(resourceId),
+      ico = (HICON) LoadImage(GetModuleHandle(NULL), MAKEINTRESOURCE(101),
                               IMAGE_ICON, 32, 32, LR_DEFAULTCOLOR | LR_SHARED);
       if (!ico) {
         ico = LoadIcon(NULL, IDI_APPLICATION);
       }
     }
-    wnd->icon((char *)ico);
+    icon((char *)ico);
 #else
-    char buffer[PATH_MAX];
-    char path[PATH_MAX];
-    const char *key = "Icon=";
-
-    // read the application desktop file, then scan for the Icon file
-    snprintf(path, sizeof(path), "%s/share/applications/smallbasic.desktop", prefix);
-    FILE *fp = fopen(path, "r");
-    if (fp) {
-      while (feof(fp) == 0 && fgets(buffer, sizeof(buffer), fp)) {
-        buffer[strlen(buffer) - 1] = 0; // trim new-line
-        if (strncasecmp(buffer, key, strlen(key)) == 0) {
-          // found icon spec
-          const char *filename = buffer + strlen(key);
-          Fl_Image *ico = Fl_Shared_Image::get(filename);
-          // TODO: fixme
-          if (ico) {
-            if (sizeof(unsigned) == ico->d()) {
-              // prefix the buffer with unsigned width and height values
-              unsigned size = ico->w() * ico->h() * ico->d();
-              unsigned *image = (unsigned *)malloc(size + sizeof(unsigned) * 2);
-              image[0] = ico->w();
-              image[1] = ico->h();
-              memcpy(image + 2, ico->data(), size);
-              icon(image);
-            }
-            delete ico;
-          }
-          break;
-        }
-      }
-      fclose(fp);
-    }
+#include "icon.h"
+    Fl_RGB_Image *image = new Fl_PNG_Image(NULL, sb_desktop_128x128_png, sb_desktop_128x128_png_len);
+    icon(image);
 #endif
   }
 }
@@ -1669,19 +1641,18 @@ bool BaseWindow::handleKeyEvent() {
   case FL_Menu:
     dev_pushkey(SB_KEY_MENU);
     break;
-    //TODO: fixme
-    //case FL_Multiply:
-    //dev_pushkey(SB_KEY_KP_MUL);
-    //break;
-    //case AddKey:
-    //dev_pushkey(SB_KEY_KP_PLUS);
-    //break;
-    //case SubtractKey:
-    //dev_pushkey(SB_KEY_KP_MINUS);
-    //break;
-    //case DivideKey:
-    //dev_pushkey(SB_KEY_KP_DIV);
-    //break;
+  case FL_Multiply:
+    dev_pushkey(SB_KEY_KP_MUL);
+    break;
+  case FL_AddKey:
+    dev_pushkey(SB_KEY_KP_PLUS);
+    break;
+  case FL_SubtractKey:
+    dev_pushkey(SB_KEY_KP_MINUS);
+    break;
+  case FL_DivideKey:
+    dev_pushkey(SB_KEY_KP_DIV);
+    break;
   case FL_F:
     dev_pushkey(SB_KEY_F(0));
     break;
@@ -1767,13 +1738,10 @@ bool BaseWindow::handleKeyEvent() {
     break;
 
   default:
-    //TODO: fixme
-    //if (k >= LeftShiftKey && k <= RightAltKey) {
-    // avoid pushing meta-keys
-    //key_pushed = false;
-    //break;
-    //}
-    if (Fl::event_state(FL_CTRL & FL_ALT)) {
+    if (k >= FL_Shift_L && k <= FL_Alt_R) {
+      // avoid pushing meta-keys
+      key_pushed = false;
+    } else if (Fl::event_state(FL_CTRL & FL_ALT)) {
       dev_pushkey(SB_KEY_CTRL_ALT(k));
     } else if (Fl::event_state(FL_CTRL)) {
       dev_pushkey(SB_KEY_CTRL(k));

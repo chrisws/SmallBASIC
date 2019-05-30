@@ -22,6 +22,12 @@
 #define HSCROLL_W 80
 #define DEF_FONT_SIZE 12
 
+// currently missing from Enumerations.H
+#define FL_Multiply    0xffaa
+#define FL_AddKey      0xffab
+#define FL_SubtractKey 0xffad
+#define FL_DivideKey   0xffaf
+
 #define C_LINKAGE_BEGIN extern "C" {
 #define C_LINKAGE_END }
 
