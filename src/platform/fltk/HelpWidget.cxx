@@ -1622,9 +1622,6 @@ const char *HelpWidget::getInputValue(Fl_Widget *widget) {
   case ID_CHKBOX:
     return ((Fl_Radio_Button *)widget)->value() ? truestr : falsestr;
   case ID_SELECT:
-    // TODO: fixme
-    //widget = ((Fl_Choice *)widget)->item();
-    //return widget ? widget->label() : NULL;
     return NULL;
   case ID_RANGEVAL:
     sprintf(rangeValue, "%f", ((Fl_Valuator *)widget)->value());
@@ -1676,9 +1673,6 @@ bool HelpWidget::setInputValue(const char *assignment) {
   strlib::String s = assignment;
   strlib::String name = s.leftOf('=');
   strlib::String value = s.rightOf('=');
-  //Fl_Choice *choice;
-  //Fl_Widget *item;
-
   if (value.length() == 0) {
     return false;
   }
@@ -1698,12 +1692,6 @@ bool HelpWidget::setInputValue(const char *assignment) {
         ((Fl_Radio_Button *)button)->value(value.equals(truestr) || value.equals("1"));
         break;
       case ID_SELECT:
-        // TODO: fixme
-        //choice = (Fl_Choice *)button;
-        //item = choice->find(value.c_str());
-        //if (item) {
-        //choice->set_focus(item);
-        //}
         break;
       case ID_RANGEVAL:
         ((Fl_Valuator *)button)->value(value.toNumber());

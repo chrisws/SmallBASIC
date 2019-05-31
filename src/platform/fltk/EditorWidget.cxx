@@ -583,8 +583,6 @@ void EditorWidget::set_color(Fl_Widget *w, void *eventData) {
     Fl::get_color(_editor->color(), r, g, b);
     if (fl_color_chooser(w->label(), r, g, b)) {
       Fl_Color c = fl_rgb_color(r, g, b);
-      // TODO: fixme
-      //set_color_index(FL_FREE_COLOR + styleField, c);
       setEditorColor(c, styleField == st_background_def);
       _editor->styleChanged();
     }
@@ -1066,18 +1064,7 @@ void EditorWidget::setRowCol(int row, int col) {
   sprintf(rowcol, "%d", col);
   _colStatus->copy_label(rowcol);
   _colStatus->redraw();
-
-  // sync the browser widget selection
-  int len = _funcList->children() - 1;
-  for (int i = 0; i < len; i++) {
-    int line = (int)_funcList->child(i)->argument();
-    int nextLine = (int)_funcList->child(i + 1)->argument();
-    if (row >= line && (i == len - 1 || row < nextLine)) {
-      // TODO: fixme
-      //_funcList->value(i);
-      break;
-    }
-  }
+  selectRowInBrowser(_funcList->root(), row);
 }
 
 /**
@@ -1418,6 +1405,27 @@ bool EditorWidget::searchBackward(const char *text, int startPos,
 }
 
 /**
+ * sync the browser widget selection
+ */
+void EditorWidget::selectRowInBrowser(Fl_Tree_Item *root, int row) {
+  int len = root->children() - 1;
+  for (int i = 0; i < len; i++) {
+    int line = (int)(intptr_t)root->child(i)->user_data();
+    int nextLine = (int)(intptr_t)root->child(i + 1)->user_data();
+    if (row >= line && (i == len - 1 || row < nextLine)) {
+      Fl_Tree_Item *item = root->child(i);
+      for (int j = 0; j < root->child(i)->children(); j++) {
+        int subLine = (int)(intptr_t)root->child(i)->child(j)->user_data();
+        if (subLine == row) {
+          item = root->child(i)->child(j);
+        }
+      }
+      _funcList->select_only(item, 0);
+    }
+  }
+}
+
+/**
  * sets the current display colour
  */
 void EditorWidget::setColor(const char *label, StyleField field) {
@@ -1425,8 +1433,6 @@ void EditorWidget::setColor(const char *label, StyleField field) {
   Fl::get_color(styletable[field].color, r, g, b);
   if (fl_color_chooser(label, r, g, b)) {
     Fl_Color c = fl_rgb_color(r, g, b);
-    //TODO: fixme
-    //set_color_index(FL_FREE_COLOR + field, c);
     styletable[field].color = c;
     _editor->styleChanged();
   }

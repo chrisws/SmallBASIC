@@ -216,9 +216,8 @@ function buildSDL() {
    dnl preconfigured values for SDL build
    AC_DEFINE(_SDL, 1, [Defined when building SDL version])
    AC_DEFINE(_UnixOS, 1, [Building under Unix like systems.])
-   AC_DEFINE(IMPL_DEV_DELAY, 1, [Driver implements dev_delay()])
-   AC_DEFINE(IMPL_LOG_WRITE, 1, [Driver implements lwrite()])
    AC_DEFINE(IMPL_DEV_READ, 1, [Implement dev_read()])
+   AC_DEFINE(IMPL_DEV_DELAY, 1, [Driver implements dev_delay()])
    AC_DEFINE(IMPL_LOG_WRITE, 1, [Driver implements lwrite()])
 
    BUILD_SUBDIRS="src/common src/platform/sdl"
@@ -364,6 +363,7 @@ function buildFLTK() {
    dnl preconfigured values for FLTK build
    AC_DEFINE(_UnixOS, 1, [Building under Unix like systems.])
    AC_DEFINE(_FLTK, 1, [Defined for FLTK build.])
+   AC_DEFINE(IMPL_DEV_READ, 1, [Implement dev_read()])
    AC_DEFINE(IMPL_DEV_DELAY, 1, [Driver implements dev_delay()])
    AC_DEFINE(IMPL_LOG_WRITE, 1, [Driver implements lwrite()])
 

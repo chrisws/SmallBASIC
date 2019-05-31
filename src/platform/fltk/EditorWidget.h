@@ -155,6 +155,7 @@ protected:
   void reloadFile();
   int replaceAll(const char *find, const char *replace, bool restorePos, bool matchWord);
   bool searchBackward(const char *text, int startPos, const char *find, int findLen, int *foundPos);
+  void selectRowInBrowser(Fl_Tree_Item *root, int row);
   void setColor(const char *label, StyleField field);
   void setCommand(CommandOpt command);
   void setModified(bool dirty);

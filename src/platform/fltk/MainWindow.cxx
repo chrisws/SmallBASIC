@@ -132,9 +132,6 @@ bool MainWindow::basicMain(EditorWidget *editWidget,
     }
   }
 
-  opt_pref_width = 0;
-  opt_pref_height = 0;
-
   Fl_Window *fullScreen = NULL;
   Fl_Group *oldOutputGroup = _outputGroup;
   int old_w = _out->w();
@@ -166,7 +163,7 @@ bool MainWindow::basicMain(EditorWidget *editWidget,
     restart = false;
     runMode = run_state;
     chdir(path);
-    success = sbasic_main(filename);
+    success = _system->run(filename);
   }
   while (restart);
 
