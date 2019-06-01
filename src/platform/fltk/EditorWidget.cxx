@@ -628,17 +628,25 @@ void EditorWidget::un_select(Fl_Widget *w, void *eventData) {
  */
 bool EditorWidget::checkSave(bool discard) {
   if (!_dirty) {
-    return true;                // continue next operation
+    // continue next operation
+    return true;
   }
 
   const char *msg = "The current file has not been saved\n\nWould you like to save it now?";
-  int r = discard ?
-          fl_choice(msg, "Save", "Discard", "Cancel", NULL) :
-          fl_choice(msg, "Save", "Cancel", NULL, NULL);
-  if (discard ? (r == 2) : (r == 1)) {
-    save_file();                // Save the file
+  int r;
+  if (discard) {
+    r = fl_choice(msg, "Save", "Discard", "Cancel", NULL);
+  } else {
+    r = fl_choice(msg, "Save", "Cancel", NULL, NULL);
+  }
+  fprintf(stderr, "selected %d\n", r);
+  if (r == 0) {
+    // save selected
+    save_file();
     return !_dirty;
   }
+
+  // continue operation when discard selected
   return (discard && r == 1);
 }
 
@@ -1275,7 +1283,7 @@ void EditorWidget::handleFileChange() {
       .append(_filename)
       .append("has changed on disk.\n\n")
       .append("Do you want to reload the file?");
-    if (fl_choice(st.c_str(), "Yes", "No", NULL, NULL)) {
+    if (fl_choice(st.c_str(), "Yes", "No", NULL, NULL) == 0) {
       reloadFile();
     } else {
       _modifiedTime = 0;
@@ -1316,22 +1324,16 @@ void EditorWidget::resize(int x, int y, int w, int h) {
  * create a new editor buffer
  */
 void EditorWidget::newFile() {
-  if (readonly()) {
-    return;
+  if (!readonly() && checkSave(true)) {
+    Fl_Text_Buffer *textbuf = _editor->_textbuf;
+    _filename[0] = '\0';
+    textbuf->select(0, textbuf->length());
+    textbuf->remove_selection();
+    _dirty = 0;
+    textbuf->call_modify_callbacks();
+    fileChanged(false);
+    _modifiedTime = 0;
   }
-
-  if (!checkSave(true)) {
-    return;
-  }
-
-  Fl_Text_Buffer *textbuf = _editor->_textbuf;
-  _filename[0] = '\0';
-  textbuf->select(0, textbuf->length());
-  textbuf->remove_selection();
-  _dirty = 0;
-  textbuf->call_modify_callbacks();
-  fileChanged(false);
-  _modifiedTime = 0;
 }
 
 /**

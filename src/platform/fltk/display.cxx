@@ -166,36 +166,25 @@ void Canvas::fillRect(int left, int top, int width, int height, Fl_Color color) 
 }
 
 void Canvas::getImageData(uint8_t *image, const MARect *srcRect, int bytesPerLine) {
-  int width = MIN(_w, srcRect->width);
-  int height = MIN(_h, srcRect->height);
-  Fl_Image_Surface *surface = new Fl_Image_Surface(width, height, 0, _offscreen);
-  Fl_RGB_Image *rgbImage = surface->image();
-  const uchar *data = rgbImage->array;
-  int x_end = srcRect->left + srcRect->width;
-  int y_end = srcRect->top + srcRect->height;
-  int depth = bytesPerLine / width;
+  fl_begin_offscreen(_offscreen);
+  int x = srcRect->left;
+  int y = srcRect->top;
+  int w = srcRect->width;
+  int h = srcRect->height;
+  fl_read_image(image, x, y, w, h, 1);
+  fl_end_offscreen();
 
-  for (int dy = 0, yi = srcRect->top; yi < y_end; yi += 1, dy++) {
-    if (yi >= y() && yi < h()) {
-      int yoffs = (dy * bytesPerLine);
-      int src_line = yi * width * rgbImage->d();
-      int src_offs = 0;
-      for (int dx = 0, xi = srcRect->left; xi < x_end; xi += 1, dx++) {
-        if (xi >= x() && xi < w()) {
-          int offs = yoffs + (dx * depth);
-          const uchar *px = data + src_line + src_offs;
-          src_offs += rgbImage->d();
-          image[offs + 0] = px[0];
-          image[offs + 1] = px[1];
-          image[offs + 2] = px[2];
-          image[offs + 3] = 255;
-        }
-      }
-    }
+  if (srcRect->width == 1 && srcRect->height == 1) {
+    // compatibility with PSET/POINT
+    uchar r = image[0];
+    uchar g = image[1];
+    uchar b = image[2];
+    uchar a = image[3];
+    image[0] = b;
+    image[1] = g;
+    image[2] = r;
+    image[3] = a;
   }
-
-  delete surface;
-  delete rgbImage;
 }
 
 void Canvas::setClip(int x, int y, int w, int h) {
