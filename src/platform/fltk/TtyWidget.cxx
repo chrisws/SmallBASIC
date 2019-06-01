@@ -41,8 +41,9 @@ TtyWidget::TtyWidget(int x, int y, int w, int h, int numRows) :
 
   // horizontal scrollbar scrolls in pixel units
   hscrollbar = new Fl_Scrollbar(w - HSCROLL_W - SCROLL_W, 1, HSCROLL_W, SCROLL_H);
-  vscrollbar->user_data(this);
-  vscrollbar->callback(scrollbar_callback);
+  hscrollbar->type(FL_HORIZONTAL);
+  hscrollbar->user_data(this);
+  hscrollbar->callback(scrollbar_callback);
 
   end();
   resize(x, y, w, h);

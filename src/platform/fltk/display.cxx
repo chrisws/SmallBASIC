@@ -112,9 +112,27 @@ void Canvas::drawPixel(int posX, int posY) {
   fl_end_offscreen();
 }
 
+// x, y, w are position and width of scan line in image. copy w
+// pixels from scanline y, starting at pixel x to this buffer.
+void drawImage(void *data, int x, int y, int w, uchar *out) {
+  uint8_t *image = (uint8_t *)data;
+  int scanLine = w * 3;
+  int offs = y * w * 4;
+
+  for (int sx = 0; sx < scanLine; sx += 3, offs += 4) {
+    out[sx + 0] = image[offs + 0];
+    out[sx + 1] = image[offs + 1];
+    out[sx + 2] = image[offs + 2];
+  }
+}
+
 void Canvas::drawRGB(const MAPoint2d *dstPoint, const void *src, const MARect *srcRect, int opacity, int bytesPerLine) {
+  int x = dstPoint->x;
+  int y = dstPoint->y;
+  int w = srcRect->width;
+  int h = srcRect->height;
   fl_begin_offscreen(_offscreen);
-  // TODO
+  fl_draw_image(drawImage, (void *)src, x, y, w, h);
   fl_end_offscreen();
 }
 

@@ -1413,14 +1413,8 @@ void EditorWidget::selectRowInBrowser(Fl_Tree_Item *root, int row) {
     int line = (int)(intptr_t)root->child(i)->user_data();
     int nextLine = (int)(intptr_t)root->child(i + 1)->user_data();
     if (row >= line && (i == len - 1 || row < nextLine)) {
-      Fl_Tree_Item *item = root->child(i);
-      for (int j = 0; j < root->child(i)->children(); j++) {
-        int subLine = (int)(intptr_t)root->child(i)->child(j)->user_data();
-        if (subLine == row) {
-          item = root->child(i)->child(j);
-        }
-      }
-      _funcList->select_only(item, 0);
+      _funcList->select_only(root->child(i), 0);
+      break;
     }
   }
 }
