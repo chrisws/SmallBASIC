@@ -22,18 +22,28 @@ String click;
 enum SORT_BY { e_name, e_size, e_time } sortBy;
 bool sortDesc;
 
+const char CMD_SET_DIR = '+';
+const char CMD_CHG_DIR = '!';
+const char CMD_ENTER_PATH = '@';
+const char CMD_SAVE_AS = '~';
+const char CMD_SORT_DATE = '#';
+const char CMD_SORT_SIZE = '^';
+const char CMD_SORT_NAME = '$';
+
 struct FileNode {
-  FileNode(const char *arg_name, time_t arg_m_time,
-           off_t arg_size, bool arg_isdir) :
-    name(arg_name, strlen(arg_name)),
-    m_time(arg_m_time),
-    size(arg_size),
-    isdir(arg_isdir) {
+  FileNode(const char *label, const char *name, time_t m_time, off_t size, bool isdir) :
+    _label(label, strlen(label)),
+    _name(name, strlen(name)),
+    _m_time(m_time),
+    _size(size),
+    _isdir(isdir) {
   }
-  String name;
-  time_t m_time;
-  off_t size;
-  bool isdir;
+
+  String _label;
+  String _name;
+  time_t _m_time;
+  off_t _size;
+  bool _isdir;
 };
 
 int stringCompare(const void *a, const void *b) {
@@ -48,19 +58,19 @@ int fileNodeCompare(const void *a, const void *b) {
   int result = 0;
   switch (sortBy) {
   case e_name:
-    if (n1->isdir && !n2->isdir) {
+    if (n1->_isdir && !n2->_isdir) {
       result = -1;
-    } else if (!n1->isdir && n2->isdir) {
+    } else if (!n1->_isdir && n2->_isdir) {
       result = 1;
     } else {
-      result = strcasecmp(n1->name.c_str(), n2->name.c_str());
+      result = strcasecmp(n1->_name.c_str(), n2->_name.c_str());
     }
     break;
   case e_size:
-    result = n1->size < n2->size ? -1 : n1->size > n2->size ? 1 : 0;
+    result = n1->_size < n2->_size ? -1 : n1->_size > n2->_size ? 1 : 0;
     break;
   case e_time:
-    result = n1->m_time < n2->m_time ? -1 : n1->m_time > n2->m_time ? 1 : 0;
+    result = n1->_m_time < n2->_m_time ? -1 : n1->_m_time > n2->_m_time ? 1 : 0;
     break;
   }
   if (sortDesc) {
@@ -90,14 +100,6 @@ static void anchorClick_cb(Fl_Widget *w, void *v) {
     Fl::add_check(anchorClick_event); // post message
   }
 }
-
-const char CMD_SET_DIR = '+';
-const char CMD_CHG_DIR = '!';
-const char CMD_ENTER_PATH = '@';
-const char CMD_SAVE_AS = '~';
-const char CMD_SORT_DATE = '#';
-const char CMD_SORT_SIZE = '^';
-const char CMD_SORT_NAME = '$';
 
 FileWidget::FileWidget(Fl_Widget *rect) :
   HelpWidget(rect),
@@ -345,15 +347,15 @@ void FileWidget::displayPath() {
     if (strcmp(name, "..") == 0) {
       if (strcmp(_path, "/") != 0 && strcmp(_path + 1, ":/") != 0) {
         // not "/" or "C:/"
-        files.add(new FileNode("..", stbuf.st_mtime, stbuf.st_size, true));
+        files.add(new FileNode("Go up", "..", stbuf.st_mtime, stbuf.st_size, true));
       }
     } else if (stat(name, &stbuf) != -1 && stbuf.st_mode & S_IFDIR) {
-      files.add(new FileNode(name, stbuf.st_mtime, stbuf.st_size, true));
+      files.add(new FileNode(name, name, stbuf.st_mtime, stbuf.st_size, true));
     } else if (strncasecmp(name + len - 4, ".htm", 4) == 0 ||
                strncasecmp(name + len - 5, ".html", 5) == 0 ||
                strncasecmp(name + len - 4, ".bas", 4) == 0 ||
                strncasecmp(name + len - 4, ".txt", 4) == 0) {
-      files.add(new FileNode(name, stbuf.st_mtime, stbuf.st_size, false));
+      files.add(new FileNode(name, name, stbuf.st_mtime, stbuf.st_size, false));
     }
   }
   closedir(dp);
@@ -395,27 +397,27 @@ void FileWidget::displayPath() {
   List_each(FileNode*, it, files) {
     FileNode *fileNode = (*it);
     html.append("<tr bgcolor=#f1f1f1>").append("<td><a href='");
-    if (fileNode->isdir) {
+    if (fileNode->_isdir) {
       html.append(CMD_CHG_DIR);
     }
-    html.append(fileNode->name).append("'>");
-    if (fileNode->isdir) {
+    html.append(fileNode->_name).append("'>");
+    if (fileNode->_isdir) {
       html.append("[ ");
     }
-    html.append(fileNode->name);
-    if (fileNode->isdir) {
+    html.append(fileNode->_label);
+    if (fileNode->_isdir) {
       html.append(" ]");
     }
     html.append("</a></td>");
     html.append("<td>");
-    if (fileNode->isdir) {
+    if (fileNode->_isdir) {
       html.append(0);
     } else {
-      html.append(fileNode->isdir ? 0 : (int)fileNode->size);
+      html.append(fileNode->_isdir ? 0 : (int)fileNode->_size);
     }
     html.append("</td>");
     strftime(modifedTime, sizeof(modifedTime), "%Y-%m-%d %I:%M %p",
-             localtime(&fileNode->m_time));
+             localtime(&fileNode->_m_time));
     html.append("<td>").append(modifedTime).append("</td></tr>");
   }
 
