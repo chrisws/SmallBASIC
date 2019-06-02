@@ -18,7 +18,8 @@ extern MainWindow *wnd;
 extern System *g_system;
 
 #define OPTIONS_BOX_WIDTH_EXTRA 4
-#define WAIT_INTERVAL 0.005
+#define WAIT_INTERVAL_MILLIS 5
+#define WAIT_INTERVAL (WAIT_INTERVAL_MILLIS/1000)
 
 int event_x() {
   return Fl::event_x();
@@ -272,7 +273,22 @@ int maGetEvent(MAEvent *event) {
 }
 
 void maWait(int timeout) {
-  Fl::wait(timeout);
+  if (timeout == -1) {
+    Fl::wait();
+  } else {
+    int slept = 0;
+    while (1) {
+      Fl::check();
+      if (wnd->isBreakExec()) {
+        break;
+      }
+      usleep(WAIT_INTERVAL_MILLIS * 1000);
+      slept += WAIT_INTERVAL_MILLIS;
+      if (timeout > 0 && slept > timeout) {
+        break;
+      }
+    }
+  }
 }
 
 //
