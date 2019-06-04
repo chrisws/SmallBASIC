@@ -68,8 +68,7 @@ enum CommandOpt {
   cmd_input_text,
 };
 
-class EditorWidget : public Fl_Group, StatusBar {
-public:
+struct EditorWidget : public Fl_Group, StatusBar {
   EditorWidget(Fl_Widget *rect, Fl_Menu_Bar *menu);
   virtual ~EditorWidget();
 
@@ -155,7 +154,7 @@ protected:
   void reloadFile();
   int replaceAll(const char *find, const char *replace, bool restorePos, bool matchWord);
   bool searchBackward(const char *text, int startPos, const char *find, int findLen, int *foundPos);
-  void selectRowInBrowser(Fl_Tree_Item *root, int row);
+  void selectRowInBrowser(int row);
   void setColor(const char *label, StyleField field);
   void setCommand(CommandOpt command);
   void setModified(bool dirty);
@@ -179,6 +178,7 @@ private:
   Fl_Button *_runStatus;
   Fl_Button *_modStatus;
   Fl_Tree *_funcList;
+  bool _funcListEvent;
 
   Fl_Toggle_Button *_logPrintBn;
   Fl_Toggle_Button *_lockBn;

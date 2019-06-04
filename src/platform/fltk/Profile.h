@@ -11,6 +11,7 @@
 
 #include <FL/Fl_Rect.H>
 #include "ui/strlib.h"
+#include "ui/textedit.h"
 
 using namespace strlib;
 
@@ -23,6 +24,7 @@ struct Profile {
   void loadConfig(EditorWidget *editor);
   void restore(MainWindow *wnd);
   void restoreAppPosition(Fl_Window *wnd);
+  void setTheme(int themeId);
   void save(MainWindow *wnd);
 
   Fl_Color _color;
@@ -36,6 +38,7 @@ struct Profile {
 
 private:
   bool _loaded;
+  EditTheme _theme;
   int nextInteger(const char *s, int len, int &index);
   Fl_Rect restoreRect(Properties<String *> *profile, const char *key);
   void restoreStyles(Properties<String *> *profile);

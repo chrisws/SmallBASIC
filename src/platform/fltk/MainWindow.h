@@ -22,9 +22,6 @@
 #include "platform/fltk/Profile.h"
 #include "platform/fltk/utils.h"
 
-#define MENU_HEIGHT 24
-#define NUM_RECENT_ITEMS 9
-
 enum ExecState {
   init_state,
   edit_state,
@@ -140,6 +137,7 @@ struct MainWindow : public BaseWindow {
   CALLBACK_METHOD(run_selection);
   CALLBACK_METHOD(save_file_as);
   CALLBACK_METHOD(set_options);
+  CALLBACK_METHOD(set_theme);
   CALLBACK_METHOD(tool_plugin);
 
   HelpWidget *getHelp();

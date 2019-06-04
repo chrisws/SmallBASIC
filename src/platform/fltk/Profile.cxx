@@ -26,6 +26,12 @@ const char *appPositionKey = "appPosition";
 
 // in BasicEditor.cxx
 extern Fl_Text_Display::Style_Table_Entry styletable[];
+extern Fl_Color defaultColor[];
+
+Fl_Color get_color(int c) {
+  // Fl_Color => 0xrrggbbii
+  return (c << 8) & 0xffffff00;
+}
 
 //
 // Profile constructor
@@ -39,6 +45,7 @@ Profile::Profile() :
   _createBackups(true),
   _lineNumbers(true),
   _loaded(false) {
+  setTheme(0);
 }
 
 //
@@ -99,6 +106,23 @@ void Profile::restoreAppPosition(Fl_Window *wnd) {
     int y = _appPosition.y() != 0 ? _appPosition.y() : wnd->y();
     wnd->resize(x, y, _appPosition.w(), _appPosition.h());
   }
+}
+
+//
+// select the given theme
+//
+void Profile::setTheme(int themeId) {
+  _theme.setId(themeId);
+  defaultColor[0] = get_color(_theme._color); // A - plain
+  defaultColor[1] = get_color(_theme._syntax_comments); // B - comments
+  defaultColor[2] = get_color(_theme._syntax_text); // C - string 
+  defaultColor[3] = get_color(_theme._syntax_statement); // D - keywords
+  defaultColor[4] = get_color(_theme._syntax_command); // E - functions
+  defaultColor[5] = get_color(_theme._syntax_command); // F - procedures
+  defaultColor[6] = get_color(_theme._match_background); // G - find matches
+  defaultColor[7] = get_color(_theme._syntax_comments); // H - comments
+  defaultColor[8] = get_color(_theme._syntax_digit); // I - numbers
+  defaultColor[9] = get_color(_theme._syntax_command); // J - operators
 }
 
 //

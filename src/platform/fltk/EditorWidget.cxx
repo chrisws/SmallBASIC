@@ -19,9 +19,6 @@
 #include "platform/fltk/FileWidget.h"
 #include "common/smbas.h"
 
-#define TTY_ROWS 1000
-#define STATUS_HEIGHT (MENU_HEIGHT + 2)
-
 // in MainWindow.cxx
 extern String recentPath[];
 extern int recentMenu[];
@@ -69,6 +66,7 @@ EditorWidget::EditorWidget(Fl_Widget *rect, Fl_Menu_Bar *menuBar) :
   _runStatus(NULL),
   _modStatus(NULL),
   _funcList(NULL),
+  _funcListEvent(false),
   _logPrintBn(NULL),
   _lockBn(NULL),
   _hideIdeBn(NULL),
@@ -456,6 +454,7 @@ void EditorWidget::func_list(Fl_Widget *w, void *eventData) {
     Fl_Tree_Item *item = (Fl_Tree_Item*)_funcList->callback_item();
     const char *label = item->label();
     if (label) {
+      _funcListEvent = true;
       if (strcmp(label, scanLabel) == 0) {
         _funcList->clear();
         createFuncList();
@@ -1072,7 +1071,11 @@ void EditorWidget::setRowCol(int row, int col) {
   sprintf(rowcol, "%d", col);
   _colStatus->copy_label(rowcol);
   _colStatus->redraw();
-  selectRowInBrowser(_funcList->root(), row);
+  if (!_funcListEvent) {
+    selectRowInBrowser(row);
+  } else {
+    _funcListEvent = false;
+  }
 }
 
 /**
@@ -1409,15 +1412,26 @@ bool EditorWidget::searchBackward(const char *text, int startPos,
 /**
  * sync the browser widget selection
  */
-void EditorWidget::selectRowInBrowser(Fl_Tree_Item *root, int row) {
+void EditorWidget::selectRowInBrowser(int row) {
+  Fl_Tree_Item *root = _funcList->root();
   int len = root->children() - 1;
+  bool found = false;
   for (int i = 0; i < len; i++) {
     int line = (int)(intptr_t)root->child(i)->user_data();
     int nextLine = (int)(intptr_t)root->child(i + 1)->user_data();
     if (row >= line && (i == len - 1 || row < nextLine)) {
+      int y = _funcList->vposition() + root->child(i)->y();
+      int bottom = _funcList->y() + _funcList->h();
+      int pos = bottom - y - (_funcList->h() / 2);
       _funcList->select_only(root->child(i), 0);
+      _funcList->vposition(-pos);
+      found = true;
       break;
     }
+  }
+  if (!found) {
+    _funcList->select_only(root->child(0), 0);
+    _funcList->vposition(0);
   }
 }
 

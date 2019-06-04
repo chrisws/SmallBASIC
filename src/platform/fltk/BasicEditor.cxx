@@ -11,6 +11,7 @@
 #include <FL/Fl_Rect.H>
 #include "platform/fltk/BasicEditor.h"
 #include "platform/fltk/kwp.h"
+#include "platform/fltk/Profile.h"
 
 using namespace strlib;
 
@@ -174,7 +175,7 @@ BasicEditor::~BasicEditor() {
 void BasicEditor::styleParse(const char *text, char *style, int length) {
   char current = PLAIN;
   int last = 0;                 // prev char was alpha-num
-  char buf[255];
+  char buf[1024];
   char *bufptr;
   const char *temp;
   int searchLen = strlen(_search);

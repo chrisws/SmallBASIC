@@ -21,6 +21,11 @@
 #define SCROLL_X SCROLL_W - 2
 #define HSCROLL_W 80
 #define DEF_FONT_SIZE 12
+#define TAB_BORDER 4
+#define TTY_ROWS 1000
+#define MENU_HEIGHT 24
+#define NUM_RECENT_ITEMS 9
+#define STATUS_HEIGHT (MENU_HEIGHT + 2)
 
 // currently missing from Enumerations.H
 #define FL_Multiply    0xffaa

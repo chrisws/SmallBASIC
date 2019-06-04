@@ -20,8 +20,6 @@
 #include "common/fs_socket_client.h"
 #include "common/keymap.h"
 
-#define TAB_BORDER 4
-
 char *packageHome;
 char *runfile = 0;
 int recentIndex = 0;
@@ -444,6 +442,11 @@ void MainWindow::set_options(Fl_Widget *w, void *eventData) {
   if (args) {
     strcpy(opt_command, args);
   }
+}
+
+void MainWindow::set_theme(Fl_Widget *w, void *eventData) {
+  _profile->setTheme(((intptr_t) eventData));
+  damage(FL_DAMAGE_ALL);
 }
 
 void MainWindow::next_tab(Fl_Widget *w, void *eventData) {
@@ -995,6 +998,11 @@ MainWindow::MainWindow(int w, int h) :
   m->add("&Edit/_&Goto Line", FL_CTRL + 'g', EditorWidget::goto_line_cb);
   m->add("&View/&Next Tab", FL_F+6, next_tab_cb);
   m->add("&View/_&Prev Tab", FL_CTRL + FL_F+6, prev_tab_cb);
+  m->add("&View/Theme/&Solarized Light", 0, set_theme_cb, (void *)(intptr_t)0);
+  m->add("&View/Theme/&Solarized Dark", 0, set_theme_cb, (void *)(intptr_t)1);
+  m->add("&View/Theme/&Shian", 0, set_theme_cb, (void *)(intptr_t)2);
+  m->add("&View/Theme/&Atom 1", 0, set_theme_cb, (void *)(intptr_t)3);
+  m->add("&View/Theme/&Atom 2", 0, set_theme_cb, (void *)(intptr_t)4);
   m->add("&View/Text Size/&Increase", FL_CTRL + ']', font_size_incr_cb);
   m->add("&View/Text Size/&Decrease", FL_CTRL + '[', font_size_decr_cb);
   m->add("&View/Text Color/Background Def", 0, EditorWidget::set_color_cb, (void *)st_background_def);
