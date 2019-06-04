@@ -26,7 +26,6 @@ const char *appPositionKey = "appPosition";
 
 // in BasicEditor.cxx
 extern Fl_Text_Display::Style_Table_Entry styletable[];
-extern Fl_Color defaultColor[];
 
 Fl_Color get_color(int c) {
   // Fl_Color => 0xrrggbbii
@@ -56,7 +55,7 @@ void Profile::loadConfig(EditorWidget *editWidget) {
   editWidget->setFont(_font);
   editWidget->setFontSize(_fontSize);
   editWidget->setEditorColor(_color, false);
-  editWidget->getEditor()->linenumber_width(_lineNumbers ? 40 : 1);
+  editWidget->getEditor()->linenumber_width(_lineNumbers ? LINE_NUMBER_WIDTH : 1);
 }
 
 //
@@ -109,20 +108,30 @@ void Profile::restoreAppPosition(Fl_Window *wnd) {
 }
 
 //
+// set editor foreground and background colors
+//
+void Profile::setEditorColor(EditorWidget *editWidget) {
+  editWidget->setThemeColor(get_color(_theme._background),
+                            get_color(_theme._selection_color),
+                            get_color(_theme._number_color));
+}
+
+//
 // select the given theme
 //
 void Profile::setTheme(int themeId) {
   _theme.setId(themeId);
-  defaultColor[0] = get_color(_theme._color); // A - plain
-  defaultColor[1] = get_color(_theme._syntax_comments); // B - comments
-  defaultColor[2] = get_color(_theme._syntax_text); // C - string 
-  defaultColor[3] = get_color(_theme._syntax_statement); // D - keywords
-  defaultColor[4] = get_color(_theme._syntax_command); // E - functions
-  defaultColor[5] = get_color(_theme._syntax_command); // F - procedures
-  defaultColor[6] = get_color(_theme._match_background); // G - find matches
-  defaultColor[7] = get_color(_theme._syntax_comments); // H - comments
-  defaultColor[8] = get_color(_theme._syntax_digit); // I - numbers
-  defaultColor[9] = get_color(_theme._syntax_command); // J - operators
+  _color = _theme._background;
+  styletable[0].color = get_color(_theme._color); // A - plain
+  styletable[1].color = get_color(_theme._syntax_comments); // B - comments
+  styletable[2].color = get_color(_theme._syntax_text); // C - string 
+  styletable[3].color = get_color(_theme._syntax_statement); // D - keywords
+  styletable[4].color = get_color(_theme._syntax_command); // E - functions
+  styletable[5].color = get_color(_theme._syntax_command); // F - procedures
+  styletable[6].color = get_color(_theme._match_background); // G - find matches
+  styletable[7].color = get_color(_theme._syntax_comments); // H - comments
+  styletable[8].color = get_color(_theme._syntax_digit); // I - numbers
+  styletable[9].color = get_color(_theme._syntax_command); // J - operators
 }
 
 //

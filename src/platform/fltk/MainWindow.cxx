@@ -446,6 +446,21 @@ void MainWindow::set_options(Fl_Widget *w, void *eventData) {
 
 void MainWindow::set_theme(Fl_Widget *w, void *eventData) {
   _profile->setTheme(((intptr_t) eventData));
+  for (int c = 0; c < _tabGroup->children(); c++) {
+    Fl_Group *child = (Fl_Group *)_tabGroup->child(c);
+    GroupWidgetEnum gw = getGroupWidget(child);
+    switch (gw) {
+    case gw_editor:
+      _profile->setEditorColor((EditorWidget *)child->child(0));
+      break;
+    case gw_output:
+      break;
+    case gw_help:
+      break;
+    case gw_file:
+      break;
+    }
+  }
   damage(FL_DAMAGE_ALL);
 }
 
@@ -998,8 +1013,8 @@ MainWindow::MainWindow(int w, int h) :
   m->add("&Edit/_&Goto Line", FL_CTRL + 'g', EditorWidget::goto_line_cb);
   m->add("&View/&Next Tab", FL_F+6, next_tab_cb);
   m->add("&View/_&Prev Tab", FL_CTRL + FL_F+6, prev_tab_cb);
-  m->add("&View/Theme/&Solarized Light", 0, set_theme_cb, (void *)(intptr_t)0);
-  m->add("&View/Theme/&Solarized Dark", 0, set_theme_cb, (void *)(intptr_t)1);
+  m->add("&View/Theme/&Solarized Dark", 0, set_theme_cb, (void *)(intptr_t)0);
+  m->add("&View/Theme/&Solarized Light", 0, set_theme_cb, (void *)(intptr_t)1);
   m->add("&View/Theme/&Shian", 0, set_theme_cb, (void *)(intptr_t)2);
   m->add("&View/Theme/&Atom 1", 0, set_theme_cb, (void *)(intptr_t)3);
   m->add("&View/Theme/&Atom 2", 0, set_theme_cb, (void *)(intptr_t)4);
@@ -1373,7 +1388,7 @@ void MainWindow::setTitle(Fl_Window *widget, const char *filename) {
 }
 
 void MainWindow::setBreak() {
-  brun_break();
+  _system->setExit(false);
   runMode = break_state;
 }
 

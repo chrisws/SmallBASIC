@@ -24,6 +24,7 @@ struct Profile {
   void loadConfig(EditorWidget *editor);
   void restore(MainWindow *wnd);
   void restoreAppPosition(Fl_Window *wnd);
+  void setEditorColor(EditorWidget *editor);
   void setTheme(int themeId);
   void save(MainWindow *wnd);
 

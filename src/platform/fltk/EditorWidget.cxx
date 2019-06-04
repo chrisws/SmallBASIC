@@ -91,7 +91,7 @@ EditorWidget::EditorWidget(Fl_Widget *rect, Fl_Menu_Bar *menuBar) :
 
   Fl_Group *tile = new Fl_Tile(rect->x(), rect->y(), rect->w(), tileHeight);
   _editor = new BasicEditor(rect->x(), rect->y(), editWidth, editHeight, this);
-  _editor->linenumber_width(40);
+  _editor->linenumber_width(LINE_NUMBER_WIDTH);
   _editor->wrap_mode(true, 0);
   _editor->selection_color(fl_rgb_color(190, 189, 188));
   _editor->_textbuf->add_modify_callback(changed_cb, this);
@@ -1002,6 +1002,13 @@ void EditorWidget::saveSelection(const char *path) {
     }
     fclose(fp);
   }
+}
+
+/**
+ * Sets the editor and editor toolbar color from the selected theme
+ */
+void EditorWidget::setThemeColor(Fl_Color background, Fl_Color selection_color, Fl_Color number_color) {
+  _editor->color(background);
 }
 
 /**
