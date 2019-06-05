@@ -10,8 +10,6 @@
 #include <FL/Fl_Rect.H>
 #include "platform/fltk/TtyWidget.h"
 
-#define SELECTION_COLOR FL_YELLOW
-
 static void scrollbar_callback(Fl_Widget *scrollBar, void *widget) {
   ((Fl_Group *)widget)->redraw();
 }
@@ -189,7 +187,7 @@ void TtyWidget::drawSelection(TtyTextSeg *seg, strlib::String *s, int row, int x
     }
 
     if (!s && (rc.w() || rc.h())) {
-      fl_color(SELECTION_COLOR);
+      fl_color(selection_color());
       fl_rectf(rc.x(), rc.y(), rc.w(), rc.h());
       fl_color(labelcolor());
     }

@@ -1007,8 +1007,17 @@ void EditorWidget::saveSelection(const char *path) {
 /**
  * Sets the editor and editor toolbar color from the selected theme
  */
-void EditorWidget::setThemeColor(Fl_Color background, Fl_Color selection_color, Fl_Color number_color) {
-  _editor->color(background);
+void EditorWidget::setThemeColor(EditTheme *theme) {
+  _editor->color(get_color(theme->_background));
+  _editor->linenumber_bgcolor(get_color(theme->_background));
+  _editor->linenumber_fgcolor(get_color(theme->_number_color));
+  _funcList->color(fl_color_average(get_color(theme->_background),
+                                    get_color(theme->_color), .80f));
+  _funcList->item_labelfgcolor(get_color(theme->_color));
+  _tty->color(fl_color_average(get_color(theme->_background),
+                                    get_color(theme->_color), .50f));
+  _tty->labelcolor(get_color(theme->_background));
+  _tty->selection_color(_editor->selection_color());
 }
 
 /**

@@ -117,7 +117,7 @@ struct EditorWidget : public Fl_Group, StatusBar {
   void runState(RunMessage runMessage);
   void saveSelection(const char *path);
   void setBreakToLine(bool b) { _gotoLineBn->value(b); }
-  void setThemeColor(Fl_Color background, Fl_Color selection_color, Fl_Color number_color);
+  void setThemeColor(EditTheme *theme);
   void setEditorColor(Fl_Color c, bool defColor);
   void setFont(Fl_Font font);
   void setFontSize(int i);

@@ -51,6 +51,7 @@
 #endif
 
 Fl_Color get_color(const char *name, Fl_Color def);
+Fl_Color get_color(int argb);
 Fl_Font get_font(const char *name);
 void getHomeDir(char *fileName, size_t size, bool appendSlash = true);
 bool cacheLink(dev_file_t *df, char *localFile, size_t size);

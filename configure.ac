@@ -342,7 +342,8 @@ function buildFLTK() {
      PACKAGE_CFLAGS="${PACKAGE_CFLAGS} -D__USE_MINGW_ANSI_STDIO"
    esac
 
-   FLTK_CXXFLAGS="${PACKAGE_CFLAGS} `fltk-config --cxxflags` -fno-exceptions -fno-rtti -std=c++11"
+   FLTK_CXXFLAGS="${PACKAGE_CFLAGS} `fltk-config --cxxflags`"
+   FLTK_CXXFLAGS="${FLTK_CXXFLAGS} -fno-exceptions -fno-rtti -std=c++11 -Wno-unknown-pragmas"
    PACKAGE_LIBS="${PACKAGE_LIBS} `fltk-config --ldstaticflags --use-images`"
 
    dnl do not depend on cygwin.dll under cygwin build

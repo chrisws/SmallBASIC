@@ -13,6 +13,11 @@
 
 #define RX_BUFFER_SIZE 1024
 
+Fl_Color get_color(int argb) {
+  // Fl_Color => 0xrrggbbii
+  return (argb << 8) & 0xffffff00;
+}
+
 Fl_Color get_color(const char *name, Fl_Color def) {
   Fl_Color result = def;
   if (!name || name[0] == '\0') {

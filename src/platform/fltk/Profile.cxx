@@ -27,11 +27,6 @@ const char *appPositionKey = "appPosition";
 // in BasicEditor.cxx
 extern Fl_Text_Display::Style_Table_Entry styletable[];
 
-Fl_Color get_color(int c) {
-  // Fl_Color => 0xrrggbbii
-  return (c << 8) & 0xffffff00;
-}
-
 //
 // Profile constructor
 //
@@ -54,7 +49,7 @@ void Profile::loadConfig(EditorWidget *editWidget) {
   editWidget->setIndentLevel(_indentLevel);
   editWidget->setFont(_font);
   editWidget->setFontSize(_fontSize);
-  editWidget->setEditorColor(_color, false);
+  editWidget->setThemeColor(&_theme);
   editWidget->getEditor()->linenumber_width(_lineNumbers ? LINE_NUMBER_WIDTH : 1);
 }
 
@@ -111,9 +106,7 @@ void Profile::restoreAppPosition(Fl_Window *wnd) {
 // set editor foreground and background colors
 //
 void Profile::setEditorColor(EditorWidget *editWidget) {
-  editWidget->setThemeColor(get_color(_theme._background),
-                            get_color(_theme._selection_color),
-                            get_color(_theme._number_color));
+  editWidget->setThemeColor(&_theme);
 }
 
 //
@@ -121,7 +114,7 @@ void Profile::setEditorColor(EditorWidget *editWidget) {
 //
 void Profile::setTheme(int themeId) {
   _theme.setId(themeId);
-  _color = _theme._background;
+  _color = get_color(_theme._background);
   styletable[0].color = get_color(_theme._color); // A - plain
   styletable[1].color = get_color(_theme._syntax_comments); // B - comments
   styletable[2].color = get_color(_theme._syntax_text); // C - string 
