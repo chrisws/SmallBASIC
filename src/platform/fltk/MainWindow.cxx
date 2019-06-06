@@ -169,7 +169,7 @@ bool MainWindow::basicMain(EditorWidget *editWidget,
   bool was_break = (runMode == break_state);
 
   if (fullScreen != NULL) {
-    _profile->_appPosition = *fullScreen;
+    _profile->setAppPosition(*fullScreen);
     fullScreen->remove(_out);
     delete fullScreen;
 
@@ -451,7 +451,7 @@ void MainWindow::set_theme(Fl_Widget *w, void *eventData) {
     GroupWidgetEnum gw = getGroupWidget(child);
     switch (gw) {
     case gw_editor:
-      _profile->setEditorColor((EditorWidget *)child->child(0));
+      _profile->setTheme((EditorWidget *)child->child(0));
       break;
     case gw_output:
       break;
@@ -1018,9 +1018,6 @@ MainWindow::MainWindow(int w, int h) :
   m->add("&View/Theme/&Shian", 0, set_theme_cb, (void *)(intptr_t)2);
   m->add("&View/Theme/&Atom 1", 0, set_theme_cb, (void *)(intptr_t)3);
   m->add("&View/Theme/&Atom 2", 0, set_theme_cb, (void *)(intptr_t)4);
-  m->add("&View/Text Size/&Increase", FL_CTRL + ']', font_size_incr_cb);
-  m->add("&View/Text Size/&Decrease", FL_CTRL + '[', font_size_decr_cb);
-  m->add("&View/Text Color/Background Def", 0, EditorWidget::set_color_cb, (void *)st_background_def);
   m->add("&View/Text Color/_Background", 0, EditorWidget::set_color_cb, (void *)st_background);
   m->add("&View/Text Color/Text", 0, EditorWidget::set_color_cb, (void *)st_text);
   m->add("&View/Text Color/Comments", 0, EditorWidget::set_color_cb, (void *)st_comments);
@@ -1031,6 +1028,8 @@ MainWindow::MainWindow(int w, int h) :
   m->add("&View/Text Color/Numbers", 0, EditorWidget::set_color_cb, (void *)st_numbers);
   m->add("&View/Text Color/Operators", 0, EditorWidget::set_color_cb, (void *)st_operators);
   m->add("&View/Text Color/Find Matches", 0, EditorWidget::set_color_cb, (void *)st_findMatches);
+  m->add("&View/Text Size/&Increase", FL_CTRL + ']', font_size_incr_cb);
+  m->add("&View/Text Size/&Decrease", FL_CTRL + '[', font_size_decr_cb);
 
   scanPlugIns(m);
 

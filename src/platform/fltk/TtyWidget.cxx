@@ -431,10 +431,10 @@ int TtyWidget::processLine(TtyRow *line, const char *linePtr) {
   const char *linePtrStart = linePtr;
 
   // Determine if we are at an end-of-line or an escape
-  bool escaped = false;
   if (*linePtr == '\033') {
     linePtr++;
 
+    bool escaped = false;
     if (*linePtr == '[') {
       escaped = true;
       linePtr++;

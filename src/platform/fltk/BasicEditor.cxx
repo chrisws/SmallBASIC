@@ -39,6 +39,7 @@ Fl_Text_Display::Style_Table_Entry styletable[] = {
   { defaultColor[7], FL_COURIER_ITALIC, 12}, // H - Italic Comments
   { defaultColor[8], FL_COURIER, 12},        // I - Numbers
   { defaultColor[9], FL_COURIER, 12},        // J - Operators
+  { FL_WHITE,        FL_COURIER, 12},        // K - Background
 };
 
 #define PLAIN      'A'
@@ -112,17 +113,11 @@ void style_update_cb(int pos,   // I - Position of update
   // style character and keep updating if we have a multi-line
   // comment character
   if (nInserted > 0) {
-    int start;                    // Start of text
-    int end;                      // End of text
-    char last;                    // Last style on line
-    char *text_range = NULL;      // Text data
-    char *style_range = NULL;     // Text data
-
-    start = textbuf->line_start(pos);
-    end = textbuf->line_end(pos + nInserted);
-    text_range = textbuf->text_range(start, end);
-    style_range = stylebuf->text_range(start, end);
-    last = style_range[end - start - 1];
+    int start = textbuf->line_start(pos);
+    int end = textbuf->line_end(pos + nInserted);
+    char *text_range = textbuf->text_range(start, end);
+    char *style_range = stylebuf->text_range(start, end);
+    int last = style_range[end - start - 1];
 
     editor->styleParse(text_range, style_range, end - start);
     stylebuf->replace(start, end, style_range);
@@ -577,8 +572,6 @@ void BasicEditor::showFindText(const char *find) {
  */
 int BasicEditor::handle(int e) {
   int cursor_pos = insert_position();
-  char spaces[250];
-  int indent;
   bool navigateKey = false;
 
   switch (Fl::event_key()) {
@@ -611,7 +604,8 @@ int BasicEditor::handle(int e) {
   switch (e) {
   case FL_KEYBOARD:
     if (Fl::event_key() == FL_Enter) {
-      indent = getIndent(spaces, sizeof(spaces), cursor_pos);
+      char spaces[250];
+      int indent = getIndent(spaces, sizeof(spaces), cursor_pos);
       if (indent) {
         buffer()->insert(insert_position(), spaces);
         insert_position(insert_position() + indent);

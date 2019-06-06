@@ -27,6 +27,7 @@
 #define NUM_RECENT_ITEMS 9
 #define STATUS_HEIGHT (MENU_HEIGHT + 2)
 #define LINE_NUMBER_WIDTH 40
+#define BROWN 0x3c3f41
 
 // currently missing from Enumerations.H
 #define FL_Multiply    0xffaa

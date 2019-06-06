@@ -55,8 +55,7 @@ enum StyleField {
   st_icomments,
   st_numbers,
   st_operators,
-  st_background,
-  st_background_def
+  st_background
 };
 
 enum CommandOpt {
@@ -117,8 +116,7 @@ struct EditorWidget : public Fl_Group, StatusBar {
   void runState(RunMessage runMessage);
   void saveSelection(const char *path);
   void setBreakToLine(bool b) { _gotoLineBn->value(b); }
-  void setThemeColor(EditTheme *theme);
-  void setEditorColor(Fl_Color c, bool defColor);
+  void setTheme(EditTheme *theme);
   void setFont(Fl_Font font);
   void setFontSize(int i);
   void setHideIde(bool b) { _hideIdeBn->value(b); if (b) setLogPrint(!b); }
@@ -156,10 +154,8 @@ protected:
   int replaceAll(const char *find, const char *replace, bool restorePos, bool matchWord);
   bool searchBackward(const char *text, int startPos, const char *find, int findLen, int *foundPos);
   void selectRowInBrowser(int row);
-  void setColor(const char *label, StyleField field);
   void setCommand(CommandOpt command);
   void setModified(bool dirty);
-  void setWidgetColor(Fl_Widget *w, Fl_Color bg, Fl_Color fg);
   void showFindText(const char *text);
 
 private:

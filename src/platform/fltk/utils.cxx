@@ -161,6 +161,7 @@ bool cacheLink(dev_file_t *df, char *localFile, size_t size) {
       df->drv_dw[2] = st.st_mtime;
     }
     if (http_open(df) == 0) {
+      fclose(fp);
       return false;
     }
   }

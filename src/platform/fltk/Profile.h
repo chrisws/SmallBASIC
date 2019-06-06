@@ -21,25 +21,29 @@ struct EditorWidget;
 struct Profile {
   Profile();
 
+  bool createBackups() const { return _createBackups; }
   void loadConfig(EditorWidget *editor);
   void restore(MainWindow *wnd);
   void restoreAppPosition(Fl_Window *wnd);
-  void setEditorColor(EditorWidget *editor);
+  void setAppPosition(Fl_Rect rect) { _appPosition = rect; }
+  void setTheme(EditorWidget *editor);
+  void setFont(Fl_Font font) { _font = font; }
+  void setFontSize(int size) { _fontSize = size; }
   void setTheme(int themeId);
   void save(MainWindow *wnd);
-
-  Fl_Color _color;
-  Fl_Font _font;
-  Fl_Rect _appPosition;
-
-  int _fontSize;
-  int _indentLevel;
-  int _createBackups;
-  int _lineNumbers;
+  void updateTheme();
 
 private:
-  bool _loaded;
+  Fl_Font _font;
+  Fl_Rect _appPosition;
   EditTheme _theme;
+  bool _loaded;
+  int _createBackups;
+  int _lineNumbers;
+  int _fontSize;
+  int _indentLevel;
+  int _themeId;
+
   int nextInteger(const char *s, int len, int &index);
   Fl_Rect restoreRect(Properties<String *> *profile, const char *key);
   void restoreStyles(Properties<String *> *profile);

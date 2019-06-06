@@ -1885,7 +1885,7 @@ void HelpWidget::compile() {
   int fontSize = (int)labelsize();
   int taglen = 0;
   int textlen = 0;
-  uint8_t padlines = false;          // padding between line-breaks
+  bool padlines = false;          // padding between line-breaks
 
   strlib::Stack<TableNode *> tableStack(5);
   strlib::Stack<TrNode *> trStack(5);

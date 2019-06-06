@@ -23,6 +23,7 @@ const char *activeTabKey = "activeTab";
 const char *createBackupsKey = "createBackups";
 const char *lineNumbersKey = "lineNumbers";
 const char *appPositionKey = "appPosition";
+const char *themeIdKey = "themeId";
 
 // in BasicEditor.cxx
 extern Fl_Text_Display::Style_Table_Entry styletable[];
@@ -30,15 +31,14 @@ extern Fl_Text_Display::Style_Table_Entry styletable[];
 //
 // Profile constructor
 //
-Profile::Profile() : 
-  _color(FL_WHITE),
+Profile::Profile() :
   _font(FL_COURIER),
   _appPosition(0, 0, 640, 480),
-  _fontSize(12),
-  _indentLevel(2),
+  _loaded(false),
   _createBackups(true),
   _lineNumbers(true),
-  _loaded(false) {
+  _fontSize(12),
+  _indentLevel(2) {
   setTheme(0);
 }
 
@@ -49,7 +49,7 @@ void Profile::loadConfig(EditorWidget *editWidget) {
   editWidget->setIndentLevel(_indentLevel);
   editWidget->setFont(_font);
   editWidget->setFontSize(_fontSize);
-  editWidget->setThemeColor(&_theme);
+  editWidget->setTheme(&_theme);
   editWidget->getEditor()->linenumber_width(_lineNumbers ? LINE_NUMBER_WIDTH : 1);
 }
 
@@ -59,12 +59,11 @@ void Profile::loadConfig(EditorWidget *editWidget) {
 void Profile::restore(MainWindow *wnd) {
   strlib::String buffer;
   Properties<String *> profile;
-  long len;
 
   FILE *fp = wnd->openConfig(configFile, "r");
   if (fp) {
     fseek(fp, 0, SEEK_END);
-    len = ftell(fp);
+    long len = ftell(fp);
     rewind(fp);
     buffer.append(fp, len);
     fclose(fp);
@@ -73,6 +72,7 @@ void Profile::restore(MainWindow *wnd) {
     restoreValue(&profile, indentLevelKey, &_indentLevel);
     restoreValue(&profile, createBackupsKey, &_createBackups);
     restoreValue(&profile, lineNumbersKey, &_lineNumbers);
+    restoreValue(&profile, themeIdKey, &_themeId);
     restoreStyles(&profile);
 
     Fl_Rect rc;
@@ -103,10 +103,11 @@ void Profile::restoreAppPosition(Fl_Window *wnd) {
 }
 
 //
-// set editor foreground and background colors
+// set editor theme colors
 //
-void Profile::setEditorColor(EditorWidget *editWidget) {
-  editWidget->setThemeColor(&_theme);
+void Profile::setTheme(EditorWidget *editWidget) {
+  editWidget->setTheme(&_theme);
+  editWidget->redraw();
 }
 
 //
@@ -114,10 +115,10 @@ void Profile::setEditorColor(EditorWidget *editWidget) {
 //
 void Profile::setTheme(int themeId) {
   _theme.setId(themeId);
-  _color = get_color(_theme._background);
+  _themeId = themeId;
   styletable[0].color = get_color(_theme._color); // A - plain
   styletable[1].color = get_color(_theme._syntax_comments); // B - comments
-  styletable[2].color = get_color(_theme._syntax_text); // C - string 
+  styletable[2].color = get_color(_theme._syntax_text); // C - string
   styletable[3].color = get_color(_theme._syntax_statement); // D - keywords
   styletable[4].color = get_color(_theme._syntax_command); // E - functions
   styletable[5].color = get_color(_theme._syntax_command); // F - procedures
@@ -125,6 +126,7 @@ void Profile::setTheme(int themeId) {
   styletable[7].color = get_color(_theme._syntax_comments); // H - comments
   styletable[8].color = get_color(_theme._syntax_digit); // I - numbers
   styletable[9].color = get_color(_theme._syntax_command); // J - operators
+  styletable[10].color = get_color(_theme._background); // Background
 }
 
 //
@@ -138,6 +140,7 @@ void Profile::save(MainWindow *wnd) {
       saveValue(fp, indentLevelKey, _indentLevel);
       saveValue(fp, createBackupsKey, _createBackups);
       saveValue(fp, lineNumbersKey, _lineNumbers);
+      saveValue(fp, themeIdKey, _themeId);
       saveStyles(fp);
       saveTabs(fp, wnd);
       saveRect(fp, appPositionKey, &_appPosition);
@@ -149,11 +152,28 @@ void Profile::save(MainWindow *wnd) {
 }
 
 //
+// update the theme from the style table
+//
+void Profile::updateTheme() {
+  _theme._color = styletable[0].color >> 8;
+  _theme._syntax_comments = styletable[1].color >> 8;
+  _theme._syntax_text = styletable[2].color >> 8;
+  _theme._syntax_statement = styletable[3].color >> 8;
+  _theme._syntax_command = styletable[4].color >> 8;
+  _theme._syntax_command = styletable[5].color >> 8;
+  _theme._match_background = styletable[6].color >> 8;
+  _theme._syntax_comments = styletable[7].color >> 8;
+  _theme._syntax_digit = styletable[8].color >> 8;
+  _theme._syntax_command = styletable[9].color >> 8;
+  _theme._background = styletable[10].color >> 8;
+}
+
+//
 // returns the next integer from the given string
 //
 int Profile::nextInteger(const char *s, int len, int &index) {
   int result = 0;
-  while (isdigit(s[index]) && index < len) {
+  while (index < len && isdigit(s[index])) {
     result = (result * 10) + (s[index] - '0');
     index++;
   }
@@ -187,6 +207,7 @@ Fl_Rect Profile::restoreRect(Properties<String *> *profile, const char *key) {
 //
 void Profile::restoreStyles(Properties<String *> *profile) {
   // restore size and face
+  setTheme(_themeId);
   restoreValue(profile, fontSizeKey, &_fontSize);
   String *fontName = profile->get(fontNameKey);
   if (fontName) {
@@ -200,10 +221,9 @@ void Profile::restoreStyles(Properties<String *> *profile) {
     if (color) {
       Fl_Color c = get_color(color->c_str(), NO_COLOR);
       if (c != (Fl_Color)NO_COLOR) {
+        styletable[i].color = c;
         if (i == st_background) {
-          this->_color = c;
-        } else {
-          styletable[i].color = c;
+          _theme._background = c >> 8;
         }
       }
     }
@@ -306,7 +326,7 @@ void Profile::saveStyles(FILE *fp) {
   saveValue(fp, fontNameKey, styletable[0].font);
 
   for (int i = 0; i <= st_background; i++) {
-    Fl::get_color(i == st_background ? _color : styletable[i].color, r, g, b);
+    Fl::get_color(styletable[i].color, r, g, b);
     fprintf(fp, "%02d=#%02x%02x%02x\n", i, r, g, b);
   }
 }

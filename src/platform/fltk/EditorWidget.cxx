@@ -184,8 +184,6 @@ EditorWidget::EditorWidget(Fl_Widget *rect, Fl_Menu_Bar *menuBar) :
   // setup defaults or restore settings
   if (wnd && wnd->_profile) {
     wnd->_profile->loadConfig(this);
-  } else {
-    setEditorColor(FL_WHITE, true);
   }
   take_focus();
 }
@@ -576,21 +574,17 @@ void EditorWidget::select_all(Fl_Widget *w, void *eventData) {
  * set colour menu command handler
  */
 void EditorWidget::set_color(Fl_Widget *w, void *eventData) {
-  StyleField styleField = (StyleField) (intptr_t) eventData;
-  if (styleField == st_background || styleField == st_background_def) {
-    uint8_t r, g, b;
-    Fl::get_color(_editor->color(), r, g, b);
-    if (fl_color_chooser(w->label(), r, g, b)) {
-      Fl_Color c = fl_rgb_color(r, g, b);
-      setEditorColor(c, styleField == st_background_def);
-      _editor->styleChanged();
-    }
-    _editor->take_focus();
-  } else {
-    setColor(w->label(), styleField);
+  StyleField field = (StyleField)(intptr_t)eventData;
+  uint8_t r, g, b;
+  Fl::get_color(styletable[field].color, r, g, b);
+  if (fl_color_chooser(w->label(), r, g, b)) {
+    styletable[field].color = fl_rgb_color(r, g, b);
+    _editor->styleChanged();
+    wnd->_profile->updateTheme();
+    wnd->_profile->setTheme(this);
+    wnd->updateConfig(this);
+    wnd->show();
   }
-  wnd->updateConfig(this);
-  wnd->show();
 }
 
 /**
@@ -670,7 +664,7 @@ void EditorWidget::doSaveFile(const char *newfile) {
   char basfile[PATH_MAX];
   Fl_Text_Buffer *textbuf = _editor->_textbuf;
 
-  if (wnd->_profile->_createBackups && access(newfile, 0) == 0) {
+  if (wnd->_profile->createBackups() && access(newfile, 0) == 0) {
     // rename any existing file as a backup
     strcpy(basfile, newfile);
     strcat(basfile, "~");
@@ -695,7 +689,7 @@ void EditorWidget::doSaveFile(const char *newfile) {
   wnd->showEditTab(this);
 
   // store a copy in lastedit.bas
-  if (wnd->_profile->_createBackups) {
+  if (wnd->_profile->createBackups()) {
     getHomeDir(basfile, sizeof(basfile));
     strlcat(basfile, "lastedit.bas", sizeof(basfile));
     textbuf->savefile(basfile);
@@ -1007,46 +1001,16 @@ void EditorWidget::saveSelection(const char *path) {
 /**
  * Sets the editor and editor toolbar color from the selected theme
  */
-void EditorWidget::setThemeColor(EditTheme *theme) {
+void EditorWidget::setTheme(EditTheme *theme) {
   _editor->color(get_color(theme->_background));
   _editor->linenumber_bgcolor(get_color(theme->_background));
   _editor->linenumber_fgcolor(get_color(theme->_number_color));
-  _funcList->color(fl_color_average(get_color(theme->_background),
-                                    get_color(theme->_color), .80f));
-  _funcList->item_labelfgcolor(get_color(theme->_color));
-  _tty->color(fl_color_average(get_color(theme->_background),
-                                    get_color(theme->_color), .50f));
-  _tty->labelcolor(get_color(theme->_background));
+  _editor->cursor_color(get_color(theme->_cursor_color));
+  _funcList->color(fl_color_average(get_color(theme->_background), get_color(theme->_color), .80f));
+  _funcList->item_labelfgcolor(FL_WHITE);
+  _tty->color(fl_color_average(get_color(theme->_background), get_color(BROWN), .50f));
+  _tty->labelcolor(fl_contrast(_tty->color(), get_color(theme->_background)));
   _tty->selection_color(_editor->selection_color());
-}
-
-/**
- * Sets the editor and editor toolbar color
- */
-void EditorWidget::setEditorColor(Fl_Color c, bool defColor) {
-  if (wnd && wnd->_profile) {
-    wnd->_profile->_color = c;
-  }
-  _editor->color(c);
-
-  Fl_Color bg = _editor->linenumber_bgcolor();
-  Fl_Color fg = fl_contrast(c, bg);
-
-  // set the colours on the command text bar
-  for (int i = _commandText->parent()->children(); i > 0; i--) {
-    Fl_Widget *child = _commandText->parent()->child(i - 1);
-    setWidgetColor(child, bg, fg);
-  }
-
-  // set the colours on the function list
-  setWidgetColor(_funcList, bg, fg);
-
-  if (defColor) {
-    // contrast the default colours against the background
-    for (int i = 0; i < st_background; i++) {
-      styletable[i].color = fl_contrast(defaultColor[i], c);
-    }
-  }
 }
 
 /**
@@ -1056,7 +1020,7 @@ void EditorWidget::setFont(Fl_Font font) {
   if (font) {
     _editor->setFont(font);
     _tty->setFont(font);
-    wnd->_profile->_font = font;
+    wnd->_profile->setFont(font);
   }
 }
 
@@ -1066,7 +1030,7 @@ void EditorWidget::setFont(Fl_Font font) {
 void EditorWidget::setFontSize(int size) {
   _editor->setFontSize(size);
   _tty->setFontSize(size);
-  wnd->_profile->_fontSize = size;
+  wnd->_profile->setFontSize(size);
 }
 
 /**
@@ -1117,7 +1081,7 @@ void EditorWidget::statusMsg(const char *msg) {
 void EditorWidget::updateConfig(EditorWidget *current) {
   setFont(current->_editor->getFont());
   setFontSize(current->_editor->getFontSize());
-  setEditorColor(current->_editor->color(), false);
+  wnd->_profile->setTheme(this);
 }
 
 //--Protected methods-----------------------------------------------------------
@@ -1452,19 +1416,6 @@ void EditorWidget::selectRowInBrowser(int row) {
 }
 
 /**
- * sets the current display colour
- */
-void EditorWidget::setColor(const char *label, StyleField field) {
-  uint8_t r, g, b;
-  Fl::get_color(styletable[field].color, r, g, b);
-  if (fl_color_chooser(label, r, g, b)) {
-    Fl_Color c = fl_rgb_color(r, g, b);
-    styletable[field].color = c;
-    _editor->styleChanged();
-  }
-}
-
-/**
  * sets the current command
  */
 void EditorWidget::setCommand(CommandOpt command) {
@@ -1509,15 +1460,6 @@ void EditorWidget::setModified(bool dirty) {
   _modStatus->when(dirty ? FL_WHEN_CHANGED : FL_WHEN_NEVER);
   _modStatus->label(dirty ? "MOD" : "@line");
   _modStatus->redraw();
-}
-
-/**
- * sets the foreground and background colors on the given widget
- */
-void EditorWidget::setWidgetColor(Fl_Widget *w, Fl_Color bg, Fl_Color fg) {
-  w->color(bg);
-  w->labelcolor(fg);
-  w->redraw();
 }
 
 /**
