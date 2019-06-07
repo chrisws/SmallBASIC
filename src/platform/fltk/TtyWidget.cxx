@@ -78,6 +78,8 @@ void TtyWidget::draw() {
   fl_color(color());
   fl_rectf(rc.x(), rc.y(), rc.w(), rc.h());
   fl_push_clip(rc.x(), rc.y(), rc.w(), rc.h());
+  fl_color(fl_color_average(labelcolor(), color(), .33f));
+  fl_rectf(rc.x(), rc.y(), rc.w(), 1);
   fl_color(labelcolor());
   fl_font(labelfont(), labelsize());
 

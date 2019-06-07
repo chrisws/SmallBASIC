@@ -110,8 +110,6 @@ EditorWidget::EditorWidget(Fl_Widget *rect, Fl_Menu_Bar *menuBar) :
   _funcList->add(scanLabel, scan);
 
   _tty = new TtyWidget(rect->x(), rect->y() + editHeight, rect->w(), ttyHeight, TTY_ROWS);
-  _tty->color(FL_DARK3);
-  _tty->labelcolor(FL_GREEN);
   tile->end();
 
   // editor status bar
@@ -454,9 +452,7 @@ void EditorWidget::func_list(Fl_Widget *w, void *eventData) {
     if (label) {
       _funcListEvent = true;
       if (strcmp(label, scanLabel) == 0) {
-        _funcList->clear();
-        createFuncList();
-        _funcList->add(scanLabel);
+        resetList();
       } else {
         gotoLine((int)(intptr_t)item->user_data());
         take_focus();
@@ -1006,11 +1002,12 @@ void EditorWidget::setTheme(EditTheme *theme) {
   _editor->linenumber_bgcolor(get_color(theme->_background));
   _editor->linenumber_fgcolor(get_color(theme->_number_color));
   _editor->cursor_color(get_color(theme->_cursor_color));
-  _funcList->color(fl_color_average(get_color(theme->_background), get_color(theme->_color), .80f));
-  _funcList->item_labelfgcolor(FL_WHITE);
-  _tty->color(fl_color_average(get_color(theme->_background), get_color(BROWN), .50f));
+  _funcList->color(fl_color_average(get_color(theme->_background), get_color(theme->_color), .75f));
+  _funcList->item_labelfgcolor(fl_contrast(_funcList->color(), _editor->color()));
+  _tty->color(_editor->color());
   _tty->labelcolor(fl_contrast(_tty->color(), get_color(theme->_background)));
   _tty->selection_color(_editor->selection_color());
+  resetList();
 }
 
 /**
@@ -1272,6 +1269,15 @@ void EditorWidget::handleFileChange() {
       _modifiedTime = 0;
     }
   }
+}
+
+/**
+ * reset the function list
+ */
+void EditorWidget::resetList() {
+  _funcList->clear();
+  createFuncList();
+  _funcList->add(scanLabel);
 }
 
 /**

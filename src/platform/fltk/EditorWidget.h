@@ -148,6 +148,7 @@ protected:
   void getKeywords(strlib::List<String *> &keywords);
   uint32_t getModifiedTime();
   void handleFileChange();
+  void resetList();
   void resize(int x, int y, int w, int h);
   void newFile();
   void reloadFile();
