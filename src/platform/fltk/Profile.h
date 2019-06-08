@@ -17,6 +17,7 @@ using namespace strlib;
 
 struct MainWindow;
 struct EditorWidget;
+class HelpWidget;
 
 struct Profile {
   Profile();
@@ -26,7 +27,8 @@ struct Profile {
   void restore(MainWindow *wnd);
   void restoreAppPosition(Fl_Window *wnd);
   void setAppPosition(Fl_Rect rect) { _appPosition = rect; }
-  void setTheme(EditorWidget *editor);
+  void setEditTheme(EditorWidget *editor);
+  void setHelpTheme(HelpWidget *help);
   void setFont(Fl_Font font) { _font = font; }
   void setFontSize(int size) { _fontSize = size; }
   void setTheme(int themeId);

@@ -177,7 +177,7 @@ EditorWidget::EditorWidget(Fl_Widget *rect, Fl_Menu_Bar *menuBar) :
   _lockBn->tooltip("Prevent log window auto-scrolling");
   _hideIdeBn->tooltip("Hide the editor while program is running");
   _gotoLineBn->tooltip("Position the cursor to the last program line after BREAK");
-  statusMsg("Ready");
+  statusMsg(SB_STR_VER);
 
   // setup defaults or restore settings
   if (wnd && wnd->_profile) {
@@ -577,7 +577,7 @@ void EditorWidget::set_color(Fl_Widget *w, void *eventData) {
     styletable[field].color = fl_rgb_color(r, g, b);
     _editor->styleChanged();
     wnd->_profile->updateTheme();
-    wnd->_profile->setTheme(this);
+    wnd->_profile->setEditTheme(this);
     wnd->updateConfig(this);
     wnd->show();
   }
@@ -1002,8 +1002,9 @@ void EditorWidget::setTheme(EditTheme *theme) {
   _editor->linenumber_bgcolor(get_color(theme->_background));
   _editor->linenumber_fgcolor(get_color(theme->_number_color));
   _editor->cursor_color(get_color(theme->_cursor_color));
-  _funcList->color(fl_color_average(get_color(theme->_background), get_color(theme->_color), .75f));
-  _funcList->item_labelfgcolor(fl_contrast(_funcList->color(), _editor->color()));
+  _editor->selection_color(get_color(theme->_selection_color));
+  _funcList->color(fl_color_average(get_color(theme->_background), get_color(theme->_color), .92f));
+  _funcList->item_labelfgcolor(get_color(theme->_color));
   _tty->color(_editor->color());
   _tty->labelcolor(fl_contrast(_tty->color(), get_color(theme->_background)));
   _tty->selection_color(_editor->selection_color());
@@ -1078,7 +1079,7 @@ void EditorWidget::statusMsg(const char *msg) {
 void EditorWidget::updateConfig(EditorWidget *current) {
   setFont(current->_editor->getFont());
   setFontSize(current->_editor->getFontSize());
-  wnd->_profile->setTheme(this);
+  wnd->_profile->setEditTheme(this);
 }
 
 //--Protected methods-----------------------------------------------------------

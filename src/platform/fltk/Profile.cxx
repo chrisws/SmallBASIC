@@ -105,9 +105,17 @@ void Profile::restoreAppPosition(Fl_Window *wnd) {
 //
 // set editor theme colors
 //
-void Profile::setTheme(EditorWidget *editWidget) {
+void Profile::setEditTheme(EditorWidget *editWidget) {
   editWidget->setTheme(&_theme);
   editWidget->redraw();
+}
+
+//
+// set help theme colors
+//
+void Profile::setHelpTheme(HelpWidget *helpWidget) {
+  helpWidget->setTheme(&_theme);
+  helpWidget->redraw();
 }
 
 //

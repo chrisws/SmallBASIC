@@ -451,11 +451,12 @@ void MainWindow::set_theme(Fl_Widget *w, void *eventData) {
     GroupWidgetEnum gw = getGroupWidget(child);
     switch (gw) {
     case gw_editor:
-      _profile->setTheme((EditorWidget *)child->child(0));
+      _profile->setEditTheme((EditorWidget *)child->child(0));
       break;
     case gw_output:
       break;
     case gw_help:
+      _profile->setHelpTheme((HelpWidget *)child->child(0));
       break;
     case gw_file:
       break;
@@ -1185,6 +1186,7 @@ HelpWidget *MainWindow::getHelp() {
     help = new HelpWidget(_out);
     help->callback(help_contents_anchor_cb);
     helpGroup->resizable(help);
+    _profile->setHelpTheme(help);
     _tabGroup->end();
   } else {
     help = (HelpWidget *)helpGroup->resizable();

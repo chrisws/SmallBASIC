@@ -18,6 +18,7 @@
 #include <FL/Fl_Group.H>
 #include <FL/Fl_Scrollbar.H>
 #include "ui/strlib.h"
+#include "ui/textedit.h"
 #include "platform/fltk/utils.h"
 
 #define ID_BUTTON   1
@@ -71,6 +72,7 @@ public:
   void getText(strlib::String *s);
   void getInputProperties(Properties<String *> *p);
   void setCookies(Properties<String *> *p) { cookies = p; }
+  void setTheme(EditTheme *theme);
   bool setInputValue(const char *assignment);
   void selectAll();
   void copySelection();

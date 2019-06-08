@@ -31,9 +31,10 @@
 
 #define FOREGROUND_COLOR fl_rgb_color(0x12, 0x12, 0x12)
 #define BACKGROUND_COLOR fl_rgb_color(192, 192, 192)
+#define SELECTION_COLOR fl_rgb_color(0x58, 0x6e, 0x75)
 #define ANCHOR_COLOR fl_rgb_color(0,0,128)
 #define BUTTON_COLOR fl_rgb_color(0,0,128)
-#define SELECTION_COLOR fl_rgb_color(0x58, 0x6e, 0x75)
+
 #define DEFAULT_INDENT 2
 #define LI_INDENT 18
 #define FONT_SIZE_H1 23
@@ -46,7 +47,6 @@
 #define IMG_TEXT_BORDER 25
 #define NO_COLOR 0
 
-extern "C" void trace(const char *format, ...);
 Fl_Color getColor(strlib::String *s, Fl_Color def);
 void lineBreak(const char *s, int slen, int width, int &stlen, int &pxlen);
 const char *skipWhite(const char *s);
@@ -1558,6 +1558,12 @@ void HelpWidget::init() {
   background = BACKGROUND_COLOR;
   foreground = FOREGROUND_COLOR;
   endSelection();
+}
+
+void HelpWidget::setTheme(EditTheme *theme) {
+  background = get_color(theme->_background);
+  foreground = get_color(theme->_color);
+  selection_color(get_color(theme->_selection_color));
 }
 
 void HelpWidget::endSelection() {
