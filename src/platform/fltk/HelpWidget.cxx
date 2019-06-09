@@ -1515,8 +1515,8 @@ static void anchor_callback(Fl_Widget *helpWidget, void *target) {
 
 HelpWidget::HelpWidget(Fl_Widget *rect, int defsize) :
   Fl_Group(rect->x(), rect->y(), rect->w(), rect->h()),
-  background(0),
-  foreground(0),
+  background(BACKGROUND_COLOR),
+  foreground(FOREGROUND_COLOR),
   scrollHeight(0),
   scrollWindowHeight(0),
   markX(0),
@@ -1555,8 +1555,6 @@ void HelpWidget::init() {
   scrollHeight = 0;
   scrollWindowHeight = 0;
   hscroll = 0;
-  background = BACKGROUND_COLOR;
-  foreground = FOREGROUND_COLOR;
   endSelection();
 }
 

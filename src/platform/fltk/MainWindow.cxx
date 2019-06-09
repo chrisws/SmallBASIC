@@ -453,12 +453,11 @@ void MainWindow::set_theme(Fl_Widget *w, void *eventData) {
     case gw_editor:
       _profile->setEditTheme((EditorWidget *)child->child(0));
       break;
-    case gw_output:
-      break;
     case gw_help:
+    case gw_file:
       _profile->setHelpTheme((HelpWidget *)child->child(0));
       break;
-    case gw_file:
+    case gw_output:
       break;
     }
   }
@@ -1296,12 +1295,23 @@ Fl_Group *MainWindow::selectTab(const char *label) {
 void MainWindow::updateConfig(EditorWidget *current) {
   int n = _tabGroup->children();
   for (int c = 0; c < n; c++) {
-    Fl_Group *group = (Fl_Group *)_tabGroup->child(c);
-    if (gw_editor == getGroupWidget(group)) {
-      EditorWidget *editWidget = (EditorWidget *)group->child(0);
+    Fl_Group *child = (Fl_Group *)_tabGroup->child(c);
+    GroupWidgetEnum gw = getGroupWidget(child);
+    EditorWidget *editWidget;
+    switch (gw) {
+    case gw_editor:
+      editWidget = (EditorWidget *)child->child(0);
       if (editWidget != current) {
         editWidget->updateConfig(current);
+        _profile->setEditTheme(editWidget);
       }
+      break;
+    case gw_help:
+    case gw_file:
+      _profile->setHelpTheme((HelpWidget *)child->child(0));
+      break;
+    case gw_output:
+      break;
     }
   }
 }

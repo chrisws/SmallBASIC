@@ -1079,7 +1079,6 @@ void EditorWidget::statusMsg(const char *msg) {
 void EditorWidget::updateConfig(EditorWidget *current) {
   setFont(current->_editor->getFont());
   setFontSize(current->_editor->getFontSize());
-  wnd->_profile->setEditTheme(this);
 }
 
 //--Protected methods-----------------------------------------------------------
