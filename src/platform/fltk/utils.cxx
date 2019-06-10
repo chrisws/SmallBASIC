@@ -8,7 +8,9 @@
 
 #include <config.h>
 #include <sys/socket.h>
+#include <stdint.h>
 #include "lib/str.h"
+#include "ui/kwp.h"
 #include "utils.h"
 
 #define RX_BUFFER_SIZE 1024
@@ -108,6 +110,19 @@ void getHomeDir(char *fileName, size_t size, bool appendSlash) {
   }
 }
 
+const char *getNodeId(const char *selection) {
+  const char *result = NULL;
+  int len = selection != NULL ? strlen(selection) : 0;
+  if (len > 0) {
+    for (int i = 0; i < keyword_help_len && !result; i++) {
+      if (strcasecmp(selection, keyword_help[i].keyword) == 0) {
+        result = keyword_help[i].nodeId;
+      }
+    }
+  }
+  return result;
+}
+
 // copy the url into the local cache
 bool cacheLink(dev_file_t *df, char *localFile, size_t size) {
   char rxbuff[RX_BUFFER_SIZE];
@@ -120,12 +135,12 @@ bool cacheLink(dev_file_t *df, char *localFile, size_t size) {
   bool httpOK = false;
 
   getHomeDir(localFile, size, true);
-  strcat(localFile, "/cache/");
+  strlcat(localFile, "cache/", size);
   makedir(localFile);
 
   // create host name component
   strncat(localFile, url + 7, pathBegin - url - 7);
-  strcat(localFile, "/");
+  strlcat(localFile, "/", size);
   makedir(localFile);
 
   if (pathBegin != 0 && pathBegin < pathEnd) {
@@ -141,9 +156,9 @@ bool cacheLink(dev_file_t *df, char *localFile, size_t size) {
     while (pathBegin < pathEnd && ++level < 20);
   }
   if (pathEnd == 0 || pathEnd[1] == 0 || pathEnd[1] == '?') {
-    strcat(localFile, "index.html");
+    strlcat(localFile, "index.html", size);
   } else {
-    strcat(localFile, pathEnd + 1);
+    strlcat(localFile, pathEnd + 1, size);
   }
 
   fp = fopen(localFile, "wb");

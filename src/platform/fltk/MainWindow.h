@@ -72,9 +72,8 @@ struct MainWindow : public BaseWindow {
   bool isModal();               // whether a modal gui loop is active
   void addPlugin(Fl_Menu_Bar *menu, const char *label, const char *filename);
   void busyMessage();
-  bool execHelp();
-  void execLink(strlib::String &file);
   int  handle(int e);
+  void loadHelp(const char *path);
   void loadIcon();
   void pathMessage(const char *file);
   void resize(int x, int y, int w, int h);
@@ -86,7 +85,6 @@ struct MainWindow : public BaseWindow {
   void setModal(bool modal);
   void setTitle(Fl_Window *widget, const char *filename);
   void showEditTab(EditorWidget *editWidget);
-  void showHelpPage();
   void statusMsg(RunMessage runMessage, const char *filename);
   void updateConfig(EditorWidget *current);
   void updateEditTabName(EditorWidget *editWidget);

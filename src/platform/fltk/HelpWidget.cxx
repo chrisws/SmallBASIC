@@ -32,8 +32,8 @@
 #define FOREGROUND_COLOR fl_rgb_color(0x12, 0x12, 0x12)
 #define BACKGROUND_COLOR fl_rgb_color(192, 192, 192)
 #define SELECTION_COLOR fl_rgb_color(0x58, 0x6e, 0x75)
-#define ANCHOR_COLOR fl_rgb_color(0,0,128)
-#define BUTTON_COLOR fl_rgb_color(0,0,128)
+#define ANCHOR_COLOR fl_rgb_color(0,0,255)
+#define BUTTON_COLOR fl_rgb_color(0,0,255)
 
 #define DEFAULT_INDENT 2
 #define LI_INDENT 18

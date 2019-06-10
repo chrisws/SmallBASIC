@@ -11,6 +11,7 @@
 
 #include <FL/Fl_Text_Editor.H>
 #include "ui/strlib.h"
+#include <limits.h>
 
 bool isvar(int c);
 

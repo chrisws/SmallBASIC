@@ -300,54 +300,14 @@ void MainWindow::help_home(Fl_Widget *w, void *eventData) {
 }
 
 /**
- * display the results of help.bas
- */
-void MainWindow::showHelpPage() {
-  HelpWidget *help = getHelp();
-  char path[PATH_MAX];
-  getHomeDir(path, sizeof(path));
-  help->setDocHome(path);
-  strcat(path, "help.html");
-  help->loadFile(path);
-}
-
-/**
- * when opt_command is a URL, opens the URL in a browser window
- * otherwise runs help.bas with opt_command as the program argument
- */
-bool MainWindow::execHelp() {
-  bool result = true;
-  char path[PATH_MAX];
-  if (strncmp(opt_command, "http://", 7) == 0) {
-    // launch in real browser
-    browseFile(opt_command);
-    result = false;
-  } else {
-    snprintf(path, sizeof(path), "%s/%s/help.bas", packageHome, pluginHome);
-    basicMain(getEditor(), path, true);
-  }
-  return result;
-}
-
-/**
  * handle click from within help window
  */
-void do_help_contents_anchor(void *){
-  Fl::remove_check(do_help_contents_anchor);
-  strlib::String eventName = wnd->getHelp()->getEventName();
-  if (access(eventName, R_OK) == 0) {
-    wnd->editFile(eventName);
-  } else {
-    strcpy(opt_command, eventName);
-    if (wnd->execHelp()) {
-      wnd->showHelpPage();
-    }
-  }
-}
-
 void MainWindow::help_contents_anchor(Fl_Widget *w, void *eventData) {
   if (runMode == edit_state) {
-    Fl::add_check(do_help_contents_anchor);
+    String eventName = wnd->getHelp()->getEventName();
+    char path[PATH_MAX];
+    sprintf(path, "http://smallbasic.github.io%s", eventName.c_str());
+    loadHelp(path);
   }
 }
 
@@ -355,24 +315,20 @@ void MainWindow::help_contents_anchor(Fl_Widget *w, void *eventData) {
  * handle f1 context help
  */
 void MainWindow::help_contents(Fl_Widget *w, void *eventData) {
-  bool showHelp = true;
   if (runMode == edit_state) {
     EditorWidget *editWidget = getEditor();
     if (editWidget && Fl::event_key() != 0) {
       // scan for help context
       int start, end;
       char *selection = editWidget->getSelection(&start, &end);
-      strcpy(opt_command, selection);
+      const char *nodeId = getNodeId(selection);
+      if (nodeId != NULL && nodeId[0] != '0') {
+        char path[PATH_MAX];
+        sprintf(path, "http://smallbasic.github.io/reference/%s.html", nodeId);
+        loadHelp(path);
+      }
       free((void *)selection);
-    } else {
-      opt_command[0] = 0;
     }
-
-    showHelp = execHelp();
-  }
-
-  if (!eventData && showHelp) {
-    showHelpPage();
   }
 }
 
@@ -380,7 +336,7 @@ void MainWindow::help_contents(Fl_Widget *w, void *eventData) {
  * displays the program help page in a browser window
  */
 void MainWindow::help_app(Fl_Widget *w, void *eventData) {
-  browseFile("https://smallbasic.github.io/pages/reference.html");
+  loadHelp("https://smallbasic.github.io/pages/reference.html");
 }
 
 void MainWindow::help_about(Fl_Widget *w, void *eventData) {
@@ -1451,104 +1407,6 @@ bool MainWindow::logPrint() {
   return (_runEditWidget && _runEditWidget->getTty() && _runEditWidget->isLogPrint());
 }
 
-void MainWindow::execLink(strlib::String &link) {
-  if (!link.length()) {
-    return;
-  }
-
-  char *file = (char *)link.c_str();
-  EditorWidget *editWidget = getEditor(true);
-  _siteHome.clear();
-  bool execFile = false;
-  if (file[0] == '!' || file[0] == '|') {
-    execFile = true;            // exec flag passed with name
-    file++;
-  }
-  // execute a link from the html window
-  if (0 == strncasecmp(file, "http://", 7)) {
-    char localFile[PATH_MAX];
-    char path[PATH_MAX];
-    dev_file_t df;
-
-    memset(&df, 0, sizeof(dev_file_t));
-    strcpy(df.name, file);
-    if (http_open(&df) == 0) {
-      snprintf(localFile, sizeof(localFile), "Failed to open URL: %s", file);
-      statusMsg(rs_ready, localFile);
-      return;
-    }
-
-    bool httpOK = cacheLink(&df, localFile, sizeof(localFile));
-    char *extn = strrchr(file, '.');
-    if (!editWidget) {
-      editWidget = getEditor(createEditor(file));
-    }
-
-    if (httpOK && extn && 0 == strncasecmp(extn, ".bas", 4)) {
-      // run the remote program
-      editWidget->loadFile(localFile);
-      basicMain(editWidget, localFile, false);
-    } else {
-      // display as html
-      int len = strlen(localFile);
-      if (strcasecmp(localFile + len - 4, ".gif") == 0 ||
-          strcasecmp(localFile + len - 4, ".jpeg") == 0 ||
-          strcasecmp(localFile + len - 4, ".jpg") == 0) {
-        snprintf(path, sizeof(path), "<img src=%s>", localFile);
-      } else {
-        snprintf(path, sizeof(path), "file:%s", localFile);
-      }
-      _siteHome.append(df.name, df.drv_dw[1]);
-      statusMsg(rs_ready, _siteHome.c_str());
-    }
-    return;
-  }
-
-  char *colon = strrchr(file, ':');
-  if (colon && colon - 1 != file) {
-    file = colon + 1;           // clean 'file:' but not 'c:'
-  }
-
-  char *extn = strrchr(file, '.');
-  if (extn && (0 == strncasecmp(extn, ".bas ", 5) ||
-               0 == strncasecmp(extn, ".sbx ", 5))) {
-    strcpy(opt_command, extn + 5);
-    extn[4] = 0;                // make args available to bas program
-  }
-  // if the extension is .sbx and this does not exists or is older
-  // than the matching .bas then rename to .bas and set opt_nosave
-  // to false - otherwise set execFile flag to true
-  if (extn && 0 == strncasecmp(extn, ".sbx", 4)) {
-    struct stat st_sbx;
-    struct stat st_bas;
-    bool sbxExists = (stat(file, &st_sbx) == 0);
-    strcpy(extn + 1, "bas");    // remains .bas unless sbx valid
-    opt_nosave = 0;             // create/use sbx files
-    if (sbxExists) {
-      if (stat(file, &st_bas) == 0 && st_sbx.st_mtime > st_bas.st_mtime) {
-        strcpy(extn + 1, "sbx");
-        // sbx exists and is newer than .bas
-        execFile = true;
-      }
-    }
-  }
-  if (access(file, 0) == 0) {
-    statusMsg(rs_ready, file);
-    if (execFile) {
-      basicMain(0, file, false);
-      opt_nosave = 1;
-    } else {
-      if (!editWidget) {
-        editWidget = getEditor(createEditor(file));
-      }
-      editWidget->loadFile(file);
-      showEditTab(editWidget);
-    }
-  } else {
-    pathMessage(file);
-  }
-}
-
 int MainWindow::handle(int e) {
   int result;
   if (getSelectedTab() == _outputGroup && _system->handle(e)) {
@@ -1557,6 +1415,20 @@ int MainWindow::handle(int e) {
     result = BaseWindow::handle(e);
   }
   return result;
+}
+
+void MainWindow::loadHelp(const char *path) {
+  char localFile[PATH_MAX];
+  dev_file_t df;
+
+  memset(&df, 0, sizeof(dev_file_t));
+  strcpy(df.name, path);
+  if (http_open(&df) && cacheLink(&df, localFile, sizeof(localFile))) {
+    getHelp()->loadFile(localFile);
+  } else if (getEditor() != NULL) {
+    snprintf(localFile, sizeof(localFile), "Failed to open URL: %s", df.name);
+    getEditor()->statusMsg(localFile);
+  }
 }
 
 /**
