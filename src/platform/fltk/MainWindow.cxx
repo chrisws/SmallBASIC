@@ -324,7 +324,7 @@ void MainWindow::help_contents(Fl_Widget *w, void *eventData) {
       const char *nodeId = getNodeId(selection);
       if (nodeId != NULL && nodeId[0] != '0') {
         char path[PATH_MAX];
-        sprintf(path, "http://smallbasic.github.io/reference/%s.html", nodeId);
+        sprintf(path, "http://smallbasic.github.io/reference/ide/%s.html", nodeId);
         loadHelp(path);
       }
       free((void *)selection);
@@ -336,7 +336,7 @@ void MainWindow::help_contents(Fl_Widget *w, void *eventData) {
  * displays the program help page in a browser window
  */
 void MainWindow::help_app(Fl_Widget *w, void *eventData) {
-  loadHelp("https://smallbasic.github.io/pages/reference.html");
+  loadHelp("http://smallbasic.github.io/pages/reference.html");
 }
 
 void MainWindow::help_about(Fl_Widget *w, void *eventData) {
@@ -680,25 +680,23 @@ void MainWindow::scanRecentFiles(Fl_Menu_Bar *menu) {
  * scan for optional plugins
  */
 void MainWindow::scanPlugIns(Fl_Menu_Bar *menu) {
-  FILE *file;
   char buffer[PATH_MAX];
   char path[PATH_MAX];
   char label[1024];
-  DIR *dp;
-  struct dirent *e;
 
   snprintf(path, sizeof(path), "%s/%s", packageHome, pluginHome);
-  dp = opendir(path);
+  DIR *dp = opendir(path);
   while (dp != NULL) {
-    e = readdir(dp);
+    struct dirent *e = readdir(dp);
     if (e == NULL) {
       break;
     }
     const char *filename = e->d_name;
     int len = strlen(filename);
+
     if (strcasecmp(filename + len - 4, ".bas") == 0) {
       snprintf(path, sizeof(path), "%s/%s/%s", packageHome, pluginHome, filename);
-      file = fopen(path, "r");
+      FILE *file = fopen(path, "r");
       if (!file) {
         continue;
       }
@@ -725,14 +723,15 @@ void MainWindow::scanPlugIns(Fl_Menu_Bar *menu) {
         snprintf(label, sizeof(label), (editorTool ? "&Edit/Basic/%s" : "&Basic/%s"), buffer + offs);
         // use an absolute path
         snprintf(path, sizeof(path), "%s/%s", pluginHome, filename);
-        menu->add(label, 0, (Fl_Callback *)
-                  (editorTool ? editor_plugin_cb : tool_plugin_cb), strdup(path));
+        menu->add(label, 0, (Fl_Callback *)(editorTool ? editor_plugin_cb : tool_plugin_cb), strdup(path));
       }
       fclose(file);
     }
   }
   // cleanup
-  closedir(dp);
+  if (dp) {
+    closedir(dp);
+  }
 }
 
 /**

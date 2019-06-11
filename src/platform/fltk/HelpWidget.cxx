@@ -2152,6 +2152,9 @@ void HelpWidget::compile() {
           padlines = false;
         } else if (0 == strncasecmp(tag, "title", 5)) {
           tagPair = text = skipWhite(tagEnd + 1);
+        } else if (0 == strncasecmp(tag, "blockquote", 10)) {
+          node = new FontNode(FL_COURIER, fontSize, 0, false, false);
+          nodeList.add(node);
         } else if (0 == strncasecmp(tag, "pre", 3)) {
           pre = true;
           node = new FontNode(FL_COURIER, fontSize, 0, bold, italic);
@@ -2233,7 +2236,7 @@ void HelpWidget::compile() {
           }
           node = new FontNode(font, fontSize, color, bold, italic);
           nodeList.add(node);
-        } else if (taglen == 2 && 0 == strncasecmp(tag, "h", 1)) {
+        } else if (taglen >= 2 && 0 == strncasecmp(tag, "h", 1)) {
           // H1-H6 from large to small
           int size = FONT_SIZE_H1 - ((tag[1] - '1') * 2);
           node = new FontNode(font, size, 0, ++bold, italic);
