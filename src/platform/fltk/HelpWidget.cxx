@@ -31,11 +31,12 @@
 
 #define FOREGROUND_COLOR fl_rgb_color(0x12, 0x12, 0x12)
 #define BACKGROUND_COLOR fl_rgb_color(192, 192, 192)
-#define SELECTION_COLOR fl_rgb_color(0x58, 0x6e, 0x75)
 #define ANCHOR_COLOR fl_rgb_color(0,0,255)
 #define BUTTON_COLOR fl_rgb_color(0,0,255)
 
-#define DEFAULT_INDENT 2
+#define DEFAULT_INDENT 8
+#define TABLE_PADDING 4
+#define CODE_PADDING 4
 #define LI_INDENT 18
 #define FONT_SIZE_H1 23
 #define CELL_SPACING 4
@@ -69,6 +70,7 @@ struct Display {
   Fl_Font font;
   Fl_Color color;
   Fl_Color background;
+  Fl_Color selectionColor;
   int16_t  x1, x2, y1, y2;
   uint16_t tabW, tabH;
   uint16_t lineHeight;
@@ -86,7 +88,8 @@ struct Display {
   uint8_t measure;
   uint8_t selected;
   uint8_t invertedSel;
-  uint8_t __padding[3];
+  uint8_t insideCode;
+  uint8_t __padding[2];
 
   void drawBackground(Fl_Rect &rc) {
     if (background != NO_COLOR) {
@@ -258,6 +261,84 @@ struct BaseNode {
   virtual void getText(strlib::String *s) {}
   virtual int getY() { return -1; }
 };
+
+//-- MeasureNode----------------------------------------------------------------
+
+struct MeasureNode : public BaseNode {
+  MeasureNode() : initX(0), initY(0) {}
+  int16_t initX, initY;
+};
+
+//--CodeNode--------------------------------------------------------------------
+
+struct CodeNode : public MeasureNode {
+  CodeNode(int fontSize) :
+    MeasureNode(),
+    _font(FL_COURIER),
+    _fontSize(fontSize),
+    _nodeId(0),
+    _yEnd(0) {
+  }
+  void display(Display *out);
+  void doEndBlock(Display *out);
+  Fl_Font _font;
+  uint16_t _fontSize;
+  uint16_t _nodeId;
+  int16_t _yEnd;
+};
+
+void CodeNode::display(Display *out) {
+  out->endImageFlow();
+  fl_font(_font, _fontSize);
+
+  if (out->exposed) {
+    // defer drawing in child nodes
+    out->measure = true;
+    initX = out->x1;
+    initY = out->y1;
+    _font = out->font;
+    _nodeId = out->nodeId;
+  } else if (!out->measure) {
+    int textHeight = fl_height() + fl_descent();
+    int xpos = initX;
+    int ypos = (initY - textHeight) + fl_descent() * 2;
+    int width = out->x2 - (DEFAULT_INDENT * 2);
+    int height = _yEnd - initY + textHeight - fl_descent();
+    fl_color(out->color);
+    fl_rectf(xpos, ypos, width, height);
+    fl_color(out->background);
+    fl_rect(xpos, ypos, width, height);
+  }
+
+  out->insideCode = true;
+  out->indent += CODE_PADDING;
+  out->x1 = out->indent;
+  out->y1 += CODE_PADDING;
+}
+
+void CodeNode::doEndBlock(Display *out) {
+  if (out->exposed) {
+    out->measure = false;
+    out->nodeId = _nodeId;
+    _yEnd = out->y1;
+  }
+}
+
+struct CodeEndNode : public BaseNode {
+  CodeEndNode(CodeNode *head) : _head(head) {}
+  void display(Display *out);
+  CodeNode *_head;
+};
+
+void CodeEndNode::display(Display *out) {
+  out->insideCode = false;
+  out->indent -= CODE_PADDING;
+  out->y1 += CODE_PADDING;
+  fl_color(out->color);
+  if (_head) {
+    _head->doEndBlock(out);
+  }
+}
 
 //--FontNode--------------------------------------------------------------------
 
@@ -448,7 +529,7 @@ struct LiNode : public BaseNode {
         sprintf(t, "%d.", ++ulNode->nextId);
         fl_draw(t, 2, x, out->y1);
       } else {
-        dotImage.draw(x, y, 5, 5);
+        dotImage.draw(x, y + fl_height() - fl_descent(), 5, 5);
         // draw messes with the current font - restore
         fl_font(out->font, out->fontSize);
       }
@@ -748,7 +829,7 @@ void TextNode::drawSelection(const char *s, uint16_t len, uint16_t width, Displa
     out->selection->append(s + selBegin, selEnd - selBegin);
   }
 
-  fl_color(SELECTION_COLOR);
+  fl_color(out->selectionColor);
   fl_rectf(rc.x(), rc.y(), rc.w(), rc.h());
   fl_color(out->color);
 }
@@ -878,6 +959,19 @@ struct HrNode : public BaseNode {
   }
 };
 
+//--ParagraphNode---------------------------------------------------------------
+
+struct ParagraphNode : public BaseNode {
+  ParagraphNode() : BaseNode() {}
+  void display(Display *out) {
+    if (out->imgY != -1) {
+      out->endImageFlow();
+    } else {
+      out->newRow(out->insideCode ? 1 : 2);
+    }
+  }
+};
+
 //--Table Support---------------------------------------------------------------
 
 struct TableNode;
@@ -916,7 +1010,7 @@ struct TdEndNode : public BaseNode {
   TdNode *td;
 };
 
-struct TableNode : public BaseNode {
+struct TableNode : public MeasureNode {
   TableNode(Attributes *a);
   ~TableNode();
   void display(Display *out);
@@ -932,7 +1026,6 @@ struct TableNode : public BaseNode {
   uint16_t nextRow;
   uint16_t width;
   uint16_t nodeId;
-  uint16_t initX, initY;            // start of table
   int16_t maxY;                     // end of table
   int16_t border;
 };
@@ -947,7 +1040,7 @@ struct TableEndNode : public BaseNode {
 //--TableNode-------------------------------------------------------------------
 
 TableNode::TableNode(Attributes *a) :
-  BaseNode(),
+  MeasureNode(),
   columns(0),
   sizes(0),
   rows(0),
@@ -1105,7 +1198,7 @@ void TrNode::display(Display *out) {
 
   if (out->content) {
     // move bottom of <tr> to next line
-    table->maxY += out->lineHeight + DEFAULT_INDENT;
+    table->maxY += out->lineHeight + TABLE_PADDING;
   }
   out->content = false;
   y1 = table->maxY;
@@ -1160,8 +1253,7 @@ void TdNode::display(Display *out) {
     table->setColWidth(&width);
   }
 
-  out->x1 = table->initX + DEFAULT_INDENT + (table->nextCol == 0 ? 0 : table->columns[table->nextCol - 1]);
-
+  out->x1 = table->initX + TABLE_PADDING + (table->nextCol == 0 ? 0 : table->columns[table->nextCol - 1]);
   out->y1 = tr->y1;             // top+left of next cell
 
   // adjust for colspan attribute
@@ -1742,10 +1834,11 @@ void HelpWidget::draw() {
   out.fontSize = (int)labelsize();
   out.color = foreground;
   out.background = background;
+  out.selectionColor = selection_color();
   out.y2 = h();
   out.indent = DEFAULT_INDENT + hscroll;
   out.x1 = x() + out.indent;
-  out.x2 = w() - (DEFAULT_INDENT + SCROLL_X) + hscroll;
+  out.x2 = w() - (DEFAULT_INDENT * 2) + hscroll;
   out.content = false;
   out.measure = false;
   out.exposed = exposed();
@@ -1756,6 +1849,8 @@ void HelpWidget::draw() {
   out.tabH = out.y2;
   out.selection = 0;
   out.selected = (markX != pointX || markY != pointY);
+  out.insideCode = false;
+
   if (Fl::event_clicks() == 1 && damage() == DAMAGE_HIGHLIGHT) {
     // double click
     out.selected = true;
@@ -1819,9 +1914,9 @@ void HelpWidget::draw() {
     p->display(&out);
     if (out.nodeId < id) {
       // perform second pass on previous outer table
-      TableNode *table = (TableNode *)nodeList[out.nodeId];
-      out.x1 = table->initX;
-      out.y1 = table->initY;
+      MeasureNode *node = (MeasureNode *)nodeList[out.nodeId];
+      out.x1 = node->initX;
+      out.y1 = node->initY;
       out.exposed = false;
       for (int j = out.nodeId; j <= id; j++) {
         p = nodeList[j];
@@ -1895,6 +1990,7 @@ void HelpWidget::compile() {
   strlib::Stack<TrNode *> trStack(5);
   strlib::Stack<TdNode *> tdStack(5);
   strlib::Stack<UlNode *> olStack(5);
+  strlib::Stack<CodeNode *> codeStack(5);
   strlib::List<String *> options(5);
   Attributes p(5);
   strlib::String *prop;
@@ -2050,7 +2146,7 @@ void HelpWidget::compile() {
       if (tag[0] == '/') {
         // process the end of tag
         tag++;
-        if (0 == strncasecmp(tag, "b", 1)) {
+        if (0 == strncasecmp(tag, "b>", 2)) {
           bold = false;
           node = new FontNode(font, fontSize, 0, bold, italic);
           nodeList.add(node);
@@ -2062,7 +2158,6 @@ void HelpWidget::compile() {
           center = false;
           nodeList.add(new StyleNode(uline, center));
         } else if (0 == strncasecmp(tag, "font", 4) ||
-                   0 == strncasecmp(tag, "code", 4) ||
                    0 == strncasecmp(tag, "h", 1)) {     // </h1>
           if (0 == strncasecmp(tag, "h", 1)) {
             if (bold > 0) {
@@ -2125,15 +2220,21 @@ void HelpWidget::compile() {
           title.clear();
           title.append(tagPair, tagBegin - tagPair);
           tagPair = 0;
+        } else if (0 == strncasecmp(tag, "code", 4)) {
+          node = new CodeEndNode((CodeNode *)codeStack.pop());
+          nodeList.add(node);
         } else if (0 == strncasecmp(tag, "script", 6) ||
                    0 == strncasecmp(tag, "style", 5)) {
           tagPair = 0;
         }
       } else if (isalpha(tag[0]) || tag[0] == '!') {
         // process the start of the tag
-        if (0 == strncasecmp(tag, "br", 2) ||
-            0 == strncasecmp(tag, "p>", 2)) {
+        if (0 == strncasecmp(tag, "br", 2)) {
           nodeList.add(new BrNode(pre));
+          padlines = false;
+          text = skipWhite(tagEnd + 1);
+        } else if (0 == strncasecmp(tag, "p>", 2)) {
+          nodeList.add(new ParagraphNode());
           padlines = false;
           text = skipWhite(tagEnd + 1);
         } else if (0 == strncasecmp(tag, "b>", 2)) {
@@ -2152,16 +2253,14 @@ void HelpWidget::compile() {
           padlines = false;
         } else if (0 == strncasecmp(tag, "title", 5)) {
           tagPair = text = skipWhite(tagEnd + 1);
-        } else if (0 == strncasecmp(tag, "blockquote", 10)) {
-          node = new FontNode(FL_COURIER, fontSize, 0, false, false);
-          nodeList.add(node);
         } else if (0 == strncasecmp(tag, "pre", 3)) {
           pre = true;
           node = new FontNode(FL_COURIER, fontSize, 0, bold, italic);
           nodeList.add(node);
           nodeList.add(new BrNode(pre));
         } else if (0 == strncasecmp(tag, "code", 4)) {
-          node = new FontNode(FL_COURIER, fontSize, 0, bold, italic);
+          node = new CodeNode(fontSize);
+          codeStack.push((CodeNode *)node);
           nodeList.add(node);
         } else if (0 == strncasecmp(tag, "td", 2)) {
           p.removeAll();
@@ -2302,6 +2401,7 @@ void HelpWidget::compile() {
   }
 
   // prevent nodes from being auto-deleted
+  codeStack.clear();
   olStack.clear();
   tdStack.clear();
   trStack.clear();
