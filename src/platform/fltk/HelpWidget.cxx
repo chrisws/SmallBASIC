@@ -304,7 +304,7 @@ void CodeNode::display(Display *out) {
     int ypos = (initY - textHeight) + fl_descent() * 2;
     int width = out->x2 - (DEFAULT_INDENT * 2);
     int height = _yEnd - initY + textHeight - fl_descent();
-    fl_color(out->color);
+    fl_color(fl_lighter(out->color));
     fl_rectf(xpos, ypos, width, height);
     fl_color(out->background);
     fl_rect(xpos, ypos, width, height);
@@ -966,8 +966,8 @@ struct ParagraphNode : public BaseNode {
   void display(Display *out) {
     if (out->imgY != -1) {
       out->endImageFlow();
-    } else {
-      out->newRow(out->insideCode ? 1 : 2);
+    } else if (!out->insideCode) {
+      out->newRow(2);
     }
   }
 };
@@ -2158,12 +2158,12 @@ void HelpWidget::compile() {
           center = false;
           nodeList.add(new StyleNode(uline, center));
         } else if (0 == strncasecmp(tag, "font", 4) ||
+                   0 == strncasecmp(tag, "blockquote", 10) ||
                    0 == strncasecmp(tag, "h", 1)) {     // </h1>
           if (0 == strncasecmp(tag, "h", 1)) {
             if (bold > 0) {
               bold--;
             }
-            nodeList.add(new BrNode(pre));
             padlines = false;
           }
           color = (0 == strncasecmp(tag, "f", 1) ? (Fl_Color) - 1 : 0);
@@ -2338,9 +2338,10 @@ void HelpWidget::compile() {
         } else if (taglen >= 2 && 0 == strncasecmp(tag, "h", 1)) {
           // H1-H6 from large to small
           int size = FONT_SIZE_H1 - ((tag[1] - '1') * 2);
-          node = new FontNode(font, size, 0, ++bold, italic);
-          nodeList.add(new BrNode(pre));
-          nodeList.add(node);
+          nodeList.add(new FontNode(font, size, 0, ++bold, italic));
+          padlines = false;
+        } else if (0 == strncasecmp(tag, "blockquote", 10)) {
+          nodeList.add(new FontNode(font, fontSize, 0, true, true));
           padlines = false;
         } else if (0 == strncasecmp(tag, "input ", 6)) {
           // check for quoted values including '>'
