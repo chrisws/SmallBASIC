@@ -24,6 +24,7 @@ const char *createBackupsKey = "createBackups";
 const char *lineNumbersKey = "lineNumbers";
 const char *appPositionKey = "appPosition";
 const char *themeIdKey = "themeId";
+const char *helpThemeIdKey = "helpThemeId";
 
 // in BasicEditor.cxx
 extern Fl_Text_Display::Style_Table_Entry styletable[];
@@ -38,8 +39,10 @@ Profile::Profile() :
   _createBackups(true),
   _lineNumbers(true),
   _fontSize(12),
-  _indentLevel(2) {
-  setTheme(0);
+  _indentLevel(2),
+  _helpThemeId(0) {
+  loadEditTheme(0);
+  _helpTheme.setId(_helpThemeId);
 }
 
 //
@@ -51,6 +54,25 @@ void Profile::loadConfig(EditorWidget *editWidget) {
   editWidget->setFontSize(_fontSize);
   editWidget->setTheme(&_theme);
   editWidget->getEditor()->linenumber_width(_lineNumbers ? LINE_NUMBER_WIDTH : 1);
+}
+
+//
+// select the given theme
+//
+void Profile::loadEditTheme(int themeId) {
+  _theme.setId(themeId);
+  _themeId = themeId;
+  styletable[0].color = get_color(_theme._color); // A - plain
+  styletable[1].color = get_color(_theme._syntax_comments); // B - comments
+  styletable[2].color = get_color(_theme._syntax_text); // C - string
+  styletable[3].color = get_color(_theme._syntax_statement); // D - keywords
+  styletable[4].color = get_color(_theme._syntax_command); // E - functions
+  styletable[5].color = get_color(_theme._syntax_command); // F - procedures
+  styletable[6].color = get_color(_theme._match_background); // G - find matches
+  styletable[7].color = get_color(_theme._syntax_comments); // H - comments
+  styletable[8].color = get_color(_theme._syntax_digit); // I - numbers
+  styletable[9].color = get_color(_theme._syntax_command); // J - operators
+  styletable[10].color = get_color(_theme._background); // Background
 }
 
 //
@@ -73,6 +95,7 @@ void Profile::restore(MainWindow *wnd) {
     restoreValue(&profile, createBackupsKey, &_createBackups);
     restoreValue(&profile, lineNumbersKey, &_lineNumbers);
     restoreValue(&profile, themeIdKey, &_themeId);
+    restoreValue(&profile, helpThemeIdKey, &_helpThemeId);
     restoreStyles(&profile);
 
     Fl_Rect rc;
@@ -113,28 +136,13 @@ void Profile::setEditTheme(EditorWidget *editWidget) {
 //
 // set help theme colors
 //
-void Profile::setHelpTheme(HelpWidget *helpWidget) {
-  helpWidget->setTheme(&_theme);
-  helpWidget->redraw();
-}
-
-//
-// select the given theme
-//
-void Profile::setTheme(int themeId) {
-  _theme.setId(themeId);
-  _themeId = themeId;
-  styletable[0].color = get_color(_theme._color); // A - plain
-  styletable[1].color = get_color(_theme._syntax_comments); // B - comments
-  styletable[2].color = get_color(_theme._syntax_text); // C - string
-  styletable[3].color = get_color(_theme._syntax_statement); // D - keywords
-  styletable[4].color = get_color(_theme._syntax_command); // E - functions
-  styletable[5].color = get_color(_theme._syntax_command); // F - procedures
-  styletable[6].color = get_color(_theme._match_background); // G - find matches
-  styletable[7].color = get_color(_theme._syntax_comments); // H - comments
-  styletable[8].color = get_color(_theme._syntax_digit); // I - numbers
-  styletable[9].color = get_color(_theme._syntax_command); // J - operators
-  styletable[10].color = get_color(_theme._background); // Background
+void Profile::setHelpTheme(HelpWidget *helpWidget, int themeId) {
+  if (themeId != -1) {
+    _helpTheme.setId(themeId);
+    _helpThemeId = themeId;
+  }
+  helpWidget->setTheme(&_helpTheme);
+  helpWidget->damage(FL_DAMAGE_ALL);
 }
 
 //
@@ -149,6 +157,7 @@ void Profile::save(MainWindow *wnd) {
       saveValue(fp, createBackupsKey, _createBackups);
       saveValue(fp, lineNumbersKey, _lineNumbers);
       saveValue(fp, themeIdKey, _themeId);
+      saveValue(fp, helpThemeIdKey, _helpThemeId);
       saveStyles(fp);
       saveTabs(fp, wnd);
       saveRect(fp, appPositionKey, &_appPosition);
@@ -215,7 +224,9 @@ Fl_Rect Profile::restoreRect(Properties<String *> *profile, const char *key) {
 //
 void Profile::restoreStyles(Properties<String *> *profile) {
   // restore size and face
-  setTheme(_themeId);
+  loadEditTheme(_themeId);
+  _helpTheme.setId(_helpThemeId);
+
   restoreValue(profile, fontSizeKey, &_fontSize);
   String *fontName = profile->get(fontNameKey);
   if (fontName) {

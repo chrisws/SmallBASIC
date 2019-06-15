@@ -401,19 +401,24 @@ void MainWindow::set_options(Fl_Widget *w, void *eventData) {
 }
 
 void MainWindow::set_theme(Fl_Widget *w, void *eventData) {
-  _profile->setTheme(((intptr_t) eventData));
-  for (int c = 0; c < _tabGroup->children(); c++) {
-    Fl_Group *child = (Fl_Group *)_tabGroup->child(c);
-    GroupWidgetEnum gw = getGroupWidget(child);
+  Fl_Group *group = getSelectedTab();
+  if (group && group != _outputGroup) {
+    GroupWidgetEnum gw = getGroupWidget(group);
     switch (gw) {
     case gw_editor:
-      _profile->setEditTheme((EditorWidget *)child->child(0));
+      // change all editors
+      _profile->loadEditTheme(((intptr_t) eventData));
+      for (int c = 0; c < _tabGroup->children(); c++) {
+        Fl_Group *child = (Fl_Group *)_tabGroup->child(c);
+        if (getGroupWidget(child) == gw_editor) {
+          _profile->setEditTheme((EditorWidget *)child->child(0));
+        }
+      }
       break;
     case gw_help:
-    case gw_file:
-      _profile->setHelpTheme((HelpWidget *)child->child(0));
+      _profile->setHelpTheme((HelpWidget *)group->child(0), ((intptr_t) eventData));
       break;
-    case gw_output:
+    default:
       break;
     }
   }
@@ -1251,22 +1256,12 @@ void MainWindow::updateConfig(EditorWidget *current) {
   int n = _tabGroup->children();
   for (int c = 0; c < n; c++) {
     Fl_Group *child = (Fl_Group *)_tabGroup->child(c);
-    GroupWidgetEnum gw = getGroupWidget(child);
-    EditorWidget *editWidget;
-    switch (gw) {
-    case gw_editor:
-      editWidget = (EditorWidget *)child->child(0);
+    if (getGroupWidget(child) == gw_editor) {
+      EditorWidget *editWidget = (EditorWidget *)child->child(0);
       if (editWidget != current) {
         editWidget->updateConfig(current);
         _profile->setEditTheme(editWidget);
       }
-      break;
-    case gw_help:
-    case gw_file:
-      _profile->setHelpTheme((HelpWidget *)child->child(0));
-      break;
-    case gw_output:
-      break;
     }
   }
 }

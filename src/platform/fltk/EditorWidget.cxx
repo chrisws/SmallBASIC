@@ -95,7 +95,7 @@ EditorWidget::EditorWidget(Fl_Widget *rect, Fl_Menu_Bar *menuBar) :
   _editor->wrap_mode(true, 0);
   _editor->selection_color(fl_rgb_color(190, 189, 188));
   _editor->_textbuf->add_modify_callback(changed_cb, this);
-  _editor->box(FL_NO_BOX);
+  _editor->box(FL_FLAT_BOX);
   _editor->take_focus();
 
   // sub-func jump droplist

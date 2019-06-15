@@ -277,17 +277,22 @@ struct CodeNode : public MeasureNode {
     _font(FL_COURIER),
     _fontSize(fontSize),
     _nodeId(0),
-    _yEnd(0) {
+    _xEnd(0),
+    _yEnd(0),
+    _sameLine(false) {
   }
   void display(Display *out);
   void doEndBlock(Display *out);
   Fl_Font _font;
   uint16_t _fontSize;
   uint16_t _nodeId;
+  int16_t _xEnd;
   int16_t _yEnd;
+  bool _sameLine;
 };
 
 void CodeNode::display(Display *out) {
+  _sameLine = false;
   out->endImageFlow();
   fl_font(_font, _fontSize);
 
@@ -302,24 +307,46 @@ void CodeNode::display(Display *out) {
     int textHeight = fl_height() + fl_descent();
     int xpos = initX;
     int ypos = (initY - textHeight) + fl_descent() * 2;
-    int width = out->x2 - (DEFAULT_INDENT * 2);
-    int height = _yEnd - initY + textHeight - fl_descent();
+    int width, height;
+    if (_yEnd == initY + (CODE_PADDING * 2)) {
+      _sameLine = true;
+      width = _xEnd - (CODE_PADDING * 2);
+      height = out->lineHeight;
+    } else {
+      width = out->x2 - (DEFAULT_INDENT * 2);
+      height = _yEnd - initY + textHeight - fl_descent();
+    }
     fl_color(fl_lighter(out->color));
     fl_rectf(xpos, ypos, width, height);
     fl_color(out->background);
-    fl_rect(xpos, ypos, width, height);
+    if (!_sameLine) {
+      fl_rect(xpos, ypos, width, height);
+    }
   }
 
   out->insideCode = true;
-  out->indent += CODE_PADDING;
-  out->x1 = out->indent;
-  out->y1 += CODE_PADDING;
+
+  if (_sameLine) {
+    out->x1 += CODE_PADDING;
+  } else {
+    out->indent += CODE_PADDING;
+    out->x1 = out->indent;
+    out->y1 += CODE_PADDING;
+  }
 }
 
 void CodeNode::doEndBlock(Display *out) {
+  out->insideCode = false;
+
+  if (!_sameLine) {
+    out->indent -= CODE_PADDING;
+    out->y1 += CODE_PADDING;
+  }
+
   if (out->exposed) {
     out->measure = false;
     out->nodeId = _nodeId;
+    _xEnd = out->x1;
     _yEnd = out->y1;
   }
 }
@@ -331,9 +358,6 @@ struct CodeEndNode : public BaseNode {
 };
 
 void CodeEndNode::display(Display *out) {
-  out->insideCode = false;
-  out->indent -= CODE_PADDING;
-  out->y1 += CODE_PADDING;
   fl_color(out->color);
   if (_head) {
     _head->doEndBlock(out);
@@ -1959,7 +1983,7 @@ void HelpWidget::draw() {
   fl_pop_clip();
 
   // draw child controls
-  update_child(*scrollbar);
+  draw_child(*scrollbar);
 
   // prevent other child controls from drawing over the scrollbar
   fl_push_clip(x(), y(), w() - SCROLL_X, h());

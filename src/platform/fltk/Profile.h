@@ -24,14 +24,14 @@ struct Profile {
 
   bool createBackups() const { return _createBackups; }
   void loadConfig(EditorWidget *editor);
+  void loadEditTheme(int themeId);
   void restore(MainWindow *wnd);
   void restoreAppPosition(Fl_Window *wnd);
   void setAppPosition(Fl_Rect rect) { _appPosition = rect; }
   void setEditTheme(EditorWidget *editor);
-  void setHelpTheme(HelpWidget *help);
+  void setHelpTheme(HelpWidget *help, int themeId = -1);
   void setFont(Fl_Font font) { _font = font; }
   void setFontSize(int size) { _fontSize = size; }
-  void setTheme(int themeId);
   void save(MainWindow *wnd);
   void updateTheme();
 
@@ -39,12 +39,14 @@ private:
   Fl_Font _font;
   Fl_Rect _appPosition;
   EditTheme _theme;
+  EditTheme _helpTheme;
   bool _loaded;
   int _createBackups;
   int _lineNumbers;
   int _fontSize;
   int _indentLevel;
   int _themeId;
+  int _helpThemeId;
 
   int nextInteger(const char *s, int len, int &index);
   Fl_Rect restoreRect(Properties<String *> *profile, const char *key);
