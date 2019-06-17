@@ -30,6 +30,7 @@ sbasici_SOURCES =                 \
   display.cxx display.h           \
   runtime.cxx runtime.h           \
   HelpWidget.cxx HelpWidget.h     \
+  HelpView.cxx HelpView.h         \
   TtyWidget.cxx TtyWidget.h       \
   MainWindow.cxx MainWindow.h     \
   BasicEditor.cxx BasicEditor.h   \

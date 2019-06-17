@@ -233,3 +233,14 @@ bool cacheLink(dev_file_t *df, char *localFile, size_t size) {
   return httpOK;
 }
 
+void vsncat(char *buffer, size_t size, ...) {
+  va_list args;
+  va_start(args, size);
+  strlcpy(buffer, va_arg(args, char *), size);
+  for (char *next = va_arg(args, char *);
+       next != NULL;
+       next = va_arg(args, char *)) {
+    strlcat(buffer, next, size);
+  }
+  va_end(args);
+}

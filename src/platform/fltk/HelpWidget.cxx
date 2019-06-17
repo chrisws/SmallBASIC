@@ -71,6 +71,7 @@ struct Display {
   Fl_Color color;
   Fl_Color background;
   Fl_Color selectionColor;
+  Fl_Color anchorColor;
   int16_t  x1, x2, y1, y2;
   uint16_t tabW, tabH;
   uint16_t lineHeight;
@@ -444,7 +445,7 @@ struct AnchorNode : public BaseNode {
     y1 = y2 = out->y1 - out->lineHeight;
     wrapxy = 0;
     if (href.length() > 0) {
-      fl_color(ANCHOR_COLOR);
+      fl_color(out->anchorColor);
     }
   }
 
@@ -1672,12 +1673,14 @@ void HelpWidget::init() {
   scrollWindowHeight = 0;
   hscroll = 0;
   endSelection();
+  scrollbar->value(0);
 }
 
 void HelpWidget::setTheme(EditTheme *theme) {
   background = get_color(theme->_background);
   foreground = get_color(theme->_color);
   selection_color(get_color(theme->_selection_color));
+  labelcolor(get_color(theme->_cursor_color));
 }
 
 void HelpWidget::endSelection() {
@@ -1859,6 +1862,7 @@ void HelpWidget::draw() {
   out.color = foreground;
   out.background = background;
   out.selectionColor = selection_color();
+  out.anchorColor = labelcolor();
   out.y2 = h();
   out.indent = DEFAULT_INDENT + hscroll;
   out.x1 = x() + out.indent;

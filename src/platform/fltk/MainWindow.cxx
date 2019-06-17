@@ -11,7 +11,7 @@
 #include <FL/Fl_PNG_Image.H>
 #include "platform/fltk/MainWindow.h"
 #include "platform/fltk/EditorWidget.h"
-#include "platform/fltk/HelpWidget.h"
+#include "platform/fltk/HelpView.h"
 #include "platform/fltk/FileWidget.h"
 #include "platform/fltk/utils.h"
 #include "ui/strlib.h"
@@ -39,30 +39,6 @@ const char *helpTabName = "Help";
 const char *pluginHome = "plugins";
 const char *historyFile = "history.txt";
 const char *keywordsFile = "keywords.txt";
-const char *aboutText =
-  "<b>About SmallBASIC...</b><br><br>"
-  "Version " SB_STR_VER "<br>"
-  "Copyright (c) 2002-2019 Chris Warren-Smith.<br><br>"
-  "Copyright (c) 2000-2006 Nicholas Christopoulos.<br><br>"
-  "<a href=https://smallbasic.github.io>"
-  "https://smallbasic.github.io</a><br><br>"
-  "SmallBASIC comes with ABSOLUTELY NO WARRANTY. "
-  "This program is free software; you can use it "
-  "redistribute it and/or modify it under the terms of the "
-  "GNU General Public License version 2 as published by "
-  "the Free Software Foundation.<br><br>" "<i>Press F1 for help";
-
-void vsncat(char *buffer, size_t size, ...) {
-  va_list args;
-  va_start(args, size);
-  strlcpy(buffer, va_arg(args, char *), size);
-  for (char *next = va_arg(args, char *);
-       next != NULL;
-       next = va_arg(args, char *)) {
-    strlcat(buffer, next, size);
-  }
-  va_end(args);
-}
 
 //--EditWindow functions--------------------------------------------------------
 
@@ -315,20 +291,20 @@ void MainWindow::help_contents_anchor(Fl_Widget *w, void *eventData) {
  * handle f1 context help
  */
 void MainWindow::help_contents(Fl_Widget *w, void *eventData) {
-  if (runMode == edit_state) {
-    EditorWidget *editWidget = getEditor();
-    if (editWidget && Fl::event_key() != 0) {
-      // scan for help context
-      int start, end;
-      char *selection = editWidget->getSelection(&start, &end);
-      const char *nodeId = getNodeId(selection);
-      if (nodeId != NULL && nodeId[0] != '0') {
-        char path[PATH_MAX];
-        sprintf(path, "http://smallbasic.github.io/reference/ide/%s.html", nodeId);
-        loadHelp(path);
-      }
-      free((void *)selection);
+  EditorWidget *editWidget = getEditor();
+  if (editWidget && Fl::event_key() != 0) {
+    // scan for help context
+    int start, end;
+    char *selection = editWidget->getSelection(&start, &end);
+    const char *nodeId = getNodeId(selection);
+    if (nodeId != NULL && nodeId[0] != '0') {
+      getHelp()->showHelp(nodeId);
+    } else {
+      getHelp()->helpIndex();
     }
+    free((void *)selection);
+  } else {
+    getHelp()->helpIndex();
   }
 }
 
@@ -340,7 +316,7 @@ void MainWindow::help_app(Fl_Widget *w, void *eventData) {
 }
 
 void MainWindow::help_about(Fl_Widget *w, void *eventData) {
-  getHelp()->loadBuffer(aboutText);
+  getHelp()->about();
 }
 
 void MainWindow::export_file(Fl_Widget *w, void *eventData) {
@@ -416,7 +392,7 @@ void MainWindow::set_theme(Fl_Widget *w, void *eventData) {
       }
       break;
     case gw_help:
-      _profile->setHelpTheme((HelpWidget *)group->child(0), ((intptr_t) eventData));
+      _profile->setHelpTheme((HelpView *)group->child(0), ((intptr_t) eventData));
       break;
     default:
       break;
@@ -999,7 +975,7 @@ MainWindow::MainWindow(int w, int h) :
   m->add("&Program/_&Restart", FL_CTRL + 'r', restart_run_cb);
   m->add("&Program/&Command", FL_F+10, set_options_cb);
   m->add("&Help/_&Help Contents", FL_F+1, help_contents_cb);
-  m->add("&Help/&Program Help", FL_F+11, help_app_cb);
+  m->add("&Help/&Reference", FL_F+11, help_app_cb);
   m->add("&Help/_&Home Page", 0, help_home_cb);
   m->add("&Help/&About SmallBASIC", FL_F+12, help_about_cb);
 
@@ -1137,18 +1113,18 @@ void MainWindow::save_file_as(Fl_Widget *w, void *eventData) {
   }
 }
 
-HelpWidget *MainWindow::getHelp() {
-  HelpWidget *help = 0;
+HelpView *MainWindow::getHelp() {
+  HelpView *help = 0;
   Fl_Group *helpGroup = findTab(gw_help);
   if (!helpGroup) {
     helpGroup = createTab(gw_help, helpTabName);
-    help = new HelpWidget(_out);
+    help = new HelpView(_out);
     help->callback(help_contents_anchor_cb);
     helpGroup->resizable(help);
     _profile->setHelpTheme(help);
     _tabGroup->end();
   } else {
-    help = (HelpWidget *)helpGroup->resizable();
+    help = (HelpView *)helpGroup->resizable();
   }
   _tabGroup->value(helpGroup);
   return help;
@@ -1412,16 +1388,8 @@ int MainWindow::handle(int e) {
 }
 
 void MainWindow::loadHelp(const char *path) {
-  char localFile[PATH_MAX];
-  dev_file_t df;
-
-  memset(&df, 0, sizeof(dev_file_t));
-  strcpy(df.name, path);
-  if (http_open(&df) && cacheLink(&df, localFile, sizeof(localFile))) {
-    getHelp()->loadFile(localFile);
-  } else if (getEditor() != NULL) {
-    snprintf(localFile, sizeof(localFile), "Failed to open URL: %s", df.name);
-    getEditor()->statusMsg(localFile);
+  if (!getHelp()->loadHelp(path) && getEditor() != NULL) {
+    getEditor()->statusMsg("Failed to open help file");
   }
 }
 

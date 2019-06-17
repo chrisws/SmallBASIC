@@ -18,7 +18,7 @@
 #include "platform/fltk/display.h"
 #include "platform/fltk/runtime.h"
 #include "platform/fltk/EditorWidget.h"
-#include "platform/fltk/HelpWidget.h"
+#include "platform/fltk/HelpView.h"
 #include "platform/fltk/Profile.h"
 #include "platform/fltk/utils.h"
 
@@ -138,7 +138,7 @@ struct MainWindow : public BaseWindow {
   CALLBACK_METHOD(set_theme);
   CALLBACK_METHOD(tool_plugin);
 
-  HelpWidget *getHelp();
+  HelpView *getHelp();
   Fl_Group *createTab(GroupWidgetEnum groupWidgetEnum, const char *label = NULL);
 
   strlib::String _siteHome;
