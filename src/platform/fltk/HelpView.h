@@ -19,9 +19,11 @@ struct HelpView : public HelpWidget {
   void anchorClick();
   void helpIndex();
   bool loadHelp(const char *path);
-  void showHelp(const char *node);
+  void showContextHelp(const char *selection);
   
 private:
+  void showHelp(const char *node);
+
   int _openKeyword;
   int _openPackage;
 };

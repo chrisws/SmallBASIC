@@ -70,14 +70,14 @@ void HelpView::anchorClick() {
 
   switch (target[0]) {
   case CMD_LEVEL1_OPEN:
-    if (_openPackage != -1) {
-      _openPackage = -1;
-    } else {
-      for (int i = 0; i < keyword_help_len; i++) {
-        if (strcasecmp(target + 1, keyword_help[i].package) == 0) {
+    for (int i = 0; i < keyword_help_len; i++) {
+      if (strcasecmp(target + 1, keyword_help[i].package) == 0) {
+        if (_openPackage == i) {
+          _openPackage = -1;
+        } else {
           _openPackage = i;
-          break;
         }
+        break;
       }
     }
     _openKeyword = -1;
@@ -87,7 +87,11 @@ void HelpView::anchorClick() {
   case CMD_LEVEL2_OPEN:
     for (int i = 0; i < keyword_help_len; i++) {
       if (strcasecmp(target + 1, keyword_help[i].keyword) == 0) {
-        _openKeyword = i;
+        if (_openKeyword == i) {
+          _openKeyword = -1;
+        } else {
+          _openKeyword = i;
+        }
         break;
       }
     }
@@ -165,6 +169,20 @@ bool HelpView::loadHelp(const char *path) {
     result = false;
   }
   return result;
+}
+
+void HelpView::showContextHelp(const char *selection) {
+  const char *result = NULL;
+  int len = selection != NULL ? strlen(selection) : 0;
+  if (len > 0) {
+    for (int i = 0; i < keyword_help_len && !result; i++) {
+      if (strcasecmp(selection, keyword_help[i].keyword) == 0) {
+        _openPackage = _openKeyword = i;
+        break;
+      }
+    }
+  }
+  helpIndex();
 }
 
 void HelpView::showHelp(const char *nodeId) {

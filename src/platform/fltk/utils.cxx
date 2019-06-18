@@ -10,7 +10,6 @@
 #include <sys/socket.h>
 #include <stdint.h>
 #include "lib/str.h"
-#include "ui/kwp.h"
 #include "utils.h"
 
 #define RX_BUFFER_SIZE 1024
@@ -108,19 +107,6 @@ void getHomeDir(char *fileName, size_t size, bool appendSlash) {
       break;
     }
   }
-}
-
-const char *getNodeId(const char *selection) {
-  const char *result = NULL;
-  int len = selection != NULL ? strlen(selection) : 0;
-  if (len > 0) {
-    for (int i = 0; i < keyword_help_len && !result; i++) {
-      if (strcasecmp(selection, keyword_help[i].keyword) == 0) {
-        result = keyword_help[i].nodeId;
-      }
-    }
-  }
-  return result;
 }
 
 // copy the url into the local cache

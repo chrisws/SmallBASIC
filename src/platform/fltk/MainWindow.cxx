@@ -272,18 +272,27 @@ void MainWindow::quit(Fl_Widget *w, void *eventData) {
  * opens the smallbasic home page in a browser window
  */
 void MainWindow::help_home(Fl_Widget *w, void *eventData) {
-  browseFile("http://smallbasic.github.io");
+  browseFile("https://smallbasic.github.io");
+}
+
+/**
+ * displays the program help page in a browser window
+ */
+void MainWindow::help_app(Fl_Widget *w, void *eventData) {
+  browseFile("https://smallbasic.github.io/pages/fltk.html");
 }
 
 /**
  * handle click from within help window
  */
 void MainWindow::help_contents_anchor(Fl_Widget *w, void *eventData) {
-  if (runMode == edit_state) {
-    String eventName = wnd->getHelp()->getEventName();
+  String eventName = wnd->getHelp()->getEventName();
+  if (eventName.indexOf("http", 0) != -1) {
+    browseFile(eventName.c_str());
+  } else {
     char path[PATH_MAX];
-    sprintf(path, "http://smallbasic.github.io%s", eventName.c_str());
-    loadHelp(path);
+    sprintf(path, "https://smallbasic.github.io%s", eventName.c_str());
+    browseFile(path);
   }
 }
 
@@ -293,26 +302,13 @@ void MainWindow::help_contents_anchor(Fl_Widget *w, void *eventData) {
 void MainWindow::help_contents(Fl_Widget *w, void *eventData) {
   EditorWidget *editWidget = getEditor();
   if (editWidget && Fl::event_key() != 0) {
-    // scan for help context
     int start, end;
     char *selection = editWidget->getSelection(&start, &end);
-    const char *nodeId = getNodeId(selection);
-    if (nodeId != NULL && nodeId[0] != '0') {
-      getHelp()->showHelp(nodeId);
-    } else {
-      getHelp()->helpIndex();
-    }
+    getHelp()->showContextHelp(selection);
     free((void *)selection);
   } else {
     getHelp()->helpIndex();
   }
-}
-
-/**
- * displays the program help page in a browser window
- */
-void MainWindow::help_app(Fl_Widget *w, void *eventData) {
-  loadHelp("http://smallbasic.github.io/pages/reference.html");
 }
 
 void MainWindow::help_about(Fl_Widget *w, void *eventData) {
@@ -975,7 +971,7 @@ MainWindow::MainWindow(int w, int h) :
   m->add("&Program/_&Restart", FL_CTRL + 'r', restart_run_cb);
   m->add("&Program/&Command", FL_F+10, set_options_cb);
   m->add("&Help/_&Help Contents", FL_F+1, help_contents_cb);
-  m->add("&Help/&Reference", FL_F+11, help_app_cb);
+  m->add("&Help/&Program Help", FL_F+11, help_app_cb);
   m->add("&Help/_&Home Page", 0, help_home_cb);
   m->add("&Help/&About SmallBASIC", FL_F+12, help_about_cb);
 
