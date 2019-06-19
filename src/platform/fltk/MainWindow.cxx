@@ -27,6 +27,7 @@ int restart = 0;
 bool opt_interactive;
 int recentMenu[NUM_RECENT_ITEMS];
 strlib::String recentPath[NUM_RECENT_ITEMS];
+strlib::String recentLabel[NUM_RECENT_ITEMS];
 int recentPosition[NUM_RECENT_ITEMS];
 MainWindow *wnd;
 ExecState runMode = init_state;
@@ -39,6 +40,8 @@ const char *helpTabName = "Help";
 const char *pluginHome = "plugins";
 const char *historyFile = "history.txt";
 const char *keywordsFile = "keywords.txt";
+const char *recentFile0 = "&File/_Open Recent File/%s %d";
+const char *recentFile = "&File/Open Recent File/%s %d";
 
 //--EditWindow functions--------------------------------------------------------
 
@@ -635,9 +638,11 @@ void MainWindow::scanRecentFiles(Fl_Menu_Bar *menu) {
         if (fileLabel != 0 && *fileLabel == '_') {
           fileLabel++;
         }
-        snprintf(label, sizeof(label), "&File/Open Recent File/%s", fileLabel);
-        recentMenu[i] = menu->add(label, FL_CTRL + '1' + i, (Fl_Callback *)load_file_cb, (void *)(intptr_t)(i + 1));
+        void *data = (void *)(intptr_t)(i + 1);
+        snprintf(label, sizeof(label), i == 0 ? recentFile0 : recentFile, fileLabel, i);
+        recentLabel[i].append(fileLabel);
         recentPath[i].append(buffer);
+        recentMenu[i] = menu->add(label, FL_CTRL + '1' + i, load_file_cb, data);
         if (++i == NUM_RECENT_ITEMS) {
           break;
         }
@@ -646,9 +651,11 @@ void MainWindow::scanRecentFiles(Fl_Menu_Bar *menu) {
     fclose(fp);
   }
   while (i < NUM_RECENT_ITEMS) {
-    snprintf(label, sizeof(label), "&File/Open Recent File/%s", untitledFile);
-    recentMenu[i] = menu->add(label, FL_CTRL + '1' + i, (Fl_Callback *)load_file_cb, (void *)(intptr_t)(i + 1));
+    void *data = (void *)(intptr_t)(i + 1);
+    snprintf(label, sizeof(label), i == 0 ? recentFile0 : recentFile, untitledFile, i);
+    recentLabel[i].append(untitledFile);
     recentPath[i].append(untitledFile);
+    recentMenu[i] = menu->add(label, FL_CTRL + '1' + i, load_file_cb, data);
     i++;
   }
 }
@@ -923,7 +930,6 @@ MainWindow::MainWindow(int w, int h) :
   Fl_Menu_Bar *m = _menuBar = new Fl_Menu_Bar(0, 0, w, MENU_HEIGHT);
   m->add("&File/&New File", FL_CTRL + 'n', new_file_cb);
   m->add("&File/&Open File", FL_CTRL + 'o', open_file_cb);
-  m->add("&File/_Open Recent File/", 0, (Fl_Callback *)NULL);
   scanRecentFiles(m);
   m->add("&File/&Close", FL_CTRL + FL_F+4, close_tab_cb);
   m->add("&File/_&Close Others", 0, close_other_tabs_cb);

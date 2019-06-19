@@ -21,6 +21,7 @@
 
 // in MainWindow.cxx
 extern String recentPath[];
+extern String recentLabel[];
 extern int recentMenu[];
 extern const char *historyFile;
 extern const char *untitledFile;
@@ -722,17 +723,22 @@ void EditorWidget::fileChanged(bool loadfile) {
       }
 
       if (found == false) {
+        const char *label = FileWidget::splitPath(filename, NULL);
+
         // shift items downwards
         for (int i = NUM_RECENT_ITEMS - 1; i > 0; i--) {
-          //_menuBar->replace(recentMenu[i], _menuBar->text(recentMenu[i]));
+          _menuBar->replace(recentMenu[i], recentLabel[i - 1]);
+          recentLabel[i].clear();
+          recentLabel[i].append(recentLabel[i - 1]);
           recentPath[i].clear();
           recentPath[i].append(recentPath[i - 1]);
         }
         // create new item in first position
-        const char *label = FileWidget::splitPath(filename, NULL);
+        recentLabel[0].clear();
+        recentLabel[0].append(label);
         recentPath[0].clear();
         recentPath[0].append(filename);
-        _menuBar->replace(recentMenu[0], label);
+        _menuBar->replace(recentMenu[0], recentLabel[0]);
       }
     }
   }
