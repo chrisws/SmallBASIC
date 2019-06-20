@@ -455,14 +455,6 @@ void MainWindow::font_size_decr(Fl_Widget *w, void *eventData) {
   }
 }
 
-void MainWindow::font_cache_clear(Fl_Widget *w, void *eventData) {
-  char path[PATH_MAX];
-  getHomeDir(path, sizeof(path));
-  strcat(path, fontCache);
-  unlink(path);
-  statusMsg(rs_err, "Restart SmallBASIC to load new fonts");
-}
-
 void MainWindow::run(Fl_Widget *w, void *eventData) {
   EditorWidget *editWidget = getEditor();
   if (editWidget) {

@@ -73,9 +73,10 @@ struct Display {
   Fl_Color selectionColor;
   Fl_Color anchorColor;
   int16_t  x1, x2, y1, y2;
-  uint16_t tabW, tabH;
-  uint16_t lineHeight;
-  uint16_t indent;
+  int16_t tabW, tabH;
+  int16_t lineHeight;
+  int16_t indent;
+  int16_t baseIndent;
   uint16_t fontSize;
   uint16_t tableLevel;
   uint16_t nodeId;
@@ -90,7 +91,7 @@ struct Display {
   uint8_t selected;
   uint8_t invertedSel;
   uint8_t insideCode;
-  uint8_t __padding[2];
+  uint8_t insideUl;
 
   void drawBackground(Fl_Rect &rc) {
     if (background != NO_COLOR) {
@@ -341,6 +342,9 @@ void CodeNode::doEndBlock(Display *out) {
 
   if (!_sameLine) {
     out->indent -= CODE_PADDING;
+    if (out->indent < out->baseIndent) {
+      out->indent = out->baseIndent;
+    }
     out->y1 += CODE_PADDING;
   }
 
@@ -520,6 +524,7 @@ struct UlNode : public BaseNode {
   }
   void display(Display *out) {
     nextId = 0;
+    out->insideUl = true;
     out->newRow(1);
     out->indent += LI_INDENT;
   }
@@ -532,6 +537,7 @@ struct UlEndNode : public BaseNode {
     BaseNode() {
   }
   void display(Display *out) {
+    out->insideUl = false;
     out->indent -= LI_INDENT;
     out->newRow(2);
   }
@@ -552,7 +558,7 @@ struct LiNode : public BaseNode {
       if (ulNode && ulNode->ordered) {
         char t[10];
         sprintf(t, "%d.", ++ulNode->nextId);
-        fl_draw(t, 2, x, out->y1);
+        fl_draw(t, 2, x - 4, out->y1);
       } else {
         dotImage.draw(x, y + fl_height() - fl_descent(), 5, 5);
         // draw messes with the current font - restore
@@ -991,7 +997,7 @@ struct ParagraphNode : public BaseNode {
   void display(Display *out) {
     if (out->imgY != -1) {
       out->endImageFlow();
-    } else if (!out->insideCode) {
+    } else if (!out->insideCode && !out->insideUl) {
       out->newRow(2);
     }
   }
@@ -1865,6 +1871,7 @@ void HelpWidget::draw() {
   out.anchorColor = labelcolor();
   out.y2 = h();
   out.indent = DEFAULT_INDENT + hscroll;
+  out.baseIndent = out.indent;
   out.x1 = x() + out.indent;
   out.x2 = w() - (DEFAULT_INDENT * 2) + hscroll;
   out.content = false;
@@ -1878,6 +1885,7 @@ void HelpWidget::draw() {
   out.selection = 0;
   out.selected = (markX != pointX || markY != pointY);
   out.insideCode = false;
+  out.insideUl = false;
 
   if (Fl::event_clicks() == 1 && damage() == DAMAGE_HIGHLIGHT) {
     // double click
@@ -2322,6 +2330,7 @@ void HelpWidget::compile() {
             images.add((ImageNode *)node);
           }
         } else if (0 == strncasecmp(tag, "ul>", 3) ||
+                   0 == strncasecmp(tag, "ol ", 3) ||
                    0 == strncasecmp(tag, "ol>", 3)) {
           node = new UlNode(tag[0] == 'o' || tag[0] == 'O');
           olStack.push((UlNode *)node);
