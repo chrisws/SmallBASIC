@@ -211,6 +211,9 @@ struct Attributes : public Properties<String *> {
   int getSize(int def = -1) {
     return getIntValue("size", def);
   }
+  int getStart(int def = 0) {
+    return getIntValue("start", def);
+  }
   int getBorder(int def = -1) {
     return getIntValue("border", def);
   }
@@ -518,17 +521,19 @@ struct StyleNode : public BaseNode {
 //--LiNode----------------------------------------------------------------------
 
 struct UlNode : public BaseNode {
-  UlNode(bool ordered) :
+  UlNode(Attributes &p, bool ordered) :
     BaseNode(),
+    start(p.getStart(1)),
     ordered(ordered) {
   }
   void display(Display *out) {
-    nextId = 0;
+    nextId = start;
     out->insideUl = true;
     out->newRow(1);
     out->indent += LI_INDENT;
   }
   int nextId;
+  int start;
   bool ordered;
 };
 
@@ -557,10 +562,10 @@ struct LiNode : public BaseNode {
     if (out->measure == false) {
       if (ulNode && ulNode->ordered) {
         char t[10];
-        sprintf(t, "%d.", ++ulNode->nextId);
+        sprintf(t, "%d.", ulNode->nextId++);
         fl_draw(t, 2, x - 4, out->y1);
       } else {
-        dotImage.draw(x, y + fl_height() - fl_descent(), 5, 5);
+        dotImage.draw(x - 4, y + fl_height() - fl_descent(), 8, 8);
         // draw messes with the current font - restore
         fl_font(out->font, out->fontSize);
       }
@@ -2332,7 +2337,9 @@ void HelpWidget::compile() {
         } else if (0 == strncasecmp(tag, "ul>", 3) ||
                    0 == strncasecmp(tag, "ol ", 3) ||
                    0 == strncasecmp(tag, "ol>", 3)) {
-          node = new UlNode(tag[0] == 'o' || tag[0] == 'O');
+          p.removeAll();
+          p.load(tag + 2, taglen - 2);
+          node = new UlNode(p, tag[0] == 'o' || tag[0] == 'O');
           olStack.push((UlNode *)node);
           nodeList.add(node);
           padlines = false;

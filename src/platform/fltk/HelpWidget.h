@@ -131,16 +131,20 @@ private:
 #ifdef Fl_HELP_WIDGET_RESOURCES
 // somewhere to keep this clutter
 
+/* XPM */
 static const char *dot_xpm[] = {
-  "5 5 3 1",
-  "   c None",
-  ".  c #F4F4F4",
-  "+  c #000000",
-  ".+++.",
-  "+++++",
-  "+++++",
-  "+++++",
-  ".+++."
+  "8 8 3 1",
+  " 	c None",
+  ".	c #141414",
+  "+	c #000000",
+  "   ..   ",
+  " ++++++ ",
+  " ++++++ ",
+  ".++++++.",
+  ".++++++.",
+  " ++++++ ",
+  " ++++++ ",
+  "   ..   "
 };
 
 static Fl_Pixmap dotImage(dot_xpm);
