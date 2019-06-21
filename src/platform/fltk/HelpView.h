@@ -11,6 +11,8 @@
 
 #include "platform/fltk/HelpWidget.h"
 
+const char *getBriefHelp(const char *selection);
+
 struct HelpView : public HelpWidget {
   HelpView(Fl_Widget *rect);
   ~HelpView();

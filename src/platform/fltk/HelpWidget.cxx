@@ -544,7 +544,7 @@ struct UlEndNode : public BaseNode {
   void display(Display *out) {
     out->insideUl = false;
     out->indent -= LI_INDENT;
-    out->newRow(2);
+    out->newRow(1);
   }
 };
 
@@ -1856,9 +1856,9 @@ void HelpWidget::scrollTo(const char *anchorName) {
 }
 
 void HelpWidget::resize(int x, int y, int w, int h) {
-  scrollbar->resize(w - SCROLL_X, 0, SCROLL_W, h);
-  endSelection();
   Fl_Group::resize(x, y, w, h);
+  scrollbar->resize(w - SCROLL_X, y, SCROLL_W, h);
+  endSelection();
 }
 
 void HelpWidget::draw() {

@@ -118,6 +118,7 @@ struct MainWindow : public BaseWindow {
   CALLBACK_METHOD(help_about);
   CALLBACK_METHOD(help_app);
   CALLBACK_METHOD(help_contents);
+  CALLBACK_METHOD(help_contents_brief);
   CALLBACK_METHOD(help_contents_anchor);
   CALLBACK_METHOD(help_home);
   CALLBACK_METHOD(hide_ide);

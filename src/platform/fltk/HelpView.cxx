@@ -37,6 +37,20 @@ const char LEVEL2_CLOSE[]  = "   - ";
 
 HelpView *helpView;
 
+const char *getBriefHelp(const char *selection) {
+  const char *result = NULL;
+  int len = selection != NULL ? strlen(selection) : 0;
+  if (len > 0) {
+    for (int i = 0; i < keyword_help_len && !result; i++) {
+      if (strcasecmp(selection, keyword_help[i].keyword) == 0) {
+        result = keyword_help[i].signature;
+        break;
+      }
+    }
+  }
+  return result;
+}
+
 static void helpViewClick_event(void *) {
   Fl::remove_check(helpViewClick_event);
   helpView->anchorClick();
@@ -172,10 +186,9 @@ bool HelpView::loadHelp(const char *path) {
 }
 
 void HelpView::showContextHelp(const char *selection) {
-  const char *result = NULL;
   int len = selection != NULL ? strlen(selection) : 0;
   if (len > 0) {
-    for (int i = 0; i < keyword_help_len && !result; i++) {
+    for (int i = 0; i < keyword_help_len; i++) {
       if (strcasecmp(selection, keyword_help[i].keyword) == 0) {
         _openPackage = _openKeyword = i;
         break;
@@ -190,4 +203,3 @@ void HelpView::showHelp(const char *nodeId) {
   sprintf(path, "http://smallbasic.github.io/reference/ide/%s.html", nodeId);
   loadHelp(path);
 }
-

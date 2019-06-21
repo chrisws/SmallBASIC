@@ -304,13 +304,27 @@ void MainWindow::help_contents_anchor(Fl_Widget *w, void *eventData) {
  */
 void MainWindow::help_contents(Fl_Widget *w, void *eventData) {
   EditorWidget *editWidget = getEditor();
-  if (editWidget && Fl::event_key() != 0) {
+  if (editWidget) {
     int start, end;
     char *selection = editWidget->getSelection(&start, &end);
     getHelp()->showContextHelp(selection);
     free((void *)selection);
   } else {
     getHelp()->helpIndex();
+  }
+}
+
+void MainWindow::help_contents_brief(Fl_Widget *w, void *eventData) {
+  EditorWidget *editWidget = getEditor();
+  if (editWidget) {
+    int start, end;
+    char *selection = editWidget->getSelection(&start, &end);
+    const char *help = getBriefHelp(selection);
+    if (help != NULL) {
+      editWidget->getTty()->print(help);
+      editWidget->getTty()->print("\n");
+    }
+    free((void *)selection);
   }
 }
 
@@ -968,7 +982,8 @@ MainWindow::MainWindow(int w, int h) :
   m->add("&Program/&Break", FL_CTRL + 'b', run_break_cb);
   m->add("&Program/_&Restart", FL_CTRL + 'r', restart_run_cb);
   m->add("&Program/&Command", FL_F+10, set_options_cb);
-  m->add("&Help/_&Help Contents", FL_F+1, help_contents_cb);
+  m->add("&Help/&Help Contents", FL_F+1, help_contents_cb);
+  m->add("&Help/_&Context Help", 0, help_contents_brief_cb);
   m->add("&Help/&Program Help", FL_F+11, help_app_cb);
   m->add("&Help/_&Home Page", 0, help_home_cb);
   m->add("&Help/&About SmallBASIC", FL_F+12, help_about_cb);
