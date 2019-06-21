@@ -86,26 +86,18 @@ void HelpView::anchorClick() {
   case CMD_LEVEL1_OPEN:
     for (int i = 0; i < keyword_help_len; i++) {
       if (strcasecmp(target + 1, keyword_help[i].package) == 0) {
-        if (_openPackage == i) {
-          _openPackage = -1;
-        } else {
-          _openPackage = i;
-        }
+        _openPackage = i;
+        _openKeyword = i;
         break;
       }
     }
-    _openKeyword = -1;
     helpIndex();
     break;
 
   case CMD_LEVEL2_OPEN:
     for (int i = 0; i < keyword_help_len; i++) {
       if (strcasecmp(target + 1, keyword_help[i].keyword) == 0) {
-        if (_openKeyword == i) {
-          _openKeyword = -1;
-        } else {
-          _openKeyword = i;
-        }
+        _openKeyword = i;
         break;
       }
     }
@@ -132,35 +124,54 @@ void HelpView::helpIndex() {
   for (int i = 0; i < keyword_help_len; i++) {
     if (package == NULL || strcasecmp(package, keyword_help[i].package) != 0) {
       package = keyword_help[i].package;
-      // display next package
+      bool bold = (_openPackage != -1 && strcasecmp(keyword_help[_openPackage].package,
+                                                    keyword_help[i].package) == 0);
+      if (bold) {
+        html.append("<b>");
+      }
       html.append("<a href='")
           .append(CMD_LEVEL1_OPEN)
           .append(package)
           .append("'>")
-          .append(_openPackage == i ? LEVEL1_CLOSE : LEVEL1_OPEN)
           .append(package)
-          .append("</a><br>");
+          .append("</a>");
+      if (strcasecmp("System", package) != 0) {
+        html.append(" | ");
+      }
+      if (bold) {
+        html.append("</b>");
+      }
     }
+  }
+
+  if (_openKeyword != -1) {
+    // display opened keyword
+    html.append("<br><br><b>")
+        .append(keyword_help[_openKeyword].signature)
+        .append("</b><br>")
+        .append(keyword_help[_openKeyword].help)
+        .append("<br><u><a href=")
+        .append(CMD_MORE)
+        .append(">More</a></u>");
+  }
+
+  html.append("<br><br>");
+
+  for (int i = 0; i < keyword_help_len; i++) {
     if (_openPackage != -1 && strcasecmp(keyword_help[_openPackage].package,
                                          keyword_help[i].package) == 0) {
+      if (_openKeyword == i) {
+        html.append("<b>");
+      }
       // display opened package
       html.append("<a href='")
           .append(CMD_LEVEL2_OPEN)
           .append(keyword_help[i].keyword)
           .append("'>")
-          .append(_openKeyword == i ? LEVEL2_CLOSE : LEVEL2_OPEN)
           .append(keyword_help[i].keyword)
-          .append("</a><br>");
+          .append("</a> | ");
       if (_openKeyword == i) {
-        // display opened keyword
-        html.append("<br><b>")
-            .append(keyword_help[i].signature)
-            .append("</b><br>")
-            .append(keyword_help[i].help)
-            .append("<br><u><a href=")
-            .append(CMD_MORE)
-            .append(">More</a></u>")
-            .append("<br><br>");
+        html.append("</b>");
       }
     }
   }
