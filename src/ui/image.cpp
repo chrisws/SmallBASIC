@@ -466,10 +466,14 @@ void cmd_image_save(var_s *self, var_s *) {
   ImageBuffer *image = get_image(id);
   var_t *array = nullptr;
   dev_file_t *file = nullptr;
-  if (code_peek() == kwTYPE_SEP) {
+
+  switch (code_peek()) {
+  case kwTYPE_SEP:
     file = eval_filep();
-  } else {
+    break;
+  case kwTYPE_VAR:
     array = par_getvar_ptr();
+    break;
   }
 
   bool saved = false;
@@ -497,6 +501,14 @@ void cmd_image_save(var_s *self, var_s *) {
         }
       }
       saved = true;
+    } else {
+      var_t var;
+      v_init(&var);
+      eval(&var);
+      if (var.type == V_STR && !prog_error && !encode_png_file(var.v.p.ptr, image->_image, w, h)) {
+        saved = true;
+      }
+      v_free(&var);
     }
   }
 

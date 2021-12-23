@@ -102,6 +102,7 @@ public class MainActivity extends NativeActivity {
   private static final String FOLDER_NAME = "SmallBASIC";
   private String _startupBas = null;
   private boolean _untrusted = false;
+  private String _qrCodeResult = "";
   private final ExecutorService _audioExecutor = Executors.newSingleThreadExecutor();
   private final Queue<Sound> _sounds = new ConcurrentLinkedQueue<>();
   private final Handler _keypadHandler = new Handler(Looper.getMainLooper());
@@ -319,6 +320,12 @@ public class MainActivity extends NativeActivity {
     } else {
       result = "";
     }
+    return result;
+  }
+
+  public String getQrCode() {
+    String result = _qrCodeResult;
+    _qrCodeResult = "";
     return result;
   }
 
@@ -618,6 +625,12 @@ public class MainActivity extends NativeActivity {
     }, 100);
   }
 
+  public boolean showQrCodeScanner() {
+    Log.i(TAG, "showQrCodeScanner");
+    startActivityForResult(new Intent(MainActivity.this, QRCodeScanActivity.class), Consts.QRCODE_RESULT_CODE);
+    return true;
+  }
+
   public void showToast(final byte[] messageBytes) {
     final Activity activity = this;
     final String message = getString(messageBytes);
@@ -634,6 +647,16 @@ public class MainActivity extends NativeActivity {
       _tts = new TextToSpeechAdapter(this, text);
     } else {
       _tts.speak(text);
+    }
+  }
+
+  @Override
+  protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+    super.onActivityResult(requestCode, resultCode, data);
+    if (resultCode == Consts.QRCODE_RESULT_CODE && data != null) {
+      _qrCodeResult = data.getStringExtra(Consts.QR_CODE_EXTRA_KEY);
+    } else {
+      _qrCodeResult = "nil";
     }
   }
 

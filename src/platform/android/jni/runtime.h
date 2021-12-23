@@ -55,6 +55,7 @@ struct Runtime : public System {
   void readSensorEvents();
   void setFloat(const char *methodName, float value);
   void setLocationData(var_t *retval);
+  void setQrCodeData(var_t *retval);
   void setSensorData(var_t *retval);
   void setString(const char *methodName, const char *value);
   void speak(const char *text) { setString("speak", text); }

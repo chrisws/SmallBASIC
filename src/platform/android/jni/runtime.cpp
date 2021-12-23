@@ -437,6 +437,18 @@ void Runtime::setLocationData(var_t *retval) {
   map_parse_str(location.c_str(), location.length(), retval);
 }
 
+void Runtime::setQrCodeData(var_t *retval) {
+  runtime->getBoolean("showQrCodeScanner");
+  while (1) {
+    processEvents(1);
+    String qrCode = runtime->getString("getQrCode");
+    if (qrCode.length()) {
+      v_setstr(retval, qrCode.c_str());
+      break;
+    }
+  }
+}
+
 void Runtime::setSensorData(var_t *retval) {
   v_init(retval);
   map_init(retval);
@@ -1369,7 +1381,8 @@ int sblib_proc_exec(int index, int param_count, slib_par_t *params, var_t *retva
 
 const char *lib_funcs[] = {
   "LOCATION",
-  "SENSOR"
+  "SENSOR",
+  "QRCODE"
 };
 
 int sblib_func_count(void) {
@@ -1396,6 +1409,10 @@ int sblib_func_exec(int index, int param_count, slib_par_t *params, var_t *retva
     break;
   case 1:
     runtime->setSensorData(retval);
+    result = 1;
+    break;
+  case 2:
+    runtime->setQrCodeData(retval);
     result = 1;
     break;
   default:

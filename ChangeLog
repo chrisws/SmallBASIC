@@ -1,3 +1,6 @@
+2021-10-31 (12.24)
+	UI: update Image.save() to take file name argument
+
 2021-08-22 (12.24)
 	COMMON: Update plugin system to allow loading to be driven by the IMPORT statement
 
