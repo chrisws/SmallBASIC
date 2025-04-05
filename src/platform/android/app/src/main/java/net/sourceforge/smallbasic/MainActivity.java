@@ -37,6 +37,7 @@ import android.view.View;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.Toast;
 
+import androidx.annotation.RequiresPermission;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
@@ -109,6 +110,7 @@ public class MainActivity extends NativeActivity {
   private TextToSpeechAdapter _tts;
   private Storage _storage;
   private UsbConnection _usbConnection;
+  private BluetoothConnection _bluetoothConnection;
 
   static {
     System.loadLibrary("smallbasic");
@@ -191,6 +193,57 @@ public class MainActivity extends NativeActivity {
     return result.value;
   }
 
+  public boolean bluetoothClose() {
+    if (_bluetoothConnection != null) {
+      _bluetoothConnection.close();
+      _bluetoothConnection = null;
+    }
+    return true;
+  }
+
+  @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
+  public String bluetoothConnect() {
+    String result;
+    try {
+      _bluetoothConnection = new BluetoothConnection(this);
+      result = "[tag-connected]";
+    } catch (IOException e) {
+      result = e.getLocalizedMessage();
+    }
+    return result;
+  }
+
+  @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
+  public String bluetoothDescription() {
+    String result;
+    if (_bluetoothConnection != null) {
+      result = _bluetoothConnection.getDescription();
+    } else {
+      result = "";
+    }
+    return result;
+  }
+
+  public String bluetoothReceive() {
+    String result;
+    if (_bluetoothConnection != null) {
+      result = _bluetoothConnection.receive();
+    } else {
+      result = "";
+    }
+    return result;
+  }
+
+  public int bluetoothSend(final byte[] data) {
+    int result;
+    if (_bluetoothConnection != null) {
+      result = _bluetoothConnection.send(getString(data));
+    } else {
+      result = -1;
+    }
+    return result;
+  }
+
   public void browseFile(final byte[] pathBytes) {
     try {
       String url = new String(pathBytes, CP1252);
@@ -215,6 +268,10 @@ public class MainActivity extends NativeActivity {
     if (_usbConnection != null) {
       _usbConnection.close();
       _usbConnection = null;
+    }
+    if (_bluetoothConnection != null) {
+      _bluetoothConnection.close();
+      _bluetoothConnection = null;
     }
     return removeLocationUpdates();
   }
@@ -667,6 +724,16 @@ public class MainActivity extends NativeActivity {
       result = "[tag-connected]";
     } catch (IOException e) {
       result = e.getLocalizedMessage();
+    }
+    return result;
+  }
+
+  public String usbDescription() {
+    String result;
+    if (_usbConnection != null) {
+      result = _usbConnection.getDescription();
+    } else {
+      result = "";
     }
     return result;
   }
