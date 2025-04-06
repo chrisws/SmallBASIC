@@ -13,6 +13,7 @@
 #include "languages/messages.en.h"
 #include "include/var_map.h"
 #include "common/var.h"
+#include "common/device.h"
 #include "module.h"
 #include "serial.h"
 
@@ -69,11 +70,11 @@ static bool is_serial(int id) {
   return id >= 0 && id <= MAX_HW_SERIAL;
 }
 
-static bool is_usb_var(var_p_t var) {
+static bool is_serial_var(var_p_t var) {
   return var != nullptr && v_is_type(var, V_INT) && is_serial(var->v.i);
 }
 
-static bool is_usb_object(var_p_t var) {
+static bool is_serial_object(var_p_t var) {
   return var != nullptr && v_is_type(var, V_MAP) && is_serial(var->v.m.id);
 }
 
@@ -162,9 +163,9 @@ static int cmd_get_cpu_speed(int argc, slib_par_t *args, var_t *retval) {
   return 1;
 }
 
-static int cmd_usb_ready(var_s *self, int argc, slib_par_t *args, var_s *retval) {
+static int cmd_serial_ready(var_s *self, int argc, slib_par_t *args, var_s *retval) {
   int result;
-  if (argc != 0 || !is_usb_object(self)) {
+  if (argc != 0 || !is_serial_object(self)) {
     v_setstr(retval, ERR_PARAM);
     result = 0;
   } else {
@@ -179,9 +180,9 @@ static int cmd_usb_ready(var_s *self, int argc, slib_par_t *args, var_s *retval)
   return result;
 }
 
-static int cmd_usb_receive(var_s *self, int argc, slib_par_t *args, var_s *retval) {
+static int cmd_serial_receive(var_s *self, int argc, slib_par_t *args, var_s *retval) {
   int result;
-  if (argc != 0 || !is_usb_object(self)) {
+  if (argc != 0 || !is_serial_object(self)) {
     v_setstr(retval, ERR_PARAM);
     result = 0;
   } else {
@@ -200,9 +201,9 @@ static int cmd_usb_receive(var_s *self, int argc, slib_par_t *args, var_s *retva
   return result;
 }
 
-static int cmd_usb_send(var_s *self, int argc, slib_par_t *args, var_s *retval) {
+static int cmd_serial_send(var_s *self, int argc, slib_par_t *args, var_s *retval) {
   int result;
-  if (argc != 1 || !is_usb_object(self) || !v_is_type(args[0].var_p, V_STR)) {
+  if (argc != 1 || !is_serial_object(self) || !v_is_type(args[0].var_p, V_STR)) {
     v_setstr(retval, ERR_PARAM);
     result = 0;
   } else {
@@ -224,7 +225,7 @@ static int cmd_usb_send(var_s *self, int argc, slib_par_t *args, var_s *retval) 
 
 static int cmd_openserial(int argc, slib_par_t *args, var_t *retval) {
   int result;
-  if (argc != 0 || !(argc == 1 && is_usb_var(args[0].var_p))) {
+  if (!(argc == 0 || (argc == 1 && is_serial_var(args[0].var_p)))) {
     v_setstr(retval, ERR_PARAM);
     result = 0;
   } else {
@@ -232,9 +233,9 @@ static int cmd_openserial(int argc, slib_par_t *args, var_t *retval) {
     map_init(retval);
     retval->v.m.id = serialNo;
     retval->v.m.cls_id = USB_CLASS_ID;
-    v_create_callback(retval, "ready", cmd_usb_ready);
-    v_create_callback(retval, "receive", cmd_usb_receive);
-    v_create_callback(retval, "send", cmd_usb_send);
+    v_create_callback(retval, "ready", cmd_serial_ready);
+    v_create_callback(retval, "receive", cmd_serial_receive);
+    v_create_callback(retval, "send", cmd_serial_send);
     switch (serialNo) {
     case 0:
       serial_init();

@@ -175,9 +175,21 @@ static int cmd_bluetooth_close(var_s *self, int argc, slib_par_t *args, var_s *r
   return result;
 }
 
+static int cmd_bluetooth_connected(var_s *self, int argc, slib_par_t *args, var_s *retval) {
+  int result;
+  if (argc != 0 || !is_bluetooth_object(self)) {
+    v_setstr(retval, ERR_PARAM);
+    result = 0;
+  } else {
+    v_setint(retval, runtime->getBoolean("bluetoothConnected"));
+    result = 1;
+  }
+  return result;
+}
+
 static int cmd_bluetooth_description(var_s *self, int argc, slib_par_t *args, var_s *retval) {
   int result;
-  if (argc != 1 || !is_bluetooth_object(self)) {
+  if (argc != 0 || !is_bluetooth_object(self)) {
     v_setstr(retval, ERR_PARAM);
     result = 0;
   } else {
@@ -221,21 +233,19 @@ static int cmd_bluetooth_send(var_s *self, int argc, slib_par_t *args, var_s *re
 static int cmd_bluetooth_connect(int argc, slib_par_t *args, var_t *retval) {
   int result = 0;
 
-  if (argc != 0) {
-    v_setstr(retval, "Unexpected arguments");
+  if (argc != 1 || !v_is_type(args[0].var_p, V_STR)) {
+    v_setstr(retval, "Invalid device name");
   } else {
     runtime->getOutput()->redraw();
     android_app *app = runtime->getApp();
 
     JNIEnv *env;
     app->activity->vm->AttachCurrentThread(&env, nullptr);
-    // int vendorId = v_getint(args[0].var_p);
-    // int baud = argc >= 2 ? (int)v_getint(args[1].var_p) : 0;
-    // int timeout = argc == 3 ? (int)v_getint(args[2].var_p) : -1;
+    auto deviceName = env->NewStringUTF(v_getstr(args[0].var_p));
     jclass clazz = env->GetObjectClass(app->activity->clazz);
-    const char *signature = "()Ljava/lang/String;";
+    const char *signature = "(Ljava/lang/String;)Ljava/lang/String;";
     jmethodID methodId = env->GetMethodID(clazz, "bluetoothConnect", signature);
-    auto jstr = (jstring)env->CallObjectMethod(app->activity->clazz, methodId);
+    auto jstr = (jstring)env->CallObjectMethod(app->activity->clazz, methodId, deviceName);
     const char *str = env->GetStringUTFChars(jstr, JNI_FALSE);
 
     if (strncmp(str, "[tag-connected]", 15) == 0) {
@@ -243,6 +253,7 @@ static int cmd_bluetooth_connect(int argc, slib_par_t *args, var_t *retval) {
       retval->v.m.id = BLUETOOTH_OBJECT_ID;
       retval->v.m.cls_id = BLUETOOTH_CLASS_ID;
       v_create_callback(retval, "close", cmd_bluetooth_close);
+      v_create_callback(retval, "connected", cmd_bluetooth_connected);
       v_create_callback(retval, "description", cmd_bluetooth_description);
       v_create_callback(retval, "receive", cmd_bluetooth_receive);
       v_create_callback(retval, "send", cmd_bluetooth_send);
@@ -255,6 +266,7 @@ static int cmd_bluetooth_connect(int argc, slib_par_t *args, var_t *retval) {
     env->ReleaseStringUTFChars(jstr, str);
     env->DeleteLocalRef(jstr);
     env->DeleteLocalRef(clazz);
+    env->DeleteLocalRef(deviceName);
     app->activity->vm->DetachCurrentThread();
   }
   return result;

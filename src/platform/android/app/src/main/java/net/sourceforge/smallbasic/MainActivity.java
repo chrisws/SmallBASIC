@@ -202,15 +202,19 @@ public class MainActivity extends NativeActivity {
   }
 
   @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
-  public String bluetoothConnect() {
+  public String bluetoothConnect(String deviceName) {
     String result;
     try {
-      _bluetoothConnection = new BluetoothConnection(this);
+      _bluetoothConnection = new BluetoothConnection(this, deviceName);
       result = "[tag-connected]";
     } catch (IOException e) {
       result = e.getLocalizedMessage();
     }
     return result;
+  }
+
+  public boolean bluetoothConnected() {
+    return _bluetoothConnection != null && _bluetoothConnection.isConnected();
   }
 
   @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)

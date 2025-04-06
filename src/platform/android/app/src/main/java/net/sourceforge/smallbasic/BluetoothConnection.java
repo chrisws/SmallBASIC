@@ -32,19 +32,22 @@ import java.util.UUID;
 public class BluetoothConnection extends BroadcastReceiver {
   private static final String TAG = "smallbasic";
   private static final UUID SPP_UUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
-  private static final int RECEIVE_BUFFER_SIZE = 1024;
+  private static final int RECEIVE_BUFFER_SIZE = 64;
+  private static final int MAX_RECEIVE_SIZE = 128;
   private static final int CONNECT_PERMISSION = 1000;
 
-  private BluetoothAdapter _bluetoothAdapter;
+  private final BluetoothAdapter _bluetoothAdapter;
+  private final Context _context;
+  private final String _deviceName;
   private BluetoothSocket _bluetoothSocket;
   private BluetoothDevice _device;
-  private Context _context;
 
   /**
    * Constructs a new BluetoothConnection
    */
-  public BluetoothConnection(Activity activity) throws IOException {
+  public BluetoothConnection(Activity activity, String deviceName) throws IOException {
     _context = activity;
+    _deviceName = deviceName;
     _bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
     if (_bluetoothAdapter == null) {
       throw createIoException(activity, R.string.BLUETOOTH_ERROR);
@@ -77,7 +80,7 @@ public class BluetoothConnection extends BroadcastReceiver {
    */
   public void close() {
     try {
-      _context.unregisterReceiver(this);
+      unregisterReceiver();
       if (_bluetoothSocket != null) {
         _bluetoothSocket.close();
         Log.d(TAG, "Connection closed.");
@@ -94,13 +97,15 @@ public class BluetoothConnection extends BroadcastReceiver {
   public String getDescription() {
     String result;
     if (_bluetoothSocket != null) {
-      result = String.format("%s %s",
-                             _bluetoothSocket.getRemoteDevice().getAddress(),
-                             _bluetoothSocket.getRemoteDevice().getName());
+      result = String.format("Remote %s [%s]",
+                             _bluetoothSocket.getRemoteDevice().getName(),
+                             _bluetoothSocket.getRemoteDevice().getAddress());
     } else {
-      result = "";
+      result = String.format("Local: %s [%s] Waiting for %s",
+                             _bluetoothAdapter.getName(),
+                             _bluetoothAdapter.getAddress(),
+                             _deviceName);
     }
-
     return result;
   }
 
@@ -130,10 +135,9 @@ public class BluetoothConnection extends BroadcastReceiver {
         String deviceName = discoveredDevice.getName();
         String deviceAddress = discoveredDevice.getAddress();
         Log.d(TAG, "Found device: " + deviceName + " at " + deviceAddress);
-
-        // Connect to the device (you could filter based on name or address)
-        if (deviceName.equals("TargetDeviceName")) {
+        if (_deviceName.equals(deviceName)) {
           _device = discoveredDevice;
+          unregisterReceiver();
           connectToDevice();
         }
       }
@@ -151,6 +155,10 @@ public class BluetoothConnection extends BroadcastReceiver {
       byte[] buffer = new byte[RECEIVE_BUFFER_SIZE];
       for (int n = dataIn.read(buffer); n != -1; n = dataIn.read(buffer)) {
         outputStream.write(buffer, 0, n);
+        if (outputStream.size() > MAX_RECEIVE_SIZE) {
+          // break in case the device is continuously sending
+          break;
+        }
       }
       result = new String(outputStream.toByteArray(), StandardCharsets.UTF_8);
     } catch (IOException e) {
@@ -201,5 +209,13 @@ public class BluetoothConnection extends BroadcastReceiver {
       ActivityCompat.requestPermissions(activity, permissions, CONNECT_PERMISSION);
     });
     Log.d(TAG, "requesting permission");
+  }
+
+  private void unregisterReceiver() {
+    try {
+      _context.unregisterReceiver(this);
+    } catch (IllegalArgumentException e) {
+      // ignored
+    }
   }
 }
