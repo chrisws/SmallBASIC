@@ -241,9 +241,9 @@ public class MainActivity extends NativeActivity {
   public int bluetoothSend(final byte[] data) {
     int result;
     if (_bluetoothConnection != null) {
-      result = _bluetoothConnection.send(getString(data));
+      result = _bluetoothConnection.send(getString(data)) ? 1 : 0;
     } else {
-      result = -1;
+      result = 0;
     }
     return result;
   }

@@ -19,12 +19,14 @@ import androidx.annotation.NonNull;
 import androidx.annotation.RequiresPermission;
 import androidx.core.app.ActivityCompat;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Bluetooth (non BLE) communications
@@ -32,23 +34,26 @@ import java.util.UUID;
 public class BluetoothConnection extends BroadcastReceiver {
   private static final String TAG = "smallbasic";
   private static final UUID SPP_UUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
-  private static final int RECEIVE_BUFFER_SIZE = 64;
-  private static final int MAX_RECEIVE_SIZE = 128;
   private static final int CONNECT_PERMISSION = 1000;
+  private static final int SEND_TIMEOUT_SECS = 10;
+  private static final int RING_BUFFER_SIZE = 4096;
 
   private final BluetoothAdapter _bluetoothAdapter;
   private final Context _context;
   private final String _deviceName;
+  private final RingBuffer _ringBuffer;
   private BluetoothSocket _bluetoothSocket;
   private BluetoothDevice _device;
+  private ReceiverThread _receiverThread;
 
   /**
    * Constructs a new BluetoothConnection
    */
   public BluetoothConnection(Activity activity, String deviceName) throws IOException {
-    _context = activity;
-    _deviceName = deviceName;
-    _bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+    this._context = activity;
+    this._deviceName = deviceName;
+    this._bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+    this._ringBuffer = new RingBuffer(RING_BUFFER_SIZE);
     if (_bluetoothAdapter == null) {
       throw createIoException(activity, R.string.BLUETOOTH_ERROR);
     }
@@ -62,7 +67,6 @@ public class BluetoothConnection extends BroadcastReceiver {
       requestPermission(activity, Manifest.permission.BLUETOOTH_SCAN);
       throw createIoException(activity, R.string.PERMISSION_ERROR);
     }
-
 
     if (!_bluetoothAdapter.isEnabled()) {
       Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
@@ -79,15 +83,14 @@ public class BluetoothConnection extends BroadcastReceiver {
    * Closes the USB connection
    */
   public void close() {
-    try {
-      unregisterReceiver();
-      if (_bluetoothSocket != null) {
-        _bluetoothSocket.close();
-        Log.d(TAG, "Connection closed.");
-      }
-    } catch (Exception e) {
-      Log.e(TAG, "Error closing connection", e);
+    unregisterReceiver();
+    _bluetoothAdapter.cancelDiscovery();
+    if (_receiverThread != null) {
+      _receiverThread.interrupt();
     }
+    closeSocket();
+    _device = null;
+    _receiverThread = null;
   }
 
   /**
@@ -125,7 +128,7 @@ public class BluetoothConnection extends BroadcastReceiver {
     Log.d(TAG, "onReceive entered");
     String action = intent.getAction();
     if (Manifest.permission.BLUETOOTH_CONNECT.equals(action)) {
-      String message = "";
+      String message = "todo - what here?";
       new Handler(Looper.getMainLooper()).post(() -> {
         Toast.makeText(context, message, Toast.LENGTH_LONG).show();
       });
@@ -148,47 +151,56 @@ public class BluetoothConnection extends BroadcastReceiver {
    * Receives the next packet of data from the usb connection
    */
   public String receive() {
-    String result = null;
-    try {
-      InputStream dataIn = _bluetoothSocket.getInputStream();
-      ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-      byte[] buffer = new byte[RECEIVE_BUFFER_SIZE];
-      for (int n = dataIn.read(buffer); n != -1; n = dataIn.read(buffer)) {
-        outputStream.write(buffer, 0, n);
-        if (outputStream.size() > MAX_RECEIVE_SIZE) {
-          // break in case the device is continuously sending
-          break;
-        }
-      }
-      result = new String(outputStream.toByteArray(), StandardCharsets.UTF_8);
-    } catch (IOException e) {
-      Log.e(TAG, "Error receiving data", e);
-    }
-    return result;
+    return _ringBuffer.read();
   }
 
   /**
    * Sends the given data to the usb connection
    */
-  public int send(String data) {
-    byte[] dataOut = data.getBytes(StandardCharsets.UTF_8);
-    try {
-      OutputStream outputStream = _bluetoothSocket.getOutputStream();
-      outputStream.write(dataOut);
-    } catch (IOException e) {
-      Log.e(TAG, "Error sending data", e);
+  public boolean send(String data) {
+    final byte[] dataOut = data.getBytes(StandardCharsets.UTF_8);
+    AtomicBoolean result = new AtomicBoolean(false);
+    CountDownLatch latch = new CountDownLatch(1);
+    new Thread(new Runnable() {
+      @Override
+      public void run() {
+        try {
+          OutputStream outputStream = _bluetoothSocket.getOutputStream();
+          outputStream.write(dataOut);
+          result.set(true);
+        } catch (IOException e) {
+          Log.e(TAG, "Error sending data", e);
+        } finally {
+          latch.countDown();
+        }
+      }
+    }).start();
+    endLatch(latch);
+    return result.get();
+  }
+
+  private void closeSocket() {
+    if (_bluetoothSocket != null) {
+      try {
+        _bluetoothSocket.close();
+        Log.d(TAG, "Connection closed.");
+      }
+      catch (IOException e) {
+        Log.e(TAG, "Error closing connection", e);
+      }
     }
-    return 0;
   }
 
   @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
   private void connectToDevice() {
     if (_device != null) {
       try {
+        _bluetoothAdapter.cancelDiscovery();
         _bluetoothSocket = _device.createRfcommSocketToServiceRecord(SPP_UUID);
         _bluetoothSocket.connect();
+        _receiverThread = new ReceiverThread(_bluetoothSocket, _ringBuffer);
+        _receiverThread.start();
         Log.d(TAG, "Connected to device: " + _device.getName());
-        // Now you can send and receive data via bluetoothSocket
       } catch (Exception e) {
         Log.e(TAG, "Connection failed", e);
       }
@@ -198,6 +210,19 @@ public class BluetoothConnection extends BroadcastReceiver {
   @NonNull
   private static IOException createIoException(Context context, int resourceId) {
     return new IOException(context.getResources().getString(resourceId));
+  }
+
+  /**
+   * Wait for the looper to process the next consumer
+   */
+  private void endLatch(CountDownLatch latch) {
+    try {
+      if (!latch.await(SEND_TIMEOUT_SECS, TimeUnit.SECONDS)) {
+        Log.d(TAG, "timeout waiting");
+      }
+    } catch (InterruptedException e) {
+      Log.d(TAG, "failed waiting", e);
+    }
   }
 
   /**
@@ -216,6 +241,98 @@ public class BluetoothConnection extends BroadcastReceiver {
       _context.unregisterReceiver(this);
     } catch (IllegalArgumentException e) {
       // ignored
+    }
+  }
+
+  /**
+   * Thread for receiving data
+   */
+  static class ReceiverThread extends Thread {
+    private static final int RECEIVE_BUFFER_SIZE = 1024;
+    private final BluetoothSocket _socket;
+    private final RingBuffer _ringBuffer;
+    private InputStream _inputStream;
+
+    public ReceiverThread(BluetoothSocket socket, RingBuffer ringBuffer) {
+      this._socket = socket;
+      this._ringBuffer = ringBuffer;
+      try {
+        this._inputStream = socket.getInputStream();
+      } catch (IOException e) {
+        Log.d(TAG, "get stream failed", e);
+      }
+    }
+
+    @Override
+    public void run() {
+      byte[] buffer = new byte[RECEIVE_BUFFER_SIZE];
+      int bytesRead;
+
+      try {
+        while (!Thread.currentThread().isInterrupted()) {
+          bytesRead = _inputStream.read(buffer);
+          if (bytesRead > 0) {
+            _ringBuffer.write(buffer, bytesRead);
+          }
+        }
+      } catch (IOException e) {
+        Log.d(TAG, "read failed", e);
+      } finally {
+        try {
+          _socket.close();
+        } catch (IOException e) {
+          Log.d(TAG, "close failed", e);
+        }
+      }
+      Log.d(TAG, "receiver thread terminating");
+    }
+  }
+
+  /**
+   * RingBuffer for receiving data
+   */
+  static class RingBuffer {
+    private static final int MAX_READ_LENGTH = 80;
+    private final byte[] buffer;
+    private int head;
+    private int tail;
+    private int size;
+
+    RingBuffer(int capacity) {
+      buffer = new byte[capacity];
+      head = 0;
+      tail = 0;
+      size = 0;
+    }
+
+    synchronized boolean hasData() {
+      return size > 0;
+    }
+
+    synchronized String read() {
+      int bytesToRead = Math.min(MAX_READ_LENGTH, size);
+      byte[] output = new byte[bytesToRead];
+
+      for (int i = 0; i < bytesToRead; i++) {
+        output[i] = buffer[head];
+        head = (head + 1) % buffer.length;
+        size--;
+      }
+
+      return new String(output, StandardCharsets.UTF_8);
+    }
+
+    synchronized void write(byte[] data, int length) {
+      if (length > buffer.length - size) {
+        // Buffer overflow, cannot write
+        return;
+      }
+
+      for (int i = 0; i < length; i++) {
+        buffer[tail] = data[i];
+        tail = (tail + 1) % buffer.length;
+        size++;
+      }
     }
   }
 }
