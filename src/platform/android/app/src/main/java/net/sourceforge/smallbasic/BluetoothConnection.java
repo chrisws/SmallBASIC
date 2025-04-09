@@ -4,6 +4,7 @@ import android.Manifest;
 import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
+import android.bluetooth.BluetoothSocket;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -32,7 +33,9 @@ public class BluetoothConnection extends BroadcastReceiver {
   private final Context _context;
   private final String _deviceName;
   private BluetoothDevice _device;
-  private BluetoothThread _bluetoothThread;
+  private BluetoothTxThread _txThread;
+  private BluetoothRxThread _rxThread;
+  private BluetoothSocket _socket;
   private boolean _error;
 
   public BluetoothConnection(Activity activity, String deviceName) throws IOException {
@@ -66,28 +69,29 @@ public class BluetoothConnection extends BroadcastReceiver {
   }
 
   /**
-   * Closes the USB connection
+   * Closes the connection
    */
   public void close() {
     Log.d(TAG, "close BT connection");
-    unregisterReceiver();
     _bluetoothAdapter.cancelDiscovery();
-    if (_bluetoothThread != null) {
-      _bluetoothThread.stopThread();
-      _bluetoothThread = null;
-    }
+    unregisterReceiver();
+    closeSocket();
+    stopTxThread();
+    stopRxThread();
     _device = null;
     Log.d(TAG, "BT connection closed");
   }
 
   /**
-   * Returns information about the connected USB device
+   * Returns information about the connected device
    */
   @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
   public String getDescription() {
     String result;
-    if (_bluetoothThread != null) {
-      result = _bluetoothThread.getDescription();
+    if (_socket != null) {
+      result = String.format("Remote %s [%s]",
+                             _socket.getRemoteDevice().getName(),
+                             _socket.getRemoteDevice().getAddress());
     } else {
       result = String.format("Local: %s [%s] Waiting for %s",
                              _bluetoothAdapter.getName(),
@@ -101,14 +105,16 @@ public class BluetoothConnection extends BroadcastReceiver {
    * Returns whether the bluetooth connection is open
    */
   public boolean isConnected() {
-    return _bluetoothThread != null && _bluetoothThread.isConnected();
+    return _socket != null && _socket.isConnected();
   }
 
   /**
    * Whether a connection error has occurred
    */
   public boolean isError() {
-    return _error || (_bluetoothThread != null && !_bluetoothThread.isRunning());
+    return _error
+           || (_rxThread != null && !_rxThread.isRunning())
+           || (_txThread != null && !_txThread.isRunning());
   }
 
   /**
@@ -135,12 +141,12 @@ public class BluetoothConnection extends BroadcastReceiver {
   }
 
   /**
-   * Receives the next packet of data from the usb connection
+   * Receives the next packet of data from the connection
    */
   public String receive() {
     String result;
-    if (_bluetoothThread != null) {
-      result = _bluetoothThread.read();
+    if (_rxThread != null) {
+      result = _rxThread.read();
     } else {
       result = "";
     }
@@ -148,12 +154,12 @@ public class BluetoothConnection extends BroadcastReceiver {
   }
 
   /**
-   * Sends the given data to the usb connection
+   * Sends the given data to the connection
    */
   public boolean send(String data) {
     boolean result;
-    if (_bluetoothThread != null) {
-      result = _bluetoothThread.send(data);
+    if (_txThread != null) {
+      result = _txThread.send(data);
     } else {
       result = false;
     }
@@ -168,6 +174,19 @@ public class BluetoothConnection extends BroadcastReceiver {
   }
 
   /**
+   * Close the socket at termination of the thread
+   */
+  private void closeSocket() {
+    try {
+      _socket.close();
+      Log.d(TAG, "BT socket closed.");
+    }
+    catch (IOException e) {
+      Log.e(TAG, "Error closing socket", e);
+    }
+  }
+
+  /**
    * Connects to the target device and commences communication
    */
   @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
@@ -175,8 +194,10 @@ public class BluetoothConnection extends BroadcastReceiver {
     if (_device != null) {
       try {
         _bluetoothAdapter.cancelDiscovery();
-        _bluetoothThread = new BluetoothThread(_device.createRfcommSocketToServiceRecord(SPP_UUID));
-        _bluetoothThread.start();
+        _socket = _device.createRfcommSocketToServiceRecord(SPP_UUID);
+        _socket.connect();
+        _txThread = new BluetoothTxThread(_socket);
+        _rxThread = new BluetoothRxThread(_socket);
         Log.d(TAG, "Connected to device: " + _device.getName());
       } catch (Exception e) {
         _error = true;
@@ -201,7 +222,27 @@ public class BluetoothConnection extends BroadcastReceiver {
       String[] permissions = {permission};
       ActivityCompat.requestPermissions(activity, permissions, CONNECT_PERMISSION);
     });
-    Log.d(TAG, "requesting permission");
+    Log.d(TAG, "requesting permission: " + permission);
+  }
+
+  /**
+   * Stops the receive thread
+   */
+  private void stopRxThread() {
+    if (_rxThread != null) {
+      _rxThread.stopThread();
+      _rxThread = null;
+    }
+  }
+
+  /**
+   * Stops the transmit thread
+   */
+  private void stopTxThread() {
+    if (_txThread != null) {
+      _txThread.stopThread();
+      _txThread = null;
+    }
   }
 
   /**
