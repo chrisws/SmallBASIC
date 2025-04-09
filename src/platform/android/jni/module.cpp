@@ -199,6 +199,18 @@ static int cmd_bluetooth_description(var_s *self, int argc, slib_par_t *args, va
   return result;
 }
 
+static int cmd_bluetooth_error(var_s *self, int argc, slib_par_t *args, var_s *retval) {
+  int result;
+  if (argc != 0 || !is_bluetooth_object(self)) {
+    v_setstr(retval, ERR_PARAM);
+    result = 0;
+  } else {
+    v_setint(retval, runtime->getBoolean("bluetoothError"));
+    result = 1;
+  }
+  return result;
+}
+
 static int cmd_bluetooth_receive(var_s *self, int argc, slib_par_t *args, var_s *retval) {
   int result;
   if (argc != 0 || !is_bluetooth_object(self)) {
@@ -255,6 +267,7 @@ static int cmd_bluetooth_connect(int argc, slib_par_t *args, var_t *retval) {
       v_create_callback(retval, "close", cmd_bluetooth_close);
       v_create_callback(retval, "connected", cmd_bluetooth_connected);
       v_create_callback(retval, "description", cmd_bluetooth_description);
+      v_create_callback(retval, "error", cmd_bluetooth_error);
       v_create_callback(retval, "receive", cmd_bluetooth_receive);
       v_create_callback(retval, "send", cmd_bluetooth_send);
       result = 1;

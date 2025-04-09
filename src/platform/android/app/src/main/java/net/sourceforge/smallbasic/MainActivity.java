@@ -228,6 +228,10 @@ public class MainActivity extends NativeActivity {
     return result;
   }
 
+  public boolean bluetoothError() {
+    return _bluetoothConnection == null || _bluetoothConnection.isError();
+  }
+
   public String bluetoothReceive() {
     String result;
     if (_bluetoothConnection != null) {
@@ -269,14 +273,8 @@ public class MainActivity extends NativeActivity {
     if (_tts != null) {
       _tts.stop();
     }
-    if (_usbConnection != null) {
-      _usbConnection.close();
-      _usbConnection = null;
-    }
-    if (_bluetoothConnection != null) {
-      _bluetoothConnection.close();
-      _bluetoothConnection = null;
-    }
+    usbClose();
+    bluetoothClose();
     return removeLocationUpdates();
   }
 
