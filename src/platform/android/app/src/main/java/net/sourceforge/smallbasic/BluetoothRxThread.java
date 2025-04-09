@@ -42,7 +42,6 @@ public class BluetoothRxThread extends Thread {
         if (bytesRead > 0) {
           _ringBuffer.write(buffer, bytesRead);
         }
-        ThreadUtil.sleep();
       }
     } catch (Exception e) {
       Log.d(TAG, "Run failed:", e);

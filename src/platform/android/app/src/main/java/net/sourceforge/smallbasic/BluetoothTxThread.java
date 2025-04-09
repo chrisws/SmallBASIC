@@ -34,13 +34,12 @@ public class BluetoothTxThread extends Thread {
   public void run() {
     try {
       while (_running.get() && !Thread.currentThread().isInterrupted()) {
-        byte[] data = _sendQueue.poll();
-        if (data != null) {
-          _outputStream.write(data);
-          _outputStream.flush();
-        }
-        ThreadUtil.sleep();
+        byte[] data = _sendQueue.take();
+        _outputStream.write(data);
+        _outputStream.flush();
       }
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
     } catch (Exception e) {
       Log.d(TAG, "Run failed:", e);
     } finally {
@@ -58,6 +57,7 @@ public class BluetoothTxThread extends Thread {
       _sendQueue.put(data.getBytes(StandardCharsets.UTF_8));
       result = true;
     } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
       Log.d(TAG, "Send failed:", e);
       result = false;
     }

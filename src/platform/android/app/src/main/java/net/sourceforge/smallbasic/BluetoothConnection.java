@@ -112,9 +112,8 @@ public class BluetoothConnection extends BroadcastReceiver {
    * Whether a connection error has occurred
    */
   public boolean isError() {
-    return _error
-           || (_rxThread != null && !_rxThread.isRunning())
-           || (_txThread != null && !_txThread.isRunning());
+    return (_rxThread != null && !_rxThread.isRunning()) ||
+           (_txThread != null && !_txThread.isRunning()) || _error;
   }
 
   /**
