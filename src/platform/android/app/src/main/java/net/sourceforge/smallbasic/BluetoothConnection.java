@@ -109,8 +109,7 @@ public class BluetoothConnection extends BroadcastReceiver {
    * Whether a connection error has occurred
    */
   public boolean isError() {
-    return (_rxThread != null && !_rxThread.isRunning()) ||
-           (_txThread != null && !_txThread.isRunning()) || _error;
+    return _error;
   }
 
   /**
@@ -139,12 +138,12 @@ public class BluetoothConnection extends BroadcastReceiver {
   /**
    * Receives the next packet of data from the connection
    */
-  public String receive() {
+  public String receive(String strDefault) {
     String result;
     if (_rxThread != null) {
       result = _rxThread.read();
     } else {
-      result = "";
+      result = strDefault;
     }
     return result;
   }

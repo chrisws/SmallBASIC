@@ -91,6 +91,8 @@ public class MainActivity extends NativeActivity {
   private static final String SCHEME_BAS = "qrcode.bas";
   private static final String SCHEME = "smallbasic://x/";
   private static final String CP1252 = "Cp1252";
+  private static final String TAG_CONNECTED = "[--tag-connected--]";
+  private static final String TAG_ERROR = "[--tag-error--]";
   private static final int BASE_FONT_SIZE = 18;
   private static final long LOCATION_INTERVAL = 1000;
   private static final float LOCATION_DISTANCE = 1;
@@ -206,7 +208,7 @@ public class MainActivity extends NativeActivity {
     String result;
     try {
       _bluetoothConnection = new BluetoothConnection(this, deviceName);
-      result = "[tag-connected]";
+      result = TAG_CONNECTED;
     } catch (IOException e) {
       result = e.getLocalizedMessage();
     }
@@ -220,34 +222,30 @@ public class MainActivity extends NativeActivity {
   @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
   public String bluetoothDescription() {
     String result;
-    if (_bluetoothConnection != null) {
+    if (_bluetoothConnection != null && !_bluetoothConnection.isError()) {
       result = _bluetoothConnection.getDescription();
     } else {
-      result = "";
+      result = TAG_ERROR;
     }
     return result;
   }
 
-  public boolean bluetoothError() {
-    return _bluetoothConnection == null || _bluetoothConnection.isError();
-  }
-
   public String bluetoothReceive() {
     String result;
-    if (_bluetoothConnection != null) {
-      result = _bluetoothConnection.receive();
+    if (_bluetoothConnection != null && !_bluetoothConnection.isError()) {
+      result = _bluetoothConnection.receive(TAG_ERROR);
     } else {
-      result = "";
+      result = TAG_ERROR;
     }
     return result;
   }
 
   public int bluetoothSend(final byte[] data) {
     int result;
-    if (_bluetoothConnection != null) {
+    if (_bluetoothConnection != null && !_bluetoothConnection.isError()) {
       result = _bluetoothConnection.send(getString(data)) ? 1 : 0;
     } else {
-      result = 0;
+      result = -1;
     }
     return result;
   }
@@ -723,7 +721,7 @@ public class MainActivity extends NativeActivity {
     String result;
     try {
       _usbConnection = new UsbConnection(getApplicationContext(), vendorId, baud, timeout);
-      result = "[tag-connected]";
+      result = TAG_CONNECTED;
     } catch (IOException e) {
       result = e.getLocalizedMessage();
     }
@@ -733,9 +731,9 @@ public class MainActivity extends NativeActivity {
   public String usbDescription() {
     String result;
     if (_usbConnection != null) {
-      result = _usbConnection.getDescription();
+      result = _usbConnection.getDescription(TAG_ERROR);
     } else {
-      result = "";
+      result = TAG_ERROR;
     }
     return result;
   }
@@ -745,7 +743,7 @@ public class MainActivity extends NativeActivity {
     if (_usbConnection != null) {
       result = _usbConnection.receive();
     } else {
-      result = "";
+      result = TAG_ERROR;
     }
     return result;
   }

@@ -10,11 +10,14 @@
 
 #include "platform/android/jni/runtime.h"
 #include "languages/messages.en.h"
+#include "common/sys.h"
 
 #define USB_OBJECT_ID 1001
 #define USB_CLASS_ID 1002
 #define BLUETOOTH_OBJECT_ID 1003
 #define BLUETOOTH_CLASS_ID 1004
+#define TAG_CONNECTED "[--tag-connected--]"
+#define TAG_ERROR "[--tag-error--]"
 
 extern Runtime *runtime;
 
@@ -24,6 +27,32 @@ static bool is_usb_object(var_p_t var) {
 
 static bool is_bluetooth_object(var_p_t var) {
   return var != nullptr && v_is_type(var, V_MAP) && (var->v.m.id == BLUETOOTH_OBJECT_ID);
+}
+
+static int get_integer_from_string(const char *methodName, const char *str, var_s *retval) {
+  int result;
+  auto len = runtime->getIntegerFromString(methodName, str);
+  if (len == -1) {
+    v_setstr(retval, ERR_CONNECTION);
+    result = 0;
+  } else {
+    v_setint(retval, len);
+    result = 1;
+  }
+  return result;
+}
+
+static int get_string(const char *methodName, var_s *retval) {
+  int result;
+  auto str = runtime->getString(methodName);
+  if (strncmp(str, TAG_ERROR, STRLEN(TAG_ERROR)) == 0) {
+    v_setstr(retval, ERR_CONNECTION);
+    result = 0;
+  } else {
+    v_setstr(retval, str);
+    result = 1;
+  }
+  return result;
 }
 
 static int cmd_usb_close(var_s *self, int argc, slib_par_t *args, var_s *retval) {
@@ -44,8 +73,7 @@ static int cmd_usb_description(var_s *self, int argc, slib_par_t *args, var_s *r
     v_setstr(retval, ERR_PARAM);
     result = 0;
   } else {
-    v_setstr(retval, runtime->getString("usbDescription"));
-    result = 1;
+    result = get_string("usbDescription", retval);
   }
   return result;
 }
@@ -56,8 +84,7 @@ static int cmd_usb_receive(var_s *self, int argc, slib_par_t *args, var_s *retva
     v_setstr(retval, ERR_PARAM);
     result = 0;
   } else {
-    v_setstr(retval, runtime->getString("usbReceive"));
-    result = 1;
+    result = get_string("usbReceive", retval);
   }
   return result;
 }
@@ -70,13 +97,12 @@ static int cmd_usb_send(var_s *self, int argc, slib_par_t *args, var_s *retval) 
   } else {
     if (v_is_type(args[0].var_p, V_STR)) {
       auto str = v_getstr(args[0].var_p);
-      v_setint(retval, runtime->getIntegerFromString("usbSend", str));
+      result = get_integer_from_string("usbSend", str, retval);
     } else {
       auto str = v_str(args[0].var_p);
-      v_setint(retval, runtime->getIntegerFromString("usbSend", str));
+      result = get_integer_from_string("usbSend", str, retval);
       free(str);
     }
-    result = 1;
   }
   return result;
 }
@@ -101,7 +127,7 @@ static int cmd_usb_connect(int argc, slib_par_t *args, var_t *retval) {
     auto jstr = (jstring)env->CallObjectMethod(app->activity->clazz, methodId, vendorId, baud, timeout);
     const char *str = env->GetStringUTFChars(jstr, JNI_FALSE);
 
-    if (strncmp(str, "[tag-connected]", 15) == 0) {
+    if (strncmp(str, TAG_CONNECTED, STRLEN(TAG_CONNECTED)) == 0) {
       map_init(retval);
       retval->v.m.id = USB_OBJECT_ID;
       retval->v.m.cls_id = USB_CLASS_ID;
@@ -193,20 +219,7 @@ static int cmd_bluetooth_description(var_s *self, int argc, slib_par_t *args, va
     v_setstr(retval, ERR_PARAM);
     result = 0;
   } else {
-    v_setstr(retval, runtime->getString("bluetoothDescription"));
-    result = 1;
-  }
-  return result;
-}
-
-static int cmd_bluetooth_error(var_s *self, int argc, slib_par_t *args, var_s *retval) {
-  int result;
-  if (argc != 0 || !is_bluetooth_object(self)) {
-    v_setstr(retval, ERR_PARAM);
-    result = 0;
-  } else {
-    v_setint(retval, runtime->getBoolean("bluetoothError"));
-    result = 1;
+    result = get_string("bluetoothDescription", retval);
   }
   return result;
 }
@@ -217,8 +230,7 @@ static int cmd_bluetooth_receive(var_s *self, int argc, slib_par_t *args, var_s 
     v_setstr(retval, ERR_PARAM);
     result = 0;
   } else {
-    v_setstr(retval, runtime->getString("bluetoothReceive"));
-    result = 1;
+    result = get_string("bluetoothReceive", retval);
   }
   return result;
 }
@@ -231,13 +243,12 @@ static int cmd_bluetooth_send(var_s *self, int argc, slib_par_t *args, var_s *re
   } else {
     if (v_is_type(args[0].var_p, V_STR)) {
       auto str = v_getstr(args[0].var_p);
-      v_setint(retval, runtime->getIntegerFromString("bluetoothSend", str));
+      result = get_integer_from_string("bluetoothSend", str, retval);
     } else {
       auto str = v_str(args[0].var_p);
-      v_setint(retval, runtime->getIntegerFromString("bluetoothSend", str));
+      result = get_integer_from_string("bluetoothSend", str, retval);
       free(str);
     }
-    result = 1;
   }
   return result;
 }
@@ -267,7 +278,6 @@ static int cmd_bluetooth_connect(int argc, slib_par_t *args, var_t *retval) {
       v_create_callback(retval, "close", cmd_bluetooth_close);
       v_create_callback(retval, "connected", cmd_bluetooth_connected);
       v_create_callback(retval, "description", cmd_bluetooth_description);
-      v_create_callback(retval, "error", cmd_bluetooth_error);
       v_create_callback(retval, "receive", cmd_bluetooth_receive);
       v_create_callback(retval, "send", cmd_bluetooth_send);
       result = 1;
@@ -479,7 +489,7 @@ extern "C" void sblib_free(int cls_id, int id) {
   } else if (cls_id == BLUETOOTH_CLASS_ID && id == BLUETOOTH_OBJECT_ID) {
     // when a 'bluetooth' variable falls out of scope
     runtime->getBoolean("bluetoothClose");
-  } 
+  }
 }
 
 extern "C" void sblib_close() {

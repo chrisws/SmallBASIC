@@ -1,5 +1,6 @@
 package net.sourceforge.smallbasic;
 
+import android.annotation.SuppressLint;
 import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -197,7 +198,8 @@ public class UsbConnection extends BroadcastReceiver {
   /**
    * Returns information about the connected USB device
    */
-  public String getDescription() {
+  @SuppressLint("DefaultLocale")
+  public String getDescription(String strDefault) {
     String result;
     if (_usbDevice != null) {
       result = String.format("%s %s %s %s [%d bps]",
@@ -207,7 +209,7 @@ public class UsbConnection extends BroadcastReceiver {
                              _usbDevice.getSerialNumber(),
                              _baud);
     } else {
-      result = "";
+      result = strDefault;
     }
     return result;
   }
