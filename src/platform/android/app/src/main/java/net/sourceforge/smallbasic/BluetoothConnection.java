@@ -32,7 +32,6 @@ public class BluetoothConnection extends BroadcastReceiver {
   private final BluetoothAdapter _bluetoothAdapter;
   private final Context _context;
   private final String _deviceName;
-  private BluetoothDevice _device;
   private BluetoothTxThread _txThread;
   private BluetoothRxThread _rxThread;
   private BluetoothSocket _socket;
@@ -72,13 +71,11 @@ public class BluetoothConnection extends BroadcastReceiver {
    * Closes the connection
    */
   public void close() {
-    Log.d(TAG, "close BT connection");
     _bluetoothAdapter.cancelDiscovery();
     unregisterReceiver();
     closeSocket();
     stopTxThread();
     stopRxThread();
-    _device = null;
     Log.d(TAG, "BT connection closed");
   }
 
@@ -131,9 +128,9 @@ public class BluetoothConnection extends BroadcastReceiver {
         String deviceAddress = discoveredDevice.getAddress();
         Log.d(TAG, "Found device: " + deviceName + " at " + deviceAddress);
         if (_deviceName.equals(deviceName)) {
-          _device = discoveredDevice;
+          _bluetoothAdapter.cancelDiscovery();
           unregisterReceiver();
-          connectToDevice();
+          connectToDevice(discoveredDevice);
         }
       }
     }
@@ -177,10 +174,13 @@ public class BluetoothConnection extends BroadcastReceiver {
    */
   private void closeSocket() {
     try {
-      _socket.close();
-      Log.d(TAG, "BT socket closed.");
+      if (_socket != null) {
+        _socket.close();
+        _socket = null;
+        Log.d(TAG, "BT socket closed.");
+      }
     }
-    catch (IOException e) {
+    catch (Exception e) {
       Log.e(TAG, "Error closing socket", e);
     }
   }
@@ -189,19 +189,16 @@ public class BluetoothConnection extends BroadcastReceiver {
    * Connects to the target device and commences communication
    */
   @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
-  private void connectToDevice() {
-    if (_device != null) {
-      try {
-        _bluetoothAdapter.cancelDiscovery();
-        _socket = _device.createRfcommSocketToServiceRecord(SPP_UUID);
-        _socket.connect();
-        _txThread = new BluetoothTxThread(_socket);
-        _rxThread = new BluetoothRxThread(_socket);
-        Log.d(TAG, "Connected to device: " + _device.getName());
-      } catch (Exception e) {
-        _error = true;
-        Log.e(TAG, "Connection failed", e);
-      }
+  private void connectToDevice(BluetoothDevice device) {
+    try {
+      _socket = device.createRfcommSocketToServiceRecord(SPP_UUID);
+      _socket.connect();
+      Log.d(TAG, "Connected to device: " + device.getName());
+      _txThread = new BluetoothTxThread(_socket);
+      _rxThread = new BluetoothRxThread(_socket);
+    } catch (Exception e) {
+      _error = true;
+      Log.e(TAG, "Connection failed", e);
     }
   }
 

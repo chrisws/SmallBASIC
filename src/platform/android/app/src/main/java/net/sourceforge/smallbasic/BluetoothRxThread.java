@@ -35,9 +35,9 @@ public class BluetoothRxThread extends Thread {
 
   @Override
   public void run() {
+    byte[] buffer = new byte[RECEIVE_BUFFER_SIZE];
     try {
       while (_running.get() && !Thread.currentThread().isInterrupted()) {
-        byte[] buffer = new byte[RECEIVE_BUFFER_SIZE];
         int bytesRead = _inputStream.read(buffer);
         if (bytesRead > 0) {
           _ringBuffer.write(buffer, bytesRead);
