@@ -6,8 +6,8 @@ import android.util.Log;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -15,13 +15,14 @@ import java.util.concurrent.atomic.AtomicBoolean;
  */
 public class BluetoothTxThread extends Thread {
   private static final String TAG = "smallbasic";
+  private static final int QUEUE_SIZE = 100;
   private final AtomicBoolean _running;
-  private final BlockingQueue<byte[]> _sendQueue;
+  private final BlockingQueue<byte[]> _queue;
   private final OutputStream _outputStream;
 
   public BluetoothTxThread(BluetoothSocket socket) throws IOException {
     this._outputStream = socket.getOutputStream();
-    this._sendQueue = new LinkedBlockingQueue<>();
+    this._queue = new ArrayBlockingQueue<>(QUEUE_SIZE);
     this._running = new AtomicBoolean(true);
     start();
   }
@@ -32,9 +33,11 @@ public class BluetoothTxThread extends Thread {
 
   @Override
   public void run() {
+    int ticks = 0;
     try {
       while (_running.get() && !Thread.currentThread().isInterrupted()) {
-        byte[] data = _sendQueue.take();
+        ticks++;
+        byte[] data = _queue.take();
         _outputStream.write(data);
         _outputStream.flush();
       }
@@ -45,21 +48,18 @@ public class BluetoothTxThread extends Thread {
     } finally {
       _running.set(false);
     }
-    Log.d(TAG, "Bluetooth TX thread terminated");
+    Log.d(TAG, "Bluetooth TX thread terminated with: " + ticks);
   }
 
   /**
-   * Add data to the send queue. This will block if the queue is full
+   * Add data to the send queue without blocking
    */
   public boolean send(String data) {
     boolean result;
-    try {
-      _sendQueue.put(data.getBytes(StandardCharsets.UTF_8));
-      result = true;
-    } catch (InterruptedException e) {
-      Thread.currentThread().interrupt();
-      Log.d(TAG, "Send failed:", e);
-      result = false;
+    if (data == null || data.isEmpty()) {
+      result  = false;
+    } else {
+      result = _queue.offer(data.getBytes(StandardCharsets.UTF_8));
     }
     return result;
   }

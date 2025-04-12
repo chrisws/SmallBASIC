@@ -5,6 +5,10 @@ import android.util.Log;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -12,15 +16,15 @@ import java.util.concurrent.atomic.AtomicBoolean;
  */
 public class BluetoothRxThread extends Thread {
   private static final String TAG = "smallbasic";
-  private static final int RECEIVE_BUFFER_SIZE = 1024;
-  private static final int RING_BUFFER_SIZE = 4096;
+  private static final int QUEUE_SIZE = 100;
+  private static final int READ_BUFFER_SIZE = 1024;
   private final AtomicBoolean _running;
   private final InputStream _inputStream;
-  private final RingBuffer _ringBuffer;
+  private final BlockingQueue<byte[]> _queue;
 
   public BluetoothRxThread(BluetoothSocket socket) throws IOException {
     this._inputStream = socket.getInputStream();
-    this._ringBuffer = new RingBuffer(RING_BUFFER_SIZE);
+    this._queue = new ArrayBlockingQueue<>(QUEUE_SIZE);
     this._running = new AtomicBoolean(true);
     start();
   }
@@ -29,18 +33,33 @@ public class BluetoothRxThread extends Thread {
     return _running.get();
   }
 
+  /**
+   * Returns any data from the queue without blocking
+   */
   public String read() {
-    return _ringBuffer.read();
+    String result;
+    byte[] data = _queue.poll();
+    if (data != null && data.length > 0) {
+      result = new String(data, StandardCharsets.UTF_8);
+    } else {
+      result = "";
+    }
+    return result;
   }
 
   @Override
   public void run() {
-    byte[] buffer = new byte[RECEIVE_BUFFER_SIZE];
+    byte[] buffer = new byte[READ_BUFFER_SIZE];
+    int ticks = 0;
     try {
       while (_running.get() && !Thread.currentThread().isInterrupted()) {
-        int bytesRead = _inputStream.read(buffer);
-        if (bytesRead > 0) {
-          _ringBuffer.write(buffer, bytesRead);
+        ticks++;
+        // read() is blocking
+        int size = _inputStream.read(buffer);
+        if (size > 0) {
+          byte[] data = Arrays.copyOf(buffer, size);
+          // blocks if the queue is full
+          _queue.put(data);
         }
       }
     } catch (Exception e) {
@@ -48,7 +67,7 @@ public class BluetoothRxThread extends Thread {
     } finally {
       _running.set(false);
     }
-    Log.d(TAG, "Bluetooth RX thread terminated");
+    Log.d(TAG, "Bluetooth RX thread terminated with: " + ticks);
   }
 
   public void stopThread() {

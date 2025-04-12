@@ -199,7 +199,7 @@ public class UsbConnection extends BroadcastReceiver {
    * Returns information about the connected USB device
    */
   @SuppressLint("DefaultLocale")
-  public String getDescription(String strDefault) {
+  public String getDescription() {
     String result;
     if (_usbDevice != null) {
       result = String.format("%s %s %s %s [%d bps]",
@@ -209,7 +209,7 @@ public class UsbConnection extends BroadcastReceiver {
                              _usbDevice.getSerialNumber(),
                              _baud);
     } else {
-      result = strDefault;
+      result = "";
     }
     return result;
   }

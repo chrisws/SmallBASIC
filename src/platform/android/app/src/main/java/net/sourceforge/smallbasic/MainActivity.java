@@ -215,8 +215,14 @@ public class MainActivity extends NativeActivity {
     return result;
   }
 
-  public boolean bluetoothConnected() {
-    return _bluetoothConnection != null && _bluetoothConnection.isConnected();
+  public int bluetoothConnected() {
+    int result;
+    if (_bluetoothConnection == null || _bluetoothConnection.isError()) {
+      result = -1;
+    } else {
+      result = _bluetoothConnection.isConnected() ? 1 : 0;
+    }
+    return result;
   }
 
   @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
@@ -731,7 +737,7 @@ public class MainActivity extends NativeActivity {
   public String usbDescription() {
     String result;
     if (_usbConnection != null) {
-      result = _usbConnection.getDescription(TAG_ERROR);
+      result = _usbConnection.getDescription();
     } else {
       result = TAG_ERROR;
     }

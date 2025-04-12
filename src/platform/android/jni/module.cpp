@@ -31,12 +31,25 @@ static bool is_bluetooth_object(var_p_t var) {
 
 static int get_integer_from_string(const char *methodName, const char *str, var_s *retval) {
   int result;
-  auto len = runtime->getIntegerFromString(methodName, str);
-  if (len == -1) {
+  auto value = runtime->getIntegerFromString(methodName, str);
+  if (value == -1) {
     v_setstr(retval, ERR_CONNECTION);
     result = 0;
   } else {
-    v_setint(retval, len);
+    v_setint(retval, value);
+    result = 1;
+  }
+  return result;
+}
+
+static int get_integer(const char *methodName, var_s *retval) {
+  int result;
+  auto value = runtime->getInteger(methodName);
+  if (value == -1) {
+    v_setstr(retval, ERR_CONNECTION);
+    result = 0;
+  } else {
+    v_setint(retval, value);
     result = 1;
   }
   return result;
@@ -207,8 +220,7 @@ static int cmd_bluetooth_connected(var_s *self, int argc, slib_par_t *args, var_
     v_setstr(retval, ERR_PARAM);
     result = 0;
   } else {
-    v_setint(retval, runtime->getBoolean("bluetoothConnected"));
-    result = 1;
+    result = get_integer("bluetoothConnected", retval);
   }
   return result;
 }
@@ -271,7 +283,7 @@ static int cmd_bluetooth_connect(int argc, slib_par_t *args, var_t *retval) {
     auto jstr = (jstring)env->CallObjectMethod(app->activity->clazz, methodId, deviceName);
     const char *str = env->GetStringUTFChars(jstr, JNI_FALSE);
 
-    if (strncmp(str, "[tag-connected]", 15) == 0) {
+    if (strncmp(str, TAG_CONNECTED, STRLEN(TAG_CONNECTED)) == 0) {
       map_init(retval);
       retval->v.m.id = BLUETOOTH_OBJECT_ID;
       retval->v.m.cls_id = BLUETOOTH_CLASS_ID;
