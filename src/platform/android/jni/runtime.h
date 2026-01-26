@@ -47,6 +47,7 @@ struct Runtime : public System {
   int getUnicodeChar(int keyCode, int metaState);
   void redraw() { _graphics->redraw(); }
   void handleKeyEvent(MAEvent &event);
+  bool hasBackMenu() const override { return !_threeButtonNavigation; }
   void openFolder() override {}
   void pause(int timeout);
   MAEvent processEvents(int waitFlag) override;
@@ -60,6 +61,7 @@ struct Runtime : public System {
   void setFloat(const char *methodName, float value);
   void setSensorData(var_t *retval);
   void setString(const char *methodName, const char *value);
+  void setTop(jint top) { if (_graphics != nullptr) { _graphics->setTop(top); }}
   void speak(const char *text) { setString("speak", text); }
   void runShell();
   char *loadResource(const char *fileName) override;
@@ -88,8 +90,6 @@ private:
   void editSource(String loadPath, bool restoreOnExit) override;
   int externalExecute(const char *bas) const override { return 0;}
 
-  bool _keypadActive;
-  bool _hasFocus;
   Graphics *_graphics;
   android_app *_app;
   Stack<MAEvent *> *_eventQueue;
@@ -100,6 +100,9 @@ private:
   ASensorEventQueue *_sensorEventQueue;
   Audio _audio;
   KeypadInput *_keypad;
+  bool _keypadActive;
+  bool _hasFocus;
+  bool _threeButtonNavigation;
 };
 
 #endif
