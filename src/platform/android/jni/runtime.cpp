@@ -276,7 +276,6 @@ jbyteArray newByteArray(JNIEnv *env, const char *str) {
 }
 
 Runtime::Runtime(android_app *app) :
-  System(),
   _keypadActive(false),
   _hasFocus(false),
   _threeButtonNavigation(getBoolean("isThreeButtonNavigationEnabled")),

@@ -52,7 +52,7 @@ struct Runtime : public System {
   void pause(int timeout);
   MAEvent processEvents(int waitFlag) override;
   void processEvent(MAEvent &event);
-  bool hasEvent() { return _eventQueue && !_eventQueue->empty(); }
+  bool hasEvent() { return _eventQueue != nullptr && !_eventQueue->empty(); }
   void playAudio(const char *path) { setString("playAudio", path); }
   void playTone(int frq, int dur, int vol, bool bgplay) { _audio.play(frq, dur, vol, bgplay); }
   void pollEvents(bool blocking);
@@ -72,7 +72,7 @@ struct Runtime : public System {
   void share(const char *path) override { setString("share", path); }
   void showCursor(CursorType cursorType) override {}
   void showKeypad(bool show);
-  void onPaused(bool paused) { if (_graphics != nullptr) _graphics->onPaused(paused); }
+  void onPaused(bool paused) { if (_graphics != nullptr) {_graphics->onPaused(paused);} }
   void onResize(int w, int h, int imeState);
   void onRunCompleted() override;
   void onUnicodeChar(int ch);
@@ -81,7 +81,7 @@ struct Runtime : public System {
   bool loadSettings(Properties<String *> &settings);
   void saveConfig();
   void runPath(const char *path);
-  void setClipboardText(const char *s) override { if (s) setString("setClipboardText", s); }
+  void setClipboardText(const char *s) override { if (s != nullptr) setString("setClipboardText", s); }
   char *getClipboardText() override;
   void setFocus(bool focus) { _hasFocus = focus; }
   int  getFontId();
