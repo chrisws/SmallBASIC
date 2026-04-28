@@ -9,11 +9,11 @@
 #ifndef STRINGLIB_H
 #define STRINGLIB_H
 
-#include <string.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <time.h>
-#include <ctype.h>
+#include <cstring>
+#include <cstdio>
+#include <cstdlib>
+#include <ctime>
+#include <cctype>
 
 #ifndef IS_WHITE
 #define IS_WHITE(c) (c == ' '|| c == '\n' || c == '\r' || c == '\t')
@@ -50,13 +50,13 @@ struct String {
   bool   endsWith(const String &s) const;
   int    indexOf(char chr, int fromIndex) const;
   int    indexOf(const char *s, int fromIndex) const;
-  bool   empty() const { return _buffer == NULL || _buffer[0] == '\0'; };
-  char   lastChar() const { return (_buffer == NULL || !_buffer[0] ? '\0' : _buffer[strlen(_buffer) - 1]); }
+  bool   empty() const { return _buffer == nullptr || _buffer[0] == '\0'; };
+  char   lastChar() const { return (_buffer == nullptr || !_buffer[0] ? '\0' : _buffer[strlen(_buffer) - 1]); }
   int    lastIndexOf(char chr, int untilIndex) const;
-  int    length() const { return (_buffer == NULL ? 0 : strlen(_buffer)); }
+  int    length() const { return (_buffer == nullptr ? 0 : strlen(_buffer)); }
   String leftOf(char ch) const;
-  int    toInteger() const { return (_buffer == NULL ? 0 : atoi(_buffer)); }
-  double toNumber() const { return (_buffer == NULL ? 0 : atof(_buffer)); }
+  int    toInteger() const { return (_buffer == nullptr ? 0 : atoi(_buffer)); }
+  double toNumber() const { return (_buffer == nullptr ? 0 : atof(_buffer)); }
   void   replaceAll(char a, char b);
   String rightOf(char ch) const;
   String substring(int beginIndex) const;
@@ -76,7 +76,7 @@ template<typename T>
 struct List {
   typedef T *TP;
 
-  List(int growSize = 20) :
+  explicit List(int growSize = 20) :
     _head(0),
     _growSize(growSize),
     _count(0),
@@ -102,7 +102,7 @@ struct List {
   }
 
   /**
-   * Empties the list without deleteing the list objects
+   * Empties the list without deleting the list objects
    */
   void clear() {
     free(_head);
@@ -117,12 +117,12 @@ struct List {
   /**
    * Returns T at the given index
    */
-  T operator[] (const int index) const { return index < _count ? _head[index] : NULL; }
+  T operator[] (const int index) const { return index < _count ? _head[index] : nullptr; }
 
   /**
    * Returns T at the given index
    */
-  T get(const int index) const { return index < _count ? _head[index] : NULL; }
+  T get(const int index) const { return index < _count ? _head[index] : nullptr; }
 
   /**
    * Adds T to the list
@@ -170,7 +170,7 @@ struct List {
   }
 
   /**
-   * Returns whether list of strings constains the string
+   * Returns whether list of strings contains the string
    */
   bool contains(const char *s);
 
@@ -215,21 +215,22 @@ template<> bool List<String *>::contains(const char *s);
 //--Stack-----------------------------------------------------------------------
 
 template<typename T>
-struct Stack : public List<T> {
+struct Stack final : public List<T> {
   Stack() : List<T>() {}
-  Stack(int growSize) : List<T>(growSize) {}
-  T peek() { return !this->_count ? (T)NULL : this->_head[this->_count - 1]; }
-  T pop() { return !this->_count ? (T)NULL : this->_head[--this->_count]; }
+  explicit Stack(int growSize) : List<T>(growSize) {}
+  T peek() { return !this->_count ? (T)nullptr : this->_head[this->_count - 1]; }
+  T pop() { return !this->_count ? (T)nullptr : this->_head[--this->_count]; }
   void push(T o) { this->add(o); }
 };
 
 //--Queue-----------------------------------------------------------------------
 
 template<typename T>
-struct Queue : public List<T> {
+struct Queue final : public List<T> {
   Queue() : List<T>() {}
-  Queue(int growSize) : List<T>(growSize) {}
-  T front() { return !this->_count ? (T)NULL : this->_head[0]; }
+  explicit Queue(int growSize) : List<T>(growSize) {}
+  T front() { return !this->_count ? (T)nullptr : this->_head[0]; }
+  T back() { return !this->_count ? (T)nullptr : this->_head[this->_count - 1]; }
   void pop(bool free=true) {
     if (this->_count) {
       if (free) {
@@ -246,8 +247,8 @@ struct Queue : public List<T> {
 template<typename T>
 struct Properties : public List<T> {
   Properties() : List<T>() {}
-  Properties(int growSize) : List<T>(growSize) {}
-  virtual ~Properties() {}
+  explicit Properties(int growSize) : List<T>(growSize) {}
+  ~Properties() override = default;
 
   /**
    * find the position of the key in the list
@@ -255,12 +256,12 @@ struct Properties : public List<T> {
   int find(const char *key) {
     int result = -1;
     for (int i = 0; i < this->_count; i++) {
-      String *nextKey = (String *)this->_head[i++];
-      if (nextKey == NULL || i == this->_count) {
+      auto *nextKey = (String *)this->_head[i++];
+      if (nextKey == nullptr || i == this->_count) {
         break;
       }
       T nextValue = this->_head[i];
-      if (nextValue == NULL) {
+      if (nextValue == nullptr) {
         break;
       }
       if (nextKey->equals(key)) {
@@ -273,7 +274,7 @@ struct Properties : public List<T> {
 
   T get(const char *key) {
     int index = find(key);
-    return index == -1 ? NULL : this->_head[index];
+    return index == -1 ? nullptr : this->_head[index];
   }
 
   int length() const {

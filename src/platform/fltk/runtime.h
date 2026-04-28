@@ -20,11 +20,15 @@ struct Runtime : public System {
   void alert(const char *title, const char *message);
   int ask(const char *title, const char *prompt, bool cancel=true);
   void browseFile(const char *url);
+  void editSource(String loadPath, bool restoreOnExit) override {}
+  int externalExecute(const char *bas) const override { return 0;}
   char *getClipboardText();
   int  getFontSize() { return _output->getFontSize(); }
   void enableCursor(bool enabled);
   int handle(int event);
+  bool hasBackMenu() const override { return true; }
   void optionsBox(StringList *items);
+  void openFolder() override {}
   void onRunCompleted() {}
   void saveWindowRect() {}
   MAEvent processEvents(int waitFlag);

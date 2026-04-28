@@ -22,11 +22,11 @@ using namespace strlib;
 
 #define LINE_SPACING 0
 #define INITXY 2
-#define NO_COLOR -1
+#define NO_COLOR (-1)
 
 struct Screen : public Shape {
   Screen(int x, int y, int width, int height, int fontSize);
-  virtual ~Screen();
+  ~Screen() override;
 
   virtual void calcTab() = 0;
   virtual bool construct() = 0;
@@ -50,32 +50,33 @@ struct Screen : public Shape {
   virtual void updateFont(int size=-1) = 0;
   virtual int  getMaxHScroll() = 0;
 
+  static int ansiToMosync(long c);
+
   void add(Shape *button);
   void addImage(ImageDisplay &image);
-  int  ansiToMosync(long c);
-  void drawLabel();
-  void drawMenu();
-  void drawShape(Shape *button);
-  void drawOverlay(bool vscroll);
-  int  getIndex(FormInput *input) const;
-  FormInput *getMenu(FormInput *prev, int px, int py);
-  FormInput *getNextMenu(FormInput *prev, bool up);
-  FormInput *getNextField(FormInput *field);
-  void getScroll(int &x, int &y) { x = _scrollX; y = _scrollY; }
+  void drawLabel() const;
+  void drawMenu() const;
+  void drawShape(Shape *button) const;
+  void drawOverlay(bool vscroll) const;
+  int  getIndex(const FormInput *input) const;
+  FormInput *getMenu(FormInput *prev, int px, int py) const;
+  FormInput *getNextMenu(FormInput *prev, bool up) const;
+  FormInput *getNextField(const FormInput *field) const;
+  void getScroll(int &x, int &y) const { x = _scrollX; y = _scrollY; }
   void layoutInputs(int newWidth, int newHeight);
-  bool overLabel(int px, int py);
-  bool overMenu(int px, int py);
-  bool overlaps(int px, int py);
+  bool overLabel(int px, int py) const;
+  bool overMenu(int px, int py) const;
+  bool overlaps(int px, int py) const;
   void remove(Shape *button);
   void removeImage(unsigned imageId);
-  bool removeInput(FormInput *input);
+  bool removeInput(const FormInput *input);
   void removeInputs() { _inputs.removeAll(); }
   void replaceFont(int type = FONT_TYPE_MONOSPACE);
   void resetScroll() { _scrollX = 0; _scrollY = 0; }
   void setColor(long color);
   void setDirty() { if (!_dirty) { _dirty = maGetMilliSecondCount(); } }
   void setFont(bool bold, bool italic, int size);
-  void selectFont() { if (_font != -1) maFontSetCurrent(_font); }
+  void selectFont() const { if (_font != -1) maFontSetCurrent(_font); }
   void setScroll(int x, int y) { _scrollX = x; _scrollY = y; }
   void setTextColor(long fg, long bg);
   void updateInputs(var_p_t form, bool setVars);
@@ -92,6 +93,7 @@ struct Screen : public Shape {
   int _curY;
   int _dirty;
   int _linePadding;
+  int _statusOffset;
   String _label;
   strlib::List<Shape *> _shapes;
   strlib::List<FormInput *> _inputs;
@@ -100,31 +102,31 @@ struct Screen : public Shape {
 
 struct GraphicScreen : public Screen {
   GraphicScreen(int width, int height, int fontSize);
-  virtual ~GraphicScreen();
+  ~GraphicScreen() override;
 
-  void calcTab();
-  bool construct();
-  void clear();
-  void drawArc(int xc, int yc, double r, double start, double end, double aspect);
-  void drawBase(bool vscroll, bool update=true);
-  void drawEllipse(int xc, int yc, int rx, int ry, int fill);
-  void drawImage(ImageDisplay &image);
-  void drawInto(bool background=false);
-  void drawLine(int x1, int y1, int x2, int y2);
-  void drawRect(int x1, int y1, int x2, int y2);
-  void drawRectFilled(int x1, int y1, int x2, int y2);
-  int  getPixel(int x, int y);
+  void calcTab() override;
+  bool construct() override;
+  void clear() override;
+  void drawArc(int xc, int yc, double r, double start, double end, double aspect) override;
+  void drawBase(bool vscroll, bool update=true) override;
+  void drawEllipse(int xc, int yc, int rx, int ry, int fill) override;
+  void drawImage(ImageDisplay &image) override;
+  void drawInto(bool background=false) override;
+  void drawLine(int x1, int y1, int x2, int y2) override;
+  void drawRect(int x1, int y1, int x2, int y2) override;
+  void drawRectFilled(int x1, int y1, int x2, int y2) override;
+  int  getPixel(int x, int y) override;
   void imageScroll();
   void imageAppend(MAHandle newImage);
-  void newLine(int lineHeight);
-  int  print(const char *p, int lineHeight, bool allChars=false);
-  void reset(int fontSize);
-  bool setGraphicsRendition(const char c, int escValue, int lineHeight);
-  void setPixel(int x, int y, int c);
+  void newLine(int lineHeight) override;
+  int  print(const char *p, int lineHeight, bool allChars=false) override;
+  void reset(int fontSize) override;
+  bool setGraphicsRendition(const char c, int escValue, int lineHeight) override;
+  void setPixel(int x, int y, int c) override;
   void resize(int newWidth, int newHeight, int oldWidth,
-              int oldHeight, int lineHeight);
-  void updateFont(int size);
-  int  getMaxHScroll() { return 0; }
+              int oldHeight, int lineHeight) override;
+  void updateFont(int size) override;
+  int  getMaxHScroll() override { return 0; }
 
   MAHandle _image;
   bool _underline;
@@ -149,15 +151,13 @@ struct TextSeg {
 
   // create a new segment
   TextSeg() :
-    _str(0),
+    _str(nullptr),
     _flags(0),
     _color(NO_COLOR),
-    _next(0) {}
+    _next(nullptr) {}
 
   ~TextSeg() {
-    if (_str) {
-      delete[]_str;
-    }
+    delete[]_str;
   }
 
   // sets the reset flag
@@ -172,7 +172,7 @@ struct TextSeg {
 
   void setText(const char *str, int n) {
     if ((!str || !n)) {
-      this->_str = 0;
+      this->_str = nullptr;
     } else {
       this->_str = new char[n + 1];
       strncpy(this->_str, str, n);
@@ -223,7 +223,7 @@ struct TextSeg {
   }
 
   // update font and state variables when set in this segment
-  bool escape(bool *bold, bool *italic, bool *underline, bool *invert) {
+  bool escape(bool *bold, bool *italic, bool *underline, bool *invert) const {
     *bold = get(BOLD, bold);
     *italic = get(ITALIC, italic);
     *underline = get(UNDERLINE, underline);
@@ -238,7 +238,7 @@ struct TextSeg {
 };
 
 struct Row {
-  Row() : _head(0) {}
+  Row() : _head(nullptr) {}
   ~Row() {
     clear();
   }
@@ -250,13 +250,13 @@ struct Row {
     } else {
       tail(_head)->_next = node;
     }
-    node->_next = 0;
+    node->_next = nullptr;
   }
 
   // clear the contents of this row
   void clear() {
     remove(_head);
-    _head = 0;
+    _head = nullptr;
   }
 
   TextSeg *next() {
@@ -294,7 +294,7 @@ struct Row {
     int num = numChars(this->_head);
     int pos = tabSize - (num % tabSize);
     if (pos) {
-      TextSeg *next = new TextSeg();
+      auto *next = new TextSeg();
       next->tab(pos);
       append(next);
     }
@@ -321,36 +321,35 @@ struct Row {
 
 struct TextScreen : public Screen {
   TextScreen(int width, int height, int fontSize);
-  virtual ~TextScreen();
+  ~TextScreen() override;
 
-  void calcTab();
-  bool construct();
-  void clear();
-  void drawArc(int xc, int yc, double r, double start, double end, double aspect) {}
-  void drawBase(bool vscroll, bool update=true);
-  void drawImage(ImageDisplay &image) {}
-  void drawEllipse(int xc, int yc, int rx, int ry, int fill) {}
-  void drawLine(int x1, int y1, int x2, int y2);
-  void drawText(const char *text, int len, int x, int lineHeight);
-  void drawRect(int x1, int y1, int x2, int y2);
-  void drawRectFilled(int x1, int y1, int x2, int y2);
-  int  getPixel(int x, int y) { return 0; }
+  void calcTab() override;
+  bool construct() override;
+  void clear() override;
+  void drawArc(int xc, int yc, double r, double start, double end, double aspect) override {}
+  void drawBase(bool vscroll, bool update=true) override;
+  void drawImage(ImageDisplay &image) override {}
+  void drawEllipse(int xc, int yc, int rx, int ry, int fill) override {}
+  void drawLine(int x1, int y1, int x2, int y2) override;
+  void drawRect(int x1, int y1, int x2, int y2) override;
+  void drawRectFilled(int x1, int y1, int x2, int y2) override;
+  int  getPixel(int x, int y) override { return 0; }
   void inset(int x, int y, int w, int h, Screen *over);
-  void newLine(int lineHeight);
-  int  print(const char *p, int lineHeight, bool allChars=false);
+  void newLine(int lineHeight) override;
+  int  print(const char *p, int lineHeight, bool allChars=false) override;
   void resize(int newWidth, int newHeight, int oldWidth,
-              int oldHeight, int lineHeight);
-  bool setGraphicsRendition(const char c, int escValue, int lineHeight);
+              int oldHeight, int lineHeight) override;
+  bool setGraphicsRendition(const char c, int escValue, int lineHeight) override;
   void setOver(Screen *over) { _over = over; }
-  void setPixel(int x, int y, int c) {}
-  void updateFont(int size) {}
-  int  getMaxHScroll() { return (_cols * _charWidth) - w(); }
+  void setPixel(int x, int y, int c) override {}
+  void updateFont(int size) override {}
+  int  getMaxHScroll() override { return (_cols * _charWidth) - w(); }
 
 private:
-  Row *getLine(int ndx);
+  Row *getLine(int ndx) const;
 
   // returns the number of display text rows held in the buffer
-  int getTextRows() {
+  int getTextRows() const {
     return 1 + ((_head >= _tail) ? (_head - _tail) : _head + (_rows - _tail));
   }
 
@@ -366,6 +365,30 @@ private:
   int _tail;         // buffer last line
   int _rows;         // total number of rows - size of buffer
   int _cols;         // maximum number of characters in a row
+};
+
+struct FormInputScreen : public Screen {
+  FormInputScreen(int width, int height, int fontSize);
+  ~FormInputScreen() override = default;
+
+  void calcTab() override {}
+  bool construct() override;
+  void clear() override {}
+  void drawArc(int xc, int yc, double r, double start, double end, double aspect) override {}
+  void drawBase(bool vscroll, bool update=true) override;
+  void drawImage(ImageDisplay &image) override {}
+  void drawEllipse(int xc, int yc, int rx, int ry, int fill) override {}
+  void drawLine(int x1, int y1, int x2, int y2) override {}
+  void drawText(const char *text, int len, int x, int lineHeight) {}
+  void drawRect(int x1, int y1, int x2, int y2) override {}
+  void drawRectFilled(int x1, int y1, int x2, int y2) override {}
+  int  getPixel(int x, int y) override { return 0; }
+  void newLine(int lineHeight) override {};
+  void resize(int newWidth, int newHeight, int oldWidth, int oldHeight, int lineHeight) override;
+  bool setGraphicsRendition(const char c, int escValue, int lineHeight) override { return true; }
+  void setPixel(int x, int y, int c) override {}
+  void updateFont(int size) override {};
+  int  getMaxHScroll() override { return 0; }
 };
 
 #endif

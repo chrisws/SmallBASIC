@@ -15,10 +15,8 @@ import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.content.res.Resources;
 import android.graphics.Rect;
-import android.location.Criteria;
 import android.location.Location;
 import android.location.LocationManager;
-import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.Build;
@@ -26,6 +24,7 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
+import android.provider.Settings;
 import android.util.Base64;
 import android.util.DisplayMetrics;
 import android.util.Log;
@@ -37,10 +36,18 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.Toast;
+import android.window.OnBackInvokedCallback;
+import android.window.OnBackInvokedDispatcher;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.RequiresPermission;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
+import androidx.core.graphics.Insets;
+import androidx.core.view.OnApplyWindowInsetsListener;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -68,14 +75,11 @@ import java.util.Collection;
 import java.util.Date;
 import java.util.Enumeration;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Properties;
-import java.util.Queue;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Semaphore;
 import java.util.zip.GZIPInputStream;
 
@@ -92,24 +96,27 @@ public class MainActivity extends NativeActivity {
   private static final String SCHEME_BAS = "qrcode.bas";
   private static final String SCHEME = "smallbasic://x/";
   private static final String CP1252 = "Cp1252";
+  private static final String TAG_CONNECTED = "[--tag-connected--]";
+  private static final String TAG_ERROR = "[--tag-error--]";
   private static final int BASE_FONT_SIZE = 18;
   private static final long LOCATION_INTERVAL = 1000;
   private static final float LOCATION_DISTANCE = 1;
   private static final int REQUEST_LOCATION_PERMISSION = 2;
   private static final String FOLDER_NAME = "SmallBASIC";
   private static final int COPY_BUFFER_SIZE = 1024;
-  private static final String[] SAMPLES = {"welcome.bas"};
+  private static final String[] SAMPLES = {"welcome.bas", "sound.bas"};
   private String _startupBas = null;
   private boolean _untrusted = false;
-  private final ExecutorService _audioExecutor = Executors.newSingleThreadExecutor();
-  private final Queue<Sound> _sounds = new ConcurrentLinkedQueue<>();
   private final Handler _keypadHandler = new Handler(Looper.getMainLooper());
   private final Map<String, Boolean> permittedHost = new ConcurrentHashMap<>();
+  private final Object _mediaPlayerLock = new Object();
   private String[] _options = null;
   private MediaPlayer _mediaPlayer = null;
   private LocationAdapter _locationAdapter = null;
   private TextToSpeechAdapter _tts;
   private Storage _storage;
+  private UsbConnection _usbConnection;
+  private BluetoothConnection _bluetoothConnection;
 
   static {
     System.loadLibrary("smallbasic");
@@ -118,7 +125,8 @@ public class MainActivity extends NativeActivity {
   public static native void consoleLog(String value);
   public static native boolean libraryMode();
   public static native void onActivityPaused(boolean paused);
-  public static native void onResize(int width, int height);
+  public static native void onBack();
+  public static native void onResize(int top, int width, int height, int imeState);
   public static native void onUnicodeChar(int ch);
   public static native boolean optionSelected(int index);
   public static native void runFile(String fileName);
@@ -136,7 +144,7 @@ public class MainActivity extends NativeActivity {
     intent.putExtra(Intent.EXTRA_SHORTCUT_NAME, name);
     intent.putExtra(Intent.EXTRA_SHORTCUT_ICON_RESOURCE,
                     Intent.ShortcutIconResource.fromContext(getApplicationContext(),
-                                                            R.drawable.ic_launcher));
+                                                            R.mipmap.ic_launcher));
     intent.putExtra("duplicate", false);
     intent.setAction("com.android.launcher.action.INSTALL_SHORTCUT");
     getApplicationContext().sendBroadcast(intent);
@@ -192,6 +200,67 @@ public class MainActivity extends NativeActivity {
     return result.value;
   }
 
+  public boolean bluetoothClose() {
+    if (_bluetoothConnection != null) {
+      _bluetoothConnection.close(this);
+      _bluetoothConnection = null;
+    }
+    return true;
+  }
+
+  @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
+  public String bluetoothConnect(String deviceName) {
+    String result;
+    try {
+      _bluetoothConnection = new BluetoothConnection(this, deviceName);
+      result = TAG_CONNECTED;
+    } catch (IOException e) {
+      result = e.getLocalizedMessage();
+    }
+    return result;
+  }
+
+  public int bluetoothConnected() {
+    int result;
+    if (_bluetoothConnection == null || _bluetoothConnection.isError()) {
+      result = -1;
+    } else {
+      result = _bluetoothConnection.isConnected() ? 1 : 0;
+    }
+    return result;
+  }
+
+  @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
+  public String bluetoothDescription() {
+    String result;
+    if (_bluetoothConnection != null && !_bluetoothConnection.isError()) {
+      result = _bluetoothConnection.getDescription();
+    } else {
+      result = TAG_ERROR;
+    }
+    return result;
+  }
+
+  public String bluetoothReceive() {
+    String result;
+    if (_bluetoothConnection != null && !_bluetoothConnection.isError()) {
+      result = _bluetoothConnection.receive(TAG_ERROR);
+    } else {
+      result = TAG_ERROR;
+    }
+    return result;
+  }
+
+  public int bluetoothSend(final byte[] data) {
+    int result;
+    if (_bluetoothConnection != null && !_bluetoothConnection.isError()) {
+      result = _bluetoothConnection.send(getString(data)) ? 1 : 0;
+    } else {
+      result = -1;
+    }
+    return result;
+  }
+
   public void browseFile(final byte[] pathBytes) {
     try {
       String url = new String(pathBytes, CP1252);
@@ -206,20 +275,15 @@ public class MainActivity extends NativeActivity {
   }
 
   public void clearSoundQueue() {
-    Log.i(TAG, "clearSoundQueue");
-    for (Sound sound : _sounds) {
-      sound.setSilent(true);
-    }
-    if (_mediaPlayer != null) {
-      _mediaPlayer.release();
-      _mediaPlayer = null;
-    }
+    releaseMediaPlayer();
   }
 
   public boolean closeLibHandlers() {
     if (_tts != null) {
       _tts.stop();
     }
+    usbClose();
+    bluetoothClose();
     return removeLocationUpdates();
   }
 
@@ -370,6 +434,29 @@ public class MainActivity extends NativeActivity {
     return rect.height();
   }
 
+  /**
+   * Check if traditional 3-button navigation is enabled
+   * @return true if 3-button navigation is active
+   */
+  public boolean isThreeButtonNavigationEnabled() {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+      try {
+        return Settings.Secure.getInt(getContentResolver(), "navigation_mode") == 0;
+      } catch (Settings.SettingNotFoundException e) {
+        Log.d(TAG, e.toString());
+      }
+    }
+    return false;
+  }
+
+  public boolean isInsetBasedOnResize() {
+    return Build.VERSION.SDK_INT >= Build.VERSION_CODES.BAKLAVA;
+  }
+
+  public boolean isPredictiveBack() {
+    return Build.VERSION.SDK_INT >= Build.VERSION_CODES.BAKLAVA;
+  }
+
   public boolean loadModules() {
     Log.i(TAG, "loadModules: " + getActivity());
     boolean result;
@@ -389,10 +476,11 @@ public class MainActivity extends NativeActivity {
   @Override
   public void onGlobalLayout() {
     super.onGlobalLayout();
-    // find the visible coordinates of our view
-    Rect rect = new Rect();
-    findViewById(android.R.id.content).getWindowVisibleDisplayFrame(rect);
-    onResize(rect.width(), rect.height());
+    if (!isInsetBasedOnResize()) {
+      Rect rect = new Rect();
+      findViewById(android.R.id.content).getWindowVisibleDisplayFrame(rect);
+      onResize(rect.top, rect.width(), rect.height(), 0);
+    }
   }
 
   @Override
@@ -454,39 +542,32 @@ public class MainActivity extends NativeActivity {
     new Thread(new Runnable() {
       public void run() {
         try {
-          Uri uri = Uri.parse("file://" + new String(pathBytes, CP1252));
-          if (_mediaPlayer == null) {
-            _mediaPlayer = new MediaPlayer();
-          } else {
-            _mediaPlayer.reset();
+          synchronized (_mediaPlayerLock) {
+            if (_mediaPlayer == null) {
+              _mediaPlayer = new MediaPlayer();
+              _mediaPlayer.setOnErrorListener(new MediaPlayer.OnErrorListener() {
+                @Override
+                public boolean onError(MediaPlayer mp, int what, int extra) {
+                  Log.e(TAG, "MediaPlayer error: " + what + ", " + extra);
+                  releaseMediaPlayer();
+                  return true;
+                }
+              });
+            } else {
+              _mediaPlayer.reset();
+            }
+            String path = _storage.findPath(new String(pathBytes, CP1252));
+            _mediaPlayer.setDataSource(getApplicationContext(), Uri.parse("file://" + path));
+            _mediaPlayer.prepare();
+            _mediaPlayer.start();
           }
-          _mediaPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
-          _mediaPlayer.setDataSource(getApplicationContext(), uri);
-          _mediaPlayer.prepare();
-          _mediaPlayer.start();
         }
-        catch (IOException e) {
+        catch (Exception e) {
           Log.i(TAG, "playAudio failed: ", e);
+          releaseMediaPlayer();
         }
       }
     }).start();
-  }
-
-  public void playTone(int frq, int dur, int vol, boolean backgroundPlay) {
-    float volume = (vol / 100f);
-    final Sound sound = new Sound(frq, dur, volume);
-    if (backgroundPlay) {
-      _sounds.add(sound);
-      _audioExecutor.execute(new Runnable() {
-        @Override
-        public void run() {
-          sound.play();
-          _sounds.remove(sound);
-        }
-      });
-    } else {
-      sound.play();
-    }
   }
 
   public boolean removeLocationUpdates() {
@@ -494,8 +575,7 @@ public class MainActivity extends NativeActivity {
     if (_locationAdapter != null) {
       LocationManager locationService = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
       if (locationService != null) {
-        // requires coarse location permission
-        //locationService.removeUpdates(_locationAdapter);
+        locationService.removeUpdates(_locationAdapter);
         _locationAdapter = null;
         result = true;
       }
@@ -515,17 +595,16 @@ public class MainActivity extends NativeActivity {
     if (!locationPermitted()) {
       checkPermission(Manifest.permission.ACCESS_FINE_LOCATION, REQUEST_LOCATION_PERMISSION);
     } else if (locationService != null) {
-      final Criteria criteria = new Criteria();
-      final String provider = locationService.getBestProvider(criteria, true);
-      if (_locationAdapter == null && provider != null &&
-        locationService.isProviderEnabled(provider)) {
+      final List<String> providers = locationService.getProviders(true);
+      if (_locationAdapter == null) {
         _locationAdapter = new LocationAdapter();
         result = true;
         runOnUiThread(new Runnable() {
           @SuppressLint("MissingPermission")
           public void run() {
-            locationService.requestLocationUpdates(provider, LOCATION_INTERVAL,
-              LOCATION_DISTANCE, _locationAdapter);
+            for (String provider : providers) {
+              locationService.requestLocationUpdates(provider, LOCATION_INTERVAL, LOCATION_DISTANCE, _locationAdapter);
+            }
           }
         });
       }
@@ -665,10 +744,61 @@ public class MainActivity extends NativeActivity {
     }
   }
 
+  public boolean usbClose() {
+    if (_usbConnection != null) {
+      _usbConnection.close();
+      _usbConnection = null;
+    }
+    return true;
+  }
+
+  public String usbConnect(int vendorId, int baud, int timeout) {
+    String result;
+    try {
+      _usbConnection = new UsbConnection(getApplicationContext(), vendorId, baud, timeout);
+      result = TAG_CONNECTED;
+    } catch (IOException e) {
+      result = e.getLocalizedMessage();
+    }
+    return result;
+  }
+
+  public String usbDescription() {
+    String result;
+    if (_usbConnection != null) {
+      result = _usbConnection.getDescription();
+    } else {
+      result = TAG_ERROR;
+    }
+    return result;
+  }
+
+  public String usbReceive() {
+    String result;
+    if (_usbConnection != null) {
+      result = _usbConnection.receive();
+    } else {
+      result = TAG_ERROR;
+    }
+    return result;
+  }
+
+  public int usbSend(final byte[] data) {
+    int result;
+    if (_usbConnection != null) {
+      result = _usbConnection.send(getString(data));
+    } else {
+      result = -1;
+    }
+    return result;
+  }
+
   @Override
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
     setupStorageEnvironment();
+    setupPredictiveBack();
+    setupInsetBaseOnResize();
     if (!libraryMode()) {
       processIntent();
       processSettings();
@@ -678,8 +808,15 @@ public class MainActivity extends NativeActivity {
 
   @Override
   protected void onPause() {
-    super.onPause();
     onActivityPaused(true);
+    // wait for Graphics::redraw() to complete
+    try {
+      Thread.sleep(10);
+    }
+    catch (Exception e) {
+      // ignored
+    }
+    super.onPause();
   }
 
   @Override
@@ -691,22 +828,19 @@ public class MainActivity extends NativeActivity {
   @Override
   protected void onStop() {
     super.onStop();
-    if (_mediaPlayer != null) {
-      _mediaPlayer.release();
-      _mediaPlayer = null;
-    }
+    releaseMediaPlayer();
     if (_tts != null) {
       _tts.close();
       _tts = null;
     }
   }
 
-  private void checkPermission(final String permission, final int result) {
+  private void checkPermission(final String permission, final int requestCode) {
     runOnUiThread(new Runnable() {
       @Override
       public void run() {
         String[] permissions = {permission};
-        ActivityCompat.requestPermissions(MainActivity.this, permissions, result);
+        ActivityCompat.requestPermissions(MainActivity.this, permissions, requestCode);
       }
     });
   }
@@ -801,7 +935,9 @@ public class MainActivity extends NativeActivity {
       // only attempt with a clean destination folder
       try {
         for (String sample : SAMPLES) {
-          copy(getAssets().open("samples/" + sample), new FileOutputStream(new File(toDir, sample)));
+          OutputStream outputStream = new FileOutputStream(new File(toDir, sample));
+          copy(getAssets().open("samples/" + sample), outputStream);
+          outputStream.close();
         }
       } catch (IOException e) {
         Log.d(TAG, "Failed to copy sample: ", e);
@@ -894,6 +1030,15 @@ public class MainActivity extends NativeActivity {
     return b == -1 ? null : out.size() == 0 ? "" : out.toString();
   }
 
+  private void releaseMediaPlayer() {
+    synchronized (_mediaPlayerLock) {
+      if (_mediaPlayer != null) {
+        _mediaPlayer.release();
+        _mediaPlayer = null;
+      }
+    }
+  }
+
   private void requestHostPermission(String remoteHost) {
     final Activity activity = this;
     runOnUiThread(new Runnable() {
@@ -921,6 +1066,60 @@ public class MainActivity extends NativeActivity {
     output.write(buffer);
     output.close();
     return outputFile.getAbsolutePath();
+  }
+
+  /**
+   * onResize() handler for android 16+
+   * Modified to work non-fullscreen with visible system UI
+   */
+  private void setupInsetBaseOnResize() {
+    if (isInsetBasedOnResize()) {
+      View view = getWindow().getDecorView();
+      ViewCompat.setOnApplyWindowInsetsListener(view, new OnApplyWindowInsetsListener() {
+        @NonNull
+        @Override
+        public WindowInsetsCompat onApplyWindowInsets(@NonNull View view, @NonNull WindowInsetsCompat insets) {
+          Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
+          Insets ime = insets.getInsets(WindowInsetsCompat.Type.ime());
+          boolean imeVisible = insets.isVisible(WindowInsetsCompat.Type.ime());
+
+          // Calculate the drawable area excluding system bars
+          int topInset = systemBars.top;
+          int bottomInset = Math.max(systemBars.bottom, ime.bottom);
+          int leftInset = systemBars.left;
+          int rightInset = systemBars.right;
+
+          // Calculate available width and height for NDK drawing
+          int width = view.getWidth() - leftInset - rightInset;
+          int height = view.getHeight() - topInset - bottomInset;
+
+          if (width > 0 && height > 0) {
+            // Graphics::redraw() should draw starting at topInset pixels from the top
+            onResize(topInset, width, height, imeVisible ? 1 : -1);
+          }
+
+          return WindowInsetsCompat.CONSUMED;
+        }
+      });
+      view.post(() -> ViewCompat.requestApplyInsets(view));
+    }
+  }
+
+  //
+  // Hook into Predictive Back (Android 13+)
+  //
+  private void setupPredictiveBack() {
+    if (isPredictiveBack()) {
+      getOnBackInvokedDispatcher().registerOnBackInvokedCallback(
+          OnBackInvokedDispatcher.PRIORITY_OVERLAY, new OnBackInvokedCallback() {
+            @Override
+            public void onBackInvoked() {
+              Log.d(TAG, "onBackInvoked");
+              onBack();
+            }
+          }
+      );
+    }
   }
 
   private void setupStorageEnvironment() {
@@ -970,18 +1169,36 @@ public class MainActivity extends NativeActivity {
         }
       }
 
-      if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-        // https://commonsware.com/blog/2019/06/07/death-external-storage-end-saga.html
-        File[] dirs = getExternalMediaDirs();
-        path = dirs != null && dirs.length > 0 ? dirs[0].getAbsolutePath() : null;
-        if (isPublicStorage(path)) {
-          media = path;
-        }
+      // https://commonsware.com/blog/2019/06/07/death-external-storage-end-saga.html
+      File[] dirs = getExternalMediaDirs();
+      path = dirs != null && dirs.length > 0 ? dirs[0].getAbsolutePath() : null;
+      if (isPublicStorage(path)) {
+        media = path;
       }
 
       this._external = external;
       this._internal = getFilesDir().getAbsolutePath();
       this._media = media;
+    }
+
+    public String findPath(String file) {
+      String result;
+      if (file.startsWith("/")) {
+        result = file;
+      }
+      else {
+        result = getExternal() + "/" + file;
+        if (!new File(result).canRead()) {
+          result = getInternal() + "/" + file;
+          if (!new File(result).canRead()) {
+            result = getMedia() + "/" + file;
+            if (!new File(result).canRead()) {
+              result = file;
+            }
+          }
+        }
+      }
+      return result;
     }
 
     public String getExternal() {
@@ -1050,7 +1267,8 @@ public class MainActivity extends NativeActivity {
         String name = "webui/" + path;
         long length = getFileLength(name);
         log("Opened " + name + " " + length + " bytes");
-        String contentType = path.endsWith("js") ? "text/javascript" : "text/html";
+        String contentType = path.endsWith("js") ? "text/javascript" :
+                             path.endsWith("css") ? "text/css": "text/html";
         result = new Response(getAssets().open(name), length, contentType);
         if ("index.html".equals(path) && isHostNotPermitted(remoteHost)) {
           requestHostPermission(remoteHost);

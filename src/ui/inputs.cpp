@@ -227,7 +227,7 @@ void FormInput::drawHover(int dx, int dy, bool selected) {
   MAHandle currentHandle = maSetDrawTarget(HANDLE_SCREEN);
   maSetColor(selected ? _fg : _bg);
   int y = _y + dy + LINE_Y;
-  maLine(dx + _x + 2, y, dx + _x + LINE_W, y);
+  maLine(dx + _x, y, dx + _x + LINE_W, y);
   maUpdateScreen();
   maSetDrawTarget(currentHandle);
 }
@@ -414,10 +414,11 @@ void FormLabel::draw(int x, int y, int w, int h, int chw) {
 //
 // FormLink
 //
-FormLink::FormLink(const char *link, bool external, int x, int y, int w, int h) :
+FormLink::FormLink(const char *link, bool external, bool folder, int x, int y, int w, int h) :
   FormInput(x, y, w, h),
   _link(link),
-  _external(external) {
+  _external(external),
+  _folder(folder) {
 }
 
 void FormLink::draw(int x, int y, int w, int h, int chw) {
@@ -445,6 +446,7 @@ FormEditInput::~FormEditInput() {
 int FormEditInput::getControlKey(int key) {
   int result = key;
   if (_controlMode) {
+    char *text;
     switch (key) {
     case 'x':
       g_system->setClipboardText(copy(true));
@@ -455,7 +457,9 @@ int FormEditInput::getControlKey(int key) {
       result = -1;
       break;
     case 'v':
-      paste(g_system->getClipboardText());
+      text = g_system->getClipboardText();
+      paste(text);
+      free(text);
       result = -1;
       break;
     case 'h':

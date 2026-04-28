@@ -1,3 +1,53 @@
+2026-02-26 (12.33)
+	COMMON: Fix build for FreeBSD
+
+2026-01-23 (12.33)
+	SDL: Fix issue with flatpak release
+
+2026-01-20 (12.32)
+	SDL: Created flatpak based build
+
+2025-10-14 (12.32)
+	ANDROID: replace react/mui based portal with native javascript solution
+
+2025-09-11 (12.31)
+	ANDROID: Implemented support for editing with the system keypad
+
+2025-08-31 (12.30)
+	ANDROID: Implemented a replacement editor keypad
+	ANDROID: Implemented editor find command
+	ANDROID: Updated editor help
+
+2025-04-26 (12.29)
+	ANDROID: minor fix for PEN(3)
+
+2025-04-19 (12.29)
+	ANDROID: experimental bluetooth support
+	ANDROID: update SOUND implementation to avoid skips
+	ANDROID: update USB api to allow setting baud rate and timeout
+	ANDROID: allow android.speak to take additional non-string args
+
+2025-02-18 (12.28)
+	ANDROID: added experimental usb communication support
+
+2025-02-02 (12.28)
+	TEENSY: added experimental runtime platform for teensy mcu
+
+2025-01-27 (12.28)
+	ANDROID: Updated app icon, thanks to bplus, j7m, round157, qube, baggey
+	Final design by j7m
+
+2024-10-09 (12.28)
+	COMMON: Fix #232: TICKS stops working after 50 days
+	ANDROID: Fix delay accuracy
+	ANDROID: Fix location regression
+
+2024-10-06 (12.28)
+	ANDROID: Fix web UI regression
+
+2024-09-27 (12.28)
+	ANDROID: Fix issue with playing an audio file on android #231
+
 2024-04-14 (12.27)
 	COMMON: Fix bug #149: Problem with big hex numbers in windows
 	COMMON: Add new function TRANSPOSE()

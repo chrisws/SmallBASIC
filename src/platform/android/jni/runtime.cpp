@@ -1,29 +1,17 @@
 // This file is part of SmallBASIC
 //
-// Copyright(C) 2001-2022 Chris Warren-Smith.
+// Copyright(C) 2001-2025 Chris Warren-Smith.
 //
 // This program is distributed under the terms of the GPL v2.0 or later
 // Download the GNU Public License (GPL) from www.gnu.org
 //
 
 #include "config.h"
-#include <android/native_window.h>
-#include <android/keycodes.h>
 #include <jni.h>
-#include <cerrno>
 
 #include "platform/android/jni/runtime.h"
-#include "lib/maapi.h"
-#include "ui/utils.h"
-#include "ui/theme.h"
-#include "languages/messages.en.h"
 #include "include/osd.h"
 #include "common/sbapp.h"
-#include "common/sys.h"
-#include "common/smbas.h"
-#include "common/device.h"
-#include "common/fs_socket_client.h"
-#include "common/keymap.h"
 
 #define WAIT_INTERVAL 10
 #define MAIN_BAS "__main_bas__"
@@ -42,11 +30,29 @@
 
 Runtime *runtime = nullptr;
 
+// Pipe file descriptors: g_backPipe[0] is read-end, g_backPipe[1] is write-end
+static int g_backPipe[2] = {-1, -1};
+
+// the logical top of the screen
+static int g_top = 0;
+
+// the sensorTypes corresponding to _sensors[] positions
+constexpr int SENSOR_TYPES[MAX_SENSORS] = {
+  ASENSOR_TYPE_ACCELEROMETER,
+  ASENSOR_TYPE_MAGNETIC_FIELD,
+  ASENSOR_TYPE_GYROSCOPE,
+  ASENSOR_TYPE_LIGHT,
+  ASENSOR_TYPE_PROXIMITY,
+  ASENSOR_TYPE_PRESSURE,
+  ASENSOR_TYPE_RELATIVE_HUMIDITY,
+  ASENSOR_TYPE_AMBIENT_TEMPERATURE,
+};
+
 MAEvent *getMotionEvent(int type, AInputEvent *event) {
   auto *result = new MAEvent();
   result->type = type;
-  result->point.x = AMotionEvent_getX(event, 0);
-  result->point.y = AMotionEvent_getY(event, 0);
+  result->point.x = (int)AMotionEvent_getX(event, 0);
+  result->point.y = (int)AMotionEvent_getY(event, 0) - g_top;
   return result;
 }
 
@@ -106,6 +112,43 @@ void handleCommand(android_app *app, int32_t cmd) {
   }
 }
 
+//
+// Callback registered with ALooper that is triggered when the pipe receives data.
+// This is what wakes the blocked ALooper_pollOnce() and lets us run pushBackEvent().
+//
+static int pipeCallback(int fd, int events, void *data) {
+  // clear the byte that woke the pipe, then return 1 to stay registered
+  if (runtime != nullptr && runtime->isActive()) {
+    logEntered();
+    char buf[1];
+    read(fd, buf, 1);
+    runtime->onBack();
+  }
+  return 1;
+}
+
+//
+// Set up the pipe and register its read-end (g_backPipe[0]) with the ALooper.
+// This allows us to wake the looper from Java code by writing to the pipe.
+//
+static void setupBackWakePipe(ALooper *looper) {
+  if (pipe(g_backPipe) == 0) {
+    // Make read-end non-blocking to avoid stalling the loop
+    fcntl(g_backPipe[0], F_SETFL, O_NONBLOCK);
+
+    // Register the pipe with the looper so it wakes up when there's input
+    ALooper_addFd(looper,
+                  g_backPipe[0],       // fd to watch
+                  0,                   // arbitrary/unused identifier
+                  ALOOPER_EVENT_INPUT, // watch for input readiness
+                  pipeCallback,        // callback to run on wake
+                  nullptr);            // no additional data
+    trace("Back pipe registered with looper");
+  } else {
+    trace("Failed to create back pipe");
+  }
+}
+
 // see http://stackoverflow.com/questions/15913080
 static void process_input(android_app *app, android_poll_source *source) {
   AInputEvent* event = nullptr;
@@ -114,12 +157,9 @@ static void process_input(android_app *app, android_poll_source *source) {
         AKeyEvent_getKeyCode(event) == AKEYCODE_BACK) {
       // prevent AInputQueue_preDispatchEvent from attempting to close
       // the keypad here to avoid a crash in android 4.2 + 4.3.
-      if (AKeyEvent_getAction(event) == AKEY_EVENT_ACTION_DOWN &&
-          runtime->isActive()) {
-        auto *maEvent = new MAEvent();
-        maEvent->nativeKey = AKEYCODE_BACK;
-        maEvent->type = EVENT_TYPE_KEY_PRESSED;
-        runtime->pushEvent(maEvent);
+      if (AKeyEvent_getAction(event) == AKEY_EVENT_ACTION_DOWN && runtime != nullptr && runtime->isActive()) {
+        trace("AKEYCODE_BACK event");
+        runtime->onBack();
       }
       AInputQueue_finishEvent(app->inputQueue, event, true);
     } else if (!AInputQueue_preDispatchEvent(app->inputQueue, event)) {
@@ -128,9 +168,16 @@ static void process_input(android_app *app, android_poll_source *source) {
   }
 }
 
-int get_sensor_events(int fd, int events, void *data) {
-  runtime->readSensorEvents();
-  return 1;
+extern "C" JNIEXPORT void JNICALL Java_net_sourceforge_smallbasic_MainActivity_onBack
+  (JNIEnv *env, jclass clazz) {
+  if (runtime != nullptr) {
+    logEntered();
+    if (g_backPipe[1] >= 0) {
+      // write a placeholder byte to trigger the read and wake ALooper_pollOnce
+      char buf = 'x';
+      write(g_backPipe[1], &buf, 1);
+    }
+  }
 }
 
 // callbacks from MainActivity.java
@@ -168,9 +215,13 @@ extern "C" JNIEXPORT void JNICALL Java_net_sourceforge_smallbasic_MainActivity_s
 }
 
 extern "C" JNIEXPORT void JNICALL Java_net_sourceforge_smallbasic_MainActivity_onResize
-  (JNIEnv *env, jclass jclazz, jint width, jint height) {
+  (JNIEnv *env, jclass jclazz, jint top, jint width, jint height, jint imeState) {
+  g_top = top;
+  if (runtime != nullptr) {
+    runtime->setTop(top);
+  }
   if (runtime != nullptr && !runtime->isClosing() && runtime->isActive() && os_graphics) {
-    runtime->onResize(width, height);
+    runtime->onResize(width, height, imeState);
   }
 }
 
@@ -198,7 +249,7 @@ extern "C" JNIEXPORT jlong JNICALL Java_net_sourceforge_smallbasic_MainActivity_
 extern "C" JNIEXPORT void JNICALL Java_net_sourceforge_smallbasic_MainActivity_consoleLog
   (JNIEnv *env, jclass clazz, jstring jstr) {
   if (jstr != nullptr) {
-    const char *str = env->GetStringUTFChars(jstr, 0);
+    const char *str = env->GetStringUTFChars(jstr, nullptr);
     runtime->systemLog(str);
     runtime->systemLog("\n");
     env->ReleaseStringUTFChars(jstr, str);
@@ -207,25 +258,25 @@ extern "C" JNIEXPORT void JNICALL Java_net_sourceforge_smallbasic_MainActivity_c
 
 void onContentRectChanged(ANativeActivity *activity, const ARect *rect) {
   logEntered();
-  runtime->onResize(rect->right, rect->bottom);
+  runtime->onResize(rect->right, rect->bottom, 0);
 }
 
 jbyteArray newByteArray(JNIEnv *env, const char *str) {
-  int size = strlen(str);
+  int size = (int)strlen(str);
   jbyteArray result = env->NewByteArray(size);
   env->SetByteArrayRegion(result, 0, size, (const jbyte *)str);
   return result;
 }
 
 Runtime::Runtime(android_app *app) :
-  System(),
   _keypadActive(false),
   _hasFocus(false),
+  _threeButtonNavigation(getBoolean("isThreeButtonNavigationEnabled")),
   _graphics(nullptr),
   _app(app),
   _eventQueue(nullptr),
-  _sensor(nullptr),
-  _sensorEventQueue(nullptr) {
+  _sensorEventQueue(nullptr),
+  _keypad(nullptr) {
   _app->userData = nullptr;
   _app->onAppCmd = handleCommand;
   _app->onInputEvent = handleInput;
@@ -238,7 +289,10 @@ Runtime::Runtime(android_app *app) :
   pthread_mutex_init(&_mutex, nullptr);
   _looper = ALooper_forThread();
   _sensorManager = ASensorManager_getInstance();
-  memset(&_sensorEvent, 0, sizeof(_sensorEvent));
+  memset(&_sensors, 0, sizeof(_sensors));
+  if (getBoolean("isPredictiveBack")) {
+    setupBackWakePipe(_looper);
+  }
 }
 
 Runtime::~Runtime() {
@@ -246,10 +300,12 @@ Runtime::~Runtime() {
   delete _output;
   delete _eventQueue;
   delete _graphics;
+  delete _keypad;
   runtime = nullptr;
   _output = nullptr;
   _eventQueue = nullptr;
   _graphics = nullptr;
+  _keypad = nullptr;
   pthread_mutex_destroy(&_mutex);
   disableSensor();
 }
@@ -287,6 +343,7 @@ int Runtime::ask(const char *title, const char *prompt, bool cancel) {
 }
 
 void Runtime::clearSoundQueue() {
+  _audio.clearSoundQueue();
   JNIEnv *env;
   _app->activity->vm->AttachCurrentThread(&env, nullptr);
   jclass clazz = env->GetObjectClass(_app->activity->clazz);
@@ -300,13 +357,13 @@ void Runtime::construct() {
   logEntered();
   _state = kClosingState;
   _graphics = new Graphics(_app);
-  if (_graphics && _graphics->construct(getFontId())) {
+  if (_graphics != nullptr && _graphics->construct(getFontId())) {
     int w = ANativeWindow_getWidth(_app->window);
     int h = ANativeWindow_getHeight(_app->window);
     _output = new AnsiWidget(w, h);
-    if (_output && _output->construct()) {
+    if (_output != nullptr && _output->construct()) {
       _eventQueue = new Stack<MAEvent *>();
-      if (_eventQueue) {
+      if (_eventQueue != nullptr) {
         _state = kActiveState;
       }
     }
@@ -316,31 +373,32 @@ void Runtime::construct() {
 void Runtime::disableSensor() {
   logEntered();
   if (_sensorEventQueue) {
-    if (_sensor) {
-      ASensorEventQueue_disableSensor(_sensorEventQueue, _sensor);
+    for (auto &i : _sensors) {
+      if (i) {
+        ASensorEventQueue_disableSensor(_sensorEventQueue, i);
+        i = nullptr;
+      }
     }
     ASensorManager_destroyEventQueue(_sensorManager, _sensorEventQueue);
   }
   _sensorEventQueue = nullptr;
-  _sensor = nullptr;
 }
 
-bool Runtime::enableSensor(int sensorType) {
-  _sensorEvent.type = 0;
-  if (!_sensorEventQueue) {
-    _sensorEventQueue =
-      ASensorManager_createEventQueue(_sensorManager, _looper, ALOOPER_POLL_CALLBACK,
-                                      get_sensor_events, nullptr);
-  } else if (_sensor) {
-    ASensorEventQueue_disableSensor(_sensorEventQueue, _sensor);
-  }
-  _sensor = ASensorManager_getDefaultSensor(_sensorManager, sensorType);
+bool Runtime::enableSensor(int sensorId) {
   bool result;
-  if (_sensor) {
-    ASensorEventQueue_enableSensor(_sensorEventQueue, _sensor);
-    result = true;
-  } else {
+  if (sensorId < 0 || sensorId >= MAX_SENSORS) {
     result = false;
+  } else if (_sensors[sensorId] == nullptr) {
+    if (!_sensorEventQueue) {
+      _sensorEventQueue = ASensorManager_createEventQueue(_sensorManager, _looper, ALOOPER_POLL_CALLBACK, nullptr, nullptr);
+    }
+    _sensors[sensorId] = ASensorManager_getDefaultSensor(_sensorManager, SENSOR_TYPES[sensorId]);
+    result = _sensors[sensorId] != nullptr;
+    if (result) {
+      ASensorEventQueue_enableSensor(_sensorEventQueue, _sensors[sensorId]);
+    }
+  } else {
+    result = true;
   }
   return result;
 }
@@ -403,6 +461,19 @@ int Runtime::getInteger(const char *methodName) {
   return result;
 }
 
+int Runtime::getIntegerFromString(const char *methodName, const char *value) {
+  JNIEnv *env;
+  _app->activity->vm->AttachCurrentThread(&env, nullptr);
+  jclass clazz = env->GetObjectClass(_app->activity->clazz);
+  jbyteArray valueByteArray = newByteArray(env, value);
+  jmethodID methodId = env->GetMethodID(clazz, methodName, "([B)I");
+  jint result = env->CallIntMethod(_app->activity->clazz, methodId, valueByteArray);
+  env->DeleteLocalRef(valueByteArray);
+  env->DeleteLocalRef(clazz);
+  _app->activity->vm->DetachCurrentThread();
+  return result;
+}
+
 int Runtime::getUnicodeChar(int keyCode, int metaState) {
   JNIEnv *env;
   _app->activity->vm->AttachCurrentThread(&env, nullptr);
@@ -433,7 +504,7 @@ char *Runtime::loadResource(const char *fileName) {
 
 MAEvent *Runtime::popEvent() {
   pthread_mutex_lock(&_mutex);
-  MAEvent *result = _eventQueue->pop();
+  auto *result = _eventQueue->pop();
   pthread_mutex_unlock(&_mutex);
   return result;
 }
@@ -442,10 +513,6 @@ void Runtime::pushEvent(MAEvent *event) {
   pthread_mutex_lock(&_mutex);
   _eventQueue->push(event);
   pthread_mutex_unlock(&_mutex);
-}
-
-void Runtime::readSensorEvents() {
-  ASensorEventQueue_getEvents(_sensorEventQueue, &_sensorEvent, 1);
 }
 
 void Runtime::setFloat(const char *methodName, float value) {
@@ -458,29 +525,42 @@ void Runtime::setFloat(const char *methodName, float value) {
   _app->activity->vm->DetachCurrentThread();
 }
 
-void Runtime::setLocationData(var_t *retval) {
-  String location = runtime->getString("getLocation");
-  map_parse_str(location.c_str(), location.length(), retval);
-}
-
 void Runtime::setSensorData(var_t *retval) {
   v_init(retval);
   map_init(retval);
-  if (_sensor != nullptr) {
-    v_setstr(map_add_var(retval, "name", 0), ASensor_getName(_sensor));
-    switch (_sensorEvent.type) {
+
+  ASensorEvent sensorEvent;
+  if (ASensorEventQueue_getEvents(_sensorEventQueue, &sensorEvent, 1) == 1) {
+    // find the sensor for the event type
+    for (int i = 0; i < MAX_SENSORS; i++) {
+      if (sensorEvent.type == SENSOR_TYPES[i]) {
+        v_setint(map_add_var(retval, "type", 0), i);
+        v_setstr(map_add_var(retval, "name", 0), ASensor_getName(_sensors[i]));
+        break;
+      }
+    }
+    switch (sensorEvent.type) {
     case ASENSOR_TYPE_ACCELEROMETER:
     case ASENSOR_TYPE_MAGNETIC_FIELD:
     case ASENSOR_TYPE_GYROSCOPE:
-      v_setreal(map_add_var(retval, "x", 0), _sensorEvent.vector.x);
-      v_setreal(map_add_var(retval, "y", 0), _sensorEvent.vector.y);
-      v_setreal(map_add_var(retval, "z", 0), _sensorEvent.vector.z);
+      v_setreal(map_add_var(retval, "x", 0), sensorEvent.vector.x);
+      v_setreal(map_add_var(retval, "y", 0), sensorEvent.vector.y);
+      v_setreal(map_add_var(retval, "z", 0), sensorEvent.vector.z);
       break;
     case ASENSOR_TYPE_LIGHT:
-      v_setreal(map_add_var(retval, "light", 0), _sensorEvent.light);
+      v_setreal(map_add_var(retval, "light", 0), sensorEvent.light);
       break;
     case ASENSOR_TYPE_PROXIMITY:
-      v_setreal(map_add_var(retval, "distance", 0), _sensorEvent.distance);
+      v_setreal(map_add_var(retval, "distance", 0), sensorEvent.distance);
+      break;
+    case ASENSOR_TYPE_PRESSURE:
+      v_setreal(map_add_var(retval, "pressure", 0), sensorEvent.pressure);
+      break;
+    case ASENSOR_TYPE_RELATIVE_HUMIDITY:
+      v_setreal(map_add_var(retval, "relative_humidity", 0), sensorEvent.relative_humidity);
+      break;
+    case ASENSOR_TYPE_AMBIENT_TEMPERATURE:
+      v_setreal(map_add_var(retval, "temperature", 0), sensorEvent.temperature);
       break;
     default:
       break;
@@ -504,7 +584,7 @@ void Runtime::runShell() {
   _app->activity->callbacks->onContentRectChanged = onContentRectChanged;
   loadConfig();
 
-  strcpy(opt_modpath, getString("getModulePath"));
+  strlcpy(opt_modpath, getString("getModulePath"), sizeof(opt_modpath));
 
 #if defined(_ANDROID_LIBRARY)
   runOnce(MAIN_BAS, true);
@@ -538,7 +618,7 @@ void Runtime::loadConfig() {
   int height = getInteger("getWindowHeight");
   if (height !=  _graphics->getHeight()) {
     // height adjustment for bottom virtual navigation bar
-    onResize(_graphics->getWidth(), height);
+    onResize(_graphics->getWidth(), height, 0);
   }
 
   _output->setTextColor(DEFAULT_FOREGROUND, DEFAULT_BACKGROUND);
@@ -573,7 +653,7 @@ void Runtime::loadConfig() {
     }
     s = settings.get(LOAD_MODULES_KEY);
     if (s && s->toInteger() == 1) {
-      if (getBoolean("loadModules")) {
+      if (getBoolean(LOAD_MODULES_KEY)) {
         systemLog("Extension modules loaded\n");
         settings.put(LOAD_MODULES_KEY, "2");
       } else {
@@ -704,9 +784,11 @@ void Runtime::handleKeyEvent(MAEvent &event) {
     event.key = SB_KEY_KP_MINUS;
     break;
   case AKEYCODE_PAGE_UP:
+  case AKEYCODE_VOLUME_UP:
     event.key = SB_KEY_PGUP;
     break;
   case AKEYCODE_PAGE_DOWN:
+  case AKEYCODE_VOLUME_DOWN:
     event.key = SB_KEY_PGDN;
     break;
   case AKEYCODE_DPAD_UP:
@@ -750,7 +832,7 @@ void Runtime::handleKeyEvent(MAEvent &event) {
           break;
         }
       }
-    } else if (event.nativeKey < 127 && event.nativeKey != event.key) {
+    } else if (event.nativeKey != 0 && event.nativeKey < 127 && event.nativeKey != event.key) {
       // avoid translating keys send from onUnicodeChar
       event.key = getUnicodeChar(event.nativeKey, event.key);
     }
@@ -788,16 +870,6 @@ void Runtime::optionsBox(StringList *items) {
   _app->activity->vm->DetachCurrentThread();
 }
 
-void Runtime::playTone(int frq, int dur, int vol, bool bgplay) {
-  JNIEnv *env;
-  _app->activity->vm->AttachCurrentThread(&env, nullptr);
-  jclass clazz = env->GetObjectClass(_app->activity->clazz);
-  jmethodID methodId = env->GetMethodID(clazz, "playTone", "(IIIZ)V");
-  env->CallVoidMethod(_app->activity->clazz, methodId, frq, dur, vol, bgplay);
-  env->DeleteLocalRef(clazz);
-  _app->activity->vm->DetachCurrentThread();
-}
-
 void Runtime::pause(int timeout) {
   if (timeout == -1) {
     pollEvents(true);
@@ -807,7 +879,8 @@ void Runtime::pause(int timeout) {
       delete event;
     }
   } else {
-    int slept = 0;
+    int slept;
+    int now = dev_get_millisecond_count();
     while (true) {
       pollEvents(false);
       if (isBreak()) {
@@ -817,9 +890,13 @@ void Runtime::pause(int timeout) {
         processEvent(*event);
         delete event;
       }
-      usleep(WAIT_INTERVAL * 1000);
-      slept += WAIT_INTERVAL;
-      if (timeout > 0 && slept > timeout) {
+      slept = dev_get_millisecond_count() - now;
+      if (slept > timeout) {
+        break;
+      } else if (timeout - slept > WAIT_INTERVAL) {
+        usleep(WAIT_INTERVAL * 1000);
+      } else {
+        usleep((timeout - slept) * 1000);
         break;
       }
     }
@@ -829,7 +906,7 @@ void Runtime::pause(int timeout) {
 void Runtime::pollEvents(bool blocking) {
   int events;
   android_poll_source *source;
-  ALooper_pollAll(blocking || !_hasFocus ? -1 : 0, nullptr, &events, (void **)&source);
+  ALooper_pollOnce(blocking || !_hasFocus ? -1 : 0, nullptr, &events, (void **)&source);
   if (source != nullptr) {
     source->process(_app, source);
   }
@@ -843,8 +920,14 @@ MAEvent Runtime::processEvents(int waitFlag) {
   switch (waitFlag) {
   case 1:
     // wait for an event
-    _output->flush(true);
-    pollEvents(true);
+    if (!hasEvent() || _eventQueue->peek()->type == EVENT_TYPE_POINTER_DRAGGED) {
+      // drain any motion events so we only return the latest
+      while (hasEvent()) {
+        delete popEvent();
+      }
+      _output->flush(true);
+      pollEvents(true);
+    }
     break;
   case 2:
     _output->flush(false);
@@ -912,14 +995,33 @@ void Runtime::showKeypad(bool show) {
   _app->activity->vm->DetachCurrentThread();
 }
 
-void Runtime::onResize(int width, int height) {
+void Runtime::onBack() {
+  pthread_mutex_lock(&_mutex);
+  auto *current = _eventQueue->peek();
+  if (current == nullptr || current->nativeKey != AKEYCODE_BACK) {
+    trace("pushing back event to the queue");
+    auto *event = new MAEvent();
+    event->nativeKey = AKEYCODE_BACK;
+    event->type = EVENT_TYPE_KEY_PRESSED;
+    _eventQueue->push(event);
+  } else {
+    trace("skipping duplicate back event");
+  }
+  pthread_mutex_unlock(&_mutex);
+}
+
+void Runtime::onResize(int width, int height, int imeState) {
   logEntered();
   if (_graphics != nullptr) {
     int w = _graphics->getWidth();
     int h = _graphics->getHeight();
     if (w != width || h != height) {
-      trace("Resized from %d %d to %d %d", w, h, width, height);
+      trace("Resized from %d %d to %d %d [ime=%d]", w, h, width, height, imeState);
       ALooper_acquire(_app->looper);
+      if (imeState != 0) {
+        // in android 16+ when resize also knows whether the ime (keypad) is active
+        _keypadActive = (imeState > 0);
+      }
       _graphics->setSize(width, height);
       auto *maEvent = new MAEvent();
       maEvent->type = EVENT_TYPE_SCREEN_CHANGED;
@@ -931,13 +1033,15 @@ void Runtime::onResize(int width, int height) {
 }
 
 void Runtime::onRunCompleted() {
-  const char *storage = getenv("EXTERNAL_DIR");
-  if (!storage) {
-    storage = getenv("INTERNAL_DIR");
-  }
-  if (storage) {
-    setenv("HOME_DIR", storage, 1);
-    chdir(storage);
+  if (!_mainBas) {
+    const char *storage = getenv("EXTERNAL_DIR");
+    if (!storage) {
+      storage = getenv("INTERNAL_DIR");
+    }
+    if (storage) {
+      setenv("HOME_DIR", storage, 1);
+      chdir(storage);
+    }
   }
 }
 
@@ -954,7 +1058,7 @@ void Runtime::onUnicodeChar(int ch) {
 
 char *Runtime::getClipboardText() {
   char *result;
-  String text = getStringBytes("getClipboardText");
+  auto text = getStringBytes("getClipboardText");
   if (!text.empty()) {
     result = strdup(text.c_str());
   } else {
@@ -975,59 +1079,12 @@ int Runtime::getFontId() {
   return result;
 }
 
-int Runtime::invokeRequest(int argc, slib_par_t *params, var_t *retval) {
-  int result = 0;
-  if (argc != 1 && argc != 3) {
-    v_setstr(retval, "Expected 1 or 3 arguments");
-  } else if (!v_is_type(params[0].var_p, V_STR)) {
-    v_setstr(retval, "invalid endPoint");
-  } else if (argc == 3 && !v_is_type(params[1].var_p, V_STR) && !v_is_type(params[1].var_p, V_MAP)) {
-    v_setstr(retval, "invalid postData");
-  } else if (argc == 3 && !v_is_type(params[2].var_p, V_STR)) {
-    v_setstr(retval, "invalid apiKey");
-  } else {
-    _output->redraw();
-
-    JNIEnv *env;
-    _app->activity->vm->AttachCurrentThread(&env, nullptr);
-    auto endPoint = env->NewStringUTF(v_getstr(params[0].var_p));
-    auto data = env->NewStringUTF(argc < 2 ? "" : v_getstr(params[1].var_p));
-    auto apiKey = env->NewStringUTF(argc < 3 ? "" : v_getstr(params[2].var_p));
-
-    jclass clazz = env->GetObjectClass(_app->activity->clazz);
-    const char *signature = "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;";
-    jmethodID methodId = env->GetMethodID(clazz, "request", signature);
-    jstring jstr = (jstring)env->CallObjectMethod(_app->activity->clazz, methodId, endPoint, data, apiKey);
-    const char *str = env->GetStringUTFChars(jstr, JNI_FALSE);
-    v_setstr(retval, str);
-    result = strncmp(str, "error: [", 8) == 0 ? 0 : 1;
-    env->ReleaseStringUTFChars(jstr, str);
-    env->DeleteLocalRef(jstr);
-    env->DeleteLocalRef(clazz);
-    env->DeleteLocalRef(endPoint);
-    env->DeleteLocalRef(data);
-    env->DeleteLocalRef(apiKey);
-
-    _app->activity->vm->DetachCurrentThread();
-  }
-  return result;
-}
-
 //
 // System platform methods
 //
 bool System::getPen3() {
-  bool result = false;
-  if (_touchX != -1 && _touchY != -1) {
-    result = true;
-  } else {
-    // get mouse
-    processEvents(0);
-    if (_touchX != -1 && _touchY != -1) {
-      result = true;
-    }
-  }
-  return result;
+  processEvents(0);
+  return _buttonPressed;
 }
 
 void System::completeKeyword(int index) const {
@@ -1040,220 +1097,13 @@ void System::completeKeyword(int index) const {
   }
 }
 
-void System::editSource(strlib::String loadPath, bool restoreOnExit) {
-  logEntered();
-
-  strlib::String fileName;
-  int i = loadPath.lastIndexOf('/', 0);
-  if (i != -1) {
-    fileName = loadPath.substring(i + 1);
-  } else {
-    fileName = loadPath;
-  }
-
-  strlib::String dirtyFile;
-  dirtyFile.append(" * ");
-  dirtyFile.append(fileName);
-  strlib::String cleanFile;
-  cleanFile.append(" - ");
-  cleanFile.append(fileName);
-
-  int w = _output->getWidth();
-  int h = _output->getHeight();
-  int charWidth = _output->getCharWidth();
-  int charHeight = _output->getCharHeight();
-  int prevScreenId = _output->selectScreen(SOURCE_SCREEN);
-  TextEditInput *editWidget;
-  if (_editor != nullptr) {
-    editWidget = _editor;
-    editWidget->_width = w;
-    editWidget->_height = h;
-  } else {
-    editWidget = new TextEditInput(_programSrc, charWidth, charHeight, 0, 0, w, h);
-  }
-  auto *helpWidget = new TextEditHelpWidget(editWidget, charWidth, charHeight, false);
-  auto *widget = editWidget;
-  _modifiedTime = getModifiedTime();
-  editWidget->updateUI(nullptr, nullptr);
-  editWidget->setLineNumbers();
-  editWidget->setFocus(true);
-
-  _output->clearScreen();
-  _output->addInput(editWidget);
-  _output->addInput(helpWidget);
-
-  if (gsb_last_line && isBreak()) {
-    String msg = "Break at line: ";
-    msg.append(gsb_last_line);
-    runtime->alert(msg);
-  } else if (gsb_last_error && !isBack()) {
-    // program stopped with an error
-    editWidget->setCursorRow(gsb_last_line + editWidget->getSelectionRow() - 1);
-    runtime->alert(gsb_last_errmsg);
-  }
-
-  bool showStatus = !editWidget->getScroll();
-  _srcRendered = false;
-  _output->setStatus(showStatus ? cleanFile : "");
-  _output->redraw();
-  _state = kEditState;
-  runtime->showKeypad(true);
-
-  while (_state == kEditState) {
-    MAEvent event = getNextEvent();
-    switch (event.type) {
-    case EVENT_TYPE_POINTER_PRESSED:
-      if (!showStatus && widget == editWidget && event.point.x < editWidget->getMarginWidth()) {
-        _output->setStatus(editWidget->isDirty() ? dirtyFile : cleanFile);
-        _output->redraw();
-        showStatus = true;
-      }
-      break;
-    case EVENT_TYPE_POINTER_RELEASED:
-      if (showStatus && event.point.x < editWidget->getMarginWidth() && editWidget->getScroll()) {
-        _output->setStatus("");
-        _output->redraw();
-        showStatus = false;
-      }
-      break;
-    case EVENT_TYPE_OPTIONS_BOX_BUTTON_CLICKED:
-      if (editWidget->isDirty() && !editWidget->getScroll()) {
-        _output->setStatus(dirtyFile);
-        _output->redraw();
-      }
-      break;
-    case EVENT_TYPE_KEY_PRESSED:
-      if (_userScreenId == -1) {
-        dev_clrkb();
-        int sw = _output->getScreenWidth();
-        bool redraw = true;
-        bool dirty = editWidget->isDirty();
-        char *text;
-
-        switch (event.key) {
-        case SB_KEY_F(2):
-        case SB_KEY_F(3):
-        case SB_KEY_F(4):
-        case SB_KEY_F(5):
-        case SB_KEY_F(6):
-        case SB_KEY_F(7):
-        case SB_KEY_F(8):
-        case SB_KEY_F(10):
-        case SB_KEY_F(11):
-        case SB_KEY_F(12):
-        case SB_KEY_MENU:
-        case SB_KEY_ESCAPE:
-        case SB_KEY_BREAK:
-          // unhandled keys
-          redraw = false;
-          break;
-        case SB_KEY_F(1):
-          widget = helpWidget;
-          helpWidget->createKeywordIndex();
-          helpWidget->showPopup(-4, -2);
-          helpWidget->setFocus(true);
-          runtime->showKeypad(false);
-          showStatus = false;
-          break;
-        case SB_KEY_F(9):
-          _state = kRunState;
-          if (editWidget->isDirty()) {
-            saveFile(editWidget, loadPath);
-          }
-          break;
-        case SB_KEY_CTRL('s'):
-          saveFile(editWidget, loadPath);
-          break;
-        case SB_KEY_CTRL('c'):
-        case SB_KEY_CTRL('x'):
-          text = widget->copy(event.key == (int)SB_KEY_CTRL('x'));
-          if (text) {
-            setClipboardText(text);
-            free(text);
-          }
-          break;
-        case SB_KEY_CTRL('v'):
-          text = getClipboardText();
-          widget->paste(text);
-          free(text);
-          break;
-        case SB_KEY_CTRL('o'):
-          _output->selectScreen(USER_SCREEN1);
-          showCompletion(true);
-          _output->redraw();
-          _state = kActiveState;
-          waitForBack();
-          runtime->showKeypad(true);
-          _output->selectScreen(SOURCE_SCREEN);
-          _state = kEditState;
-          break;
-        default:
-          redraw = widget->edit(event.key, sw, charWidth);
-          break;
-        }
-        if (editWidget->isDirty() != dirty && !editWidget->getScroll()) {
-          _output->setStatus(editWidget->isDirty() ? dirtyFile : cleanFile);
-        }
-        if (redraw) {
-          _output->redraw();
-        }
-      }
-    }
-
-    if (isBack() && widget == helpWidget) {
-      runtime->showKeypad(true);
-      widget = editWidget;
-      helpWidget->hide();
-      editWidget->setFocus(true);
-      _state = kEditState;
-      _output->redraw();
-    }
-
-    if (widget->isDirty()) {
-      int choice = -1;
-      if (isClosing()) {
-        choice = 0;
-      } else if (isBack()) {
-        const char *message = "The current file has not been saved.\n"
-                              "Would you like to save it now?";
-        choice = ask("Save changes?", message, isBack());
-      }
-      if (choice == 0) {
-        widget->save(loadPath);
-      } else if (choice == 2) {
-        // cancel
-        _state = kEditState;
-      }
-    }
-  }
-
-  if (_state == kRunState) {
-    // allow the editor to be restored on return
-    if (!_output->removeInput(editWidget)) {
-      trace("Failed to remove editor input");
-    }
-    runtime->showKeypad(false);
-    _editor = editWidget;
-    _editor->setFocus(false);
-  } else {
-    _editor = nullptr;
-  }
-
-  // deletes editWidget unless it has been removed
-  _output->removeInputs();
-  if (!isClosing() && restoreOnExit) {
-    _output->selectScreen(prevScreenId);
-  }
-  logLeaving();
-}
-
 //
 // ma event handling
 //
 int maGetEvent(MAEvent *event) {
   int result;
   if (runtime->hasEvent()) {
-    MAEvent *nextEvent = runtime->popEvent();
+    auto *nextEvent = runtime->popEvent();
     event->point = nextEvent->point;
     event->type = nextEvent->type;
     delete nextEvent;
@@ -1298,7 +1148,7 @@ void osd_audio(const char *path) {
 }
 
 void osd_sound(int frq, int dur, int vol, int bgplay) {
-  if (dur > 0 && frq > 0) {
+  if (dur > 0) {
     runtime->playTone(frq, dur, vol, bgplay);
   }
 }
@@ -1311,195 +1161,3 @@ void osd_beep(void) {
   osd_sound(1000, 30, 100, 0);
   osd_sound(500, 30, 100, 0);
 }
-
-//
-// module implementation
-//
-int gps_on(int param_count, slib_par_t *params, var_t *retval) {
-  runtime->getBoolean("requestLocationUpdates");
-  return 1;
-}
-
-int gps_off(int param_count, slib_par_t *params, var_t *retval) {
-  runtime->getBoolean("removeLocationUpdates");
-  return 1;
-}
-
-int sensor_on(int param_count, slib_par_t *params, var_t *retval) {
-  int result = 0;
-  if (param_count == 1) {
-    switch (v_getint(params[0].var_p)) {
-    case 0:
-      result = runtime->enableSensor(ASENSOR_TYPE_ACCELEROMETER);
-      break;
-    case 1:
-      result = runtime->enableSensor(ASENSOR_TYPE_MAGNETIC_FIELD);
-      break;
-    case 2:
-      result = runtime->enableSensor(ASENSOR_TYPE_GYROSCOPE);
-      break;
-    case 3:
-      result = runtime->enableSensor(ASENSOR_TYPE_LIGHT);
-      break;
-    case 4:
-      result = runtime->enableSensor(ASENSOR_TYPE_PROXIMITY);
-      break;
-    default:
-      break;
-    }
-  }
-  if (!result) {
-    v_setstr(retval, "sensor not active");
-  }
-  return result;
-}
-
-int sensor_off(int param_count, slib_par_t *params, var_t *retval) {
-  runtime->disableSensor();
-  return 1;
-}
-
-int tts_speak(int param_count, slib_par_t *params, var_t *retval) {
-  int result;
-  if (opt_mute_audio) {
-    result = 1;
-  } else if (param_count == 1 && v_is_type(params[0].var_p, V_STR)) {
-    runtime->speak(v_getstr(params[0].var_p));
-    result = 1;
-  } else {
-    v_setstr(retval, ERR_PARAM);
-    result = 0;
-  }
-  return result;
-}
-
-int tts_pitch(int param_count, slib_par_t *params, var_t *retval) {
-  int result;
-  if (param_count == 1 && (v_is_type(params[0].var_p, V_NUM) ||
-                           v_is_type(params[0].var_p, V_INT))) {
-    runtime->setFloat("setTtsPitch", v_getreal(params[0].var_p));
-    result = 1;
-  } else {
-    v_setstr(retval, ERR_PARAM);
-    result = 0;
-  }
-  return result;
-}
-
-int tts_speech_rate(int param_count, slib_par_t *params, var_t *retval) {
-  int result;
-  if (param_count == 1 && (v_is_type(params[0].var_p, V_NUM) ||
-                           v_is_type(params[0].var_p, V_INT))) {
-    runtime->setFloat("setTtsRate", v_getreal(params[0].var_p));
-    result = 1;
-  } else {
-    v_setstr(retval, ERR_PARAM);
-    result = 0;
-  }
-  return result;
-}
-
-int tts_lang(int param_count, slib_par_t *params, var_t *retval) {
-  int result;
-  if (param_count == 1 && v_is_type(params[0].var_p, V_STR)) {
-    runtime->setString("setTtsLocale", v_getstr(params[0].var_p));
-    result = 1;
-  } else {
-    v_setstr(retval, ERR_PARAM);
-    result = 0;
-  }
-  return result;
-}
-
-int tts_off(int param_count, slib_par_t *params, var_t *retval) {
-  runtime->getBoolean("setTtsQuiet");
-  return 1;
-}
-
-struct LibProcs {
-  const char *name;
-  int (*command)(int, slib_par_t *, var_t *retval);
-} lib_procs[] = {
-  {"GPS_ON", gps_on},
-  {"GPS_OFF", gps_off},
-  {"SENSOR_ON", sensor_on},
-  {"SENSOR_OFF", sensor_off},
-  {"TTS_PITCH", tts_pitch},
-  {"TTS_RATE", tts_speech_rate},
-  {"TTS_LANG", tts_lang},
-  {"TTS_OFF", tts_off},
-  {"SPEAK", tts_speak}
-};
-
-int sblib_proc_count(void) {
-  return (sizeof(lib_procs) / sizeof(lib_procs[0]));
-}
-
-int sblib_proc_getname(int index, char *proc_name) {
-  int result;
-  if (index < sblib_proc_count()) {
-    strcpy(proc_name, lib_procs[index].name);
-    result = 1;
-  } else {
-    result = 0;
-  }
-  return result;
-}
-
-int sblib_proc_exec(int index, int param_count, slib_par_t *params, var_t *retval) {
-  int result;
-  if (index < sblib_proc_count()) {
-    result = lib_procs[index].command(param_count, params, retval);
-  } else {
-    result = 0;
-  }
-  return result;
-}
-
-const char *lib_funcs[] = {
-  "LOCATION",
-  "SENSOR",
-  "REQUEST"
-};
-
-int sblib_func_count(void) {
-  return (sizeof(lib_funcs) / sizeof(lib_funcs[0]));
-}
-
-int sblib_func_getname(int index, char *proc_name) {
-  int result;
-  if (index < sblib_func_count()) {
-    strcpy(proc_name, lib_funcs[index]);
-    result = 1;
-  } else {
-    result = 0;
-  }
-  return result;
-}
-
-int sblib_func_exec(int index, int param_count, slib_par_t *params, var_t *retval) {
-  int result;
-  switch (index) {
-  case 0:
-    runtime->setLocationData(retval);
-    result = 1;
-    break;
-  case 1:
-    runtime->setSensorData(retval);
-    result = 1;
-    break;
-  case 2:
-    result = runtime->invokeRequest(param_count, params, retval);
-    break;
-  default:
-    result = 0;
-    break;
-  }
-  return result;
-}
-
-void sblib_close(void) {
-  runtime->getBoolean("closeLibHandlers");
-  runtime->disableSensor();
-}
-

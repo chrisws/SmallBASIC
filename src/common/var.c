@@ -9,9 +9,15 @@
 
 #include "common/sys.h"
 #include "common/sberr.h"
+#include "common/plugins.h"
 
 #define INT_STR_LEN 64
+
+#if defined(_MCU)
+#define VAR_POOL_SIZE 512
+#else
 #define VAR_POOL_SIZE 8192
+#endif
 
 var_t var_pool[VAR_POOL_SIZE];
 var_t *var_pool_head;
@@ -524,6 +530,7 @@ void v_set(var_t *dest, const var_t *src) {
     break;
   case V_FUNC:
     dest->v.fn.cb = src->v.fn.cb;
+    dest->v.fn.mcb = src->v.fn.mcb;
     dest->v.fn.id = src->v.fn.id;
     break;
   case V_NIL:
@@ -565,9 +572,9 @@ void v_move(var_t *dest, const var_t *src) {
     dest->v.m.map = src->v.m.map;
     dest->v.m.count = src->v.m.count;
     dest->v.m.size = src->v.m.size;
-    dest->v.m.id = src->v.m.id;
     dest->v.m.lib_id = src->v.m.lib_id;
     dest->v.m.cls_id = src->v.m.cls_id;
+    dest->v.m.id = plugin_refresh_id(src->v.m.lib_id, src->v.m.cls_id, src->v.m.id);
     break;
   case V_REF:
     dest->v.ref = src->v.ref;

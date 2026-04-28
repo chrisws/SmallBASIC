@@ -21,14 +21,18 @@ struct Runtime : public System {
   void browseFile(const char *url);
   char *getClipboardText();
   int  getFontSize() { return _output->getFontSize(); }
+  void editSource(String loadPath, bool restoreOnExit) override;
+  int externalExecute(const char *bas) const override { return 0;}
   void enableCursor(bool enabled) {}
   int  handle(int event);
   char *loadResource(const char *fileName);
+  void openFolder() override {}
   void onRunCompleted() {}
   void saveWindowRect() {}
   bool handleKeyboard(int eventType, const EmscriptenKeyboardEvent *e);
   bool handleMouse(int eventType, const EmscriptenMouseEvent *e);
   bool hasEvent() { return _eventQueue && _eventQueue->size() > 0; }
+  bool hasBackMenu() const override { return true; }
   void pause(int timeout);
   void pushEvent(MAEvent *event) { _eventQueue->push(event); }
   MAEvent *popEvent() { return _eventQueue->pop(); }

@@ -288,7 +288,9 @@ void exec_setup_predefined_variables() {
     }
   }
 #elif defined(_UnixOS)
-  if (getenv("HOME")) {
+  if (getenv("XDG_DATA_HOME")) {
+    strlcpy(homedir, getenv("XDG_DATA_HOME"), sizeof(homedir));
+  } else if (getenv("HOME")) {
     strlcpy(homedir, getenv("HOME"), sizeof(homedir));
   } else {
     strcpy(homedir, "/tmp/");
@@ -1185,17 +1187,15 @@ int brun_create_task(const char *filename, byte *preloaded_bc, int libf) {
     } else {
       find_unit(filename, fname);
     }
-    if (access(fname, R_OK)) {
-      panic("File '%s' not found", fname);
-    }
-    // look if it is already loaded
-    if (search_task(fname) != -1) {
-      return search_task(fname);
-    }
     // open & load
     int h = open(fname, O_RDWR | O_BINARY);
     if (h == -1) {
       panic("File '%s' not found", fname);
+    }
+    // look if it is already loaded
+    if (search_task(fname) != -1) {
+      close(h);
+      return search_task(fname);
     }
     // load it
     if (libf) {
@@ -1643,6 +1643,7 @@ int sbasic_exec(const char *file) {
   opt_show_page = 0;
 
   // setup global values
+  gsb_err_mod_perm = 0;
   gsb_last_line = gsb_last_error = 0;
   strlcpy(gsb_last_file, file, sizeof(gsb_last_file));
   strcpy(gsb_last_errmsg, "");
@@ -1656,6 +1657,8 @@ int sbasic_exec(const char *file) {
   } else if (!success) {        // there was some errors; do not continue
     exec_rq = 0;
     gsb_last_error = 1;
+  } else if (gsb_err_mod_perm) {
+    exec_rq = 0;                // a module was not permitted to run
   }
 
   if (exec_rq) {                // we will run it

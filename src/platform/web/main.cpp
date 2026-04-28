@@ -1,6 +1,6 @@
 // This file is part of SmallBASIC
 //
-// Copyright(C) 2001-2017 Chris Warren-Smith.
+// Copyright(C) 2001-2025 Chris Warren-Smith.
 //
 // This program is distributed under the terms of the GPL v2.0 or later
 // Download the GNU Public License (GPL) from www.gnu.org
@@ -10,27 +10,30 @@
 
 #include <microhttpd.h>
 #include <getopt.h>
-#include <stdlib.h>
-#include <string.h>
-#include <stdio.h>
-#include <string.h>
+#include <cstdlib>
+#include <cstring>
+#include <cstdio>
+#include <string>
 
 #include "include/osd.h"
 #include "common/sbapp.h"
 #include "common/device.h"
 #include "platform/web/canvas.h"
+#include "platform/web/proxy.h"
 
-Canvas g_canvas;
-uint32_t g_start = 0;
-uint32_t g_maxTime = 2000;
-bool g_graphicText = true;
-bool g_noExecute = false;
-bool g_json = false;
-char *execBas = nullptr;
-MHD_Connection *g_connection;
-StringList g_cookies;
-String g_path;
-String g_data;
+using namespace std;
+
+static Canvas g_canvas;
+static uint32_t g_start = 0;
+static uint32_t g_maxTime = 2000;
+static bool g_graphicText = true;
+static bool g_noExecute = false;
+static bool g_json = false;
+static char *execBas = nullptr;
+static MHD_Connection *g_connection;
+static StringList g_cookies;
+static string g_path;
+static string g_data;
 
 static struct option OPTIONS[] = {
   {"file-permitted", no_argument,       nullptr, 'f'},
@@ -47,6 +50,8 @@ static struct option OPTIONS[] = {
   {"port",           optional_argument, nullptr, 'p'},
   {"run",            optional_argument, nullptr, 'r'},
   {"width",          optional_argument, nullptr, 'w'},
+  {"proxy-path",     optional_argument, nullptr, 'a'},
+  {"proxy-host",     optional_argument, nullptr, 'o'},
   {0, 0, 0, 0}
 };
 
@@ -129,7 +134,7 @@ MHD_Response *execute(MHD_Connection *connection, const char *bas) {
     g_graphicText = atoi(graphicText) > 0;
   }
   if (command != nullptr) {
-    strcpy(opt_command, command);
+    strlcpy(opt_command, command, sizeof(opt_command));
   }
 
   log("%s dim:%dX%d [accept=%s, content-type=%s]", bas, os_graf_mx, os_graf_my, accept, contentType);
@@ -156,19 +161,29 @@ MHD_Response *serve_file(const char *path) {
   int fd = open(path, O_RDONLY | O_BINARY);
   if (!fstat(fd, &stbuf)) {
     response = MHD_create_response_from_fd(stbuf.st_size, fd);
+
+    // add the content-type headers for browsing
+    unsigned len = strlen(path);
+    if (len > 4 && strcmp(path + len - 4, ".css") == 0) {
+      MHD_add_response_header(response, MHD_HTTP_HEADER_CONTENT_TYPE, "text/css");
+    } else if (len > 3 && strcmp(path + len - 3, ".js") == 0) {
+      MHD_add_response_header(response, MHD_HTTP_HEADER_CONTENT_TYPE, "application/javascript");
+    }
   } else {
     response = nullptr;
   }
   return response;
 }
 
-MHD_Response *get_response(MHD_Connection *connection, const char *path) {
+MHD_Response *get_response(MHD_Connection *connection, const char *path, const char *method) {
   MHD_Response *response = nullptr;
   struct stat stbuf;
 
   g_path = path;
 
-  if (execBas && stat(execBas, &stbuf) != -1 && S_ISREG(stbuf.st_mode)) {
+  if (proxy_accept(connection, path)) {
+    response = proxy_request(connection, path, method, g_data);
+  } else if (execBas && stat(execBas, &stbuf) != -1 && S_ISREG(stbuf.st_mode)) {
     response = execute(connection, execBas);
   } else if (path[0] == '\0') {
     if (stat("index.bas", &stbuf) != -1 && S_ISREG(stbuf.st_mode)) {
@@ -212,18 +227,14 @@ MHD_Result access_cb(void *cls,
 
   if (upload_data != nullptr) {
     // curl -H "Accept: application/json" -d '{"productId": 123456, "quantity": 100}' http://localhost:8080/foo
-    size_t size = OPT_CMD_SZ - 1;
-    if (*upload_data_size < size) {
-      size = *upload_data_size;
-    }
     g_data.clear();
-    g_data.append(upload_data, size);
+    g_data.append(upload_data, *upload_data_size);
     *upload_data_size = 0;
     return MHD_YES;
   }
 
   MHD_Result result;
-  MHD_Response *response = get_response(connection, url + 1);
+  MHD_Response *response = get_response(connection, url + 1, method);
   if (response != nullptr) {
     int code = g_canvas.getPage().length() ? MHD_HTTP_OK : MHD_HTTP_NO_CONTENT;
     result = MHD_queue_response(connection, code, response);
@@ -242,10 +253,12 @@ int main(int argc, char **argv) {
   init();
   int port = 8080;
   char *runBas = nullptr;
+  char *proxyPath = nullptr;
+  char *proxyHost = nullptr;
 
   while (1) {
     int option_index = 0;
-    int c = getopt_long(argc, argv, "hvfxjp:t:m::r:w:e:c:g:i:", OPTIONS, &option_index);
+    int c = getopt_long(argc, argv, "hvfxjp:t:m::r:w:e:c:g:i:a:o:", OPTIONS, &option_index);
     if (c == -1) {
       break;
     }
@@ -264,7 +277,7 @@ int main(int argc, char **argv) {
       os_graf_my = atoi(optarg);
       break;
     case 'c':
-      strcpy(opt_command, optarg);
+      strlcpy(opt_command, optarg, sizeof(opt_command));
       break;
     case 'g':
       g_graphicText = atoi(optarg) > 1;
@@ -288,7 +301,7 @@ int main(int argc, char **argv) {
       break;
     case 'm':
       if (optarg) {
-        strcpy(opt_modpath, optarg);
+        strlcpy(opt_modpath, optarg, sizeof(opt_modpath));
       }
       break;
     case 'i':
@@ -302,12 +315,24 @@ int main(int argc, char **argv) {
     case 'j':
       g_json = true;
       break;
+    case 'a':
+      if (optarg) {
+        proxyPath = strdup(optarg);
+      }
+      break;
+    case 'o':
+      if (optarg) {
+        proxyHost = strdup(optarg);
+      }
+      break;
     default:
       show_help();
       exit(1);
       break;
     }
   }
+
+  proxy_init(proxyPath, proxyHost);
 
   if (runBas != nullptr) {
     g_canvas.reset();
@@ -331,7 +356,11 @@ int main(int argc, char **argv) {
 
     MHD_stop_daemon(d);
   }
+
+  proxy_cleanup();
   free(execBas);
+  free(proxyPath);
+  free(proxyHost);
   return 0;
 }
 

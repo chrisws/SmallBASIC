@@ -23,6 +23,8 @@ var_p_t v_get_tmp(var_p_t map) {
   var_p_t result = map_get(map, MAP_TMP_FIELD);
   if (result == NULL) {
     result = map_add_var(map, MAP_TMP_FIELD, 0);
+  } else {
+    v_free(result);
   }
   return result;
 }
@@ -51,10 +53,12 @@ void v_eval_func(var_p_t self, var_p_t v_func, var_p_t result) {
     if (!prog_error) {
       if (!v_func->v.fn.mcb(self, pcount, ptable, result)) {
         if (result->type == V_STR) {
-          err_throw(result->v.p.ptr);
+          err_throw("%s", result->v.p.ptr);
         } else {
           err_throw("Undefined");
         }
+      } else if (v_is_type(result, V_MAP)) {
+        map_set_lib_id(result, self->v.m.lib_id);
       }
     }
     if (ptable) {

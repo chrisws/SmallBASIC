@@ -10,8 +10,8 @@
 #define UI_CANVAS
 
 #if defined(_SDL)
-#include <SDL_rect.h>
-#include <SDL_surface.h>
+#include <SDL3/SDL_rect.h>
+#include <SDL3/SDL_surface.h>
 #define MAX_CANVAS_SIZE 20
 
 struct Canvas {
@@ -46,14 +46,14 @@ struct Canvas {
   virtual ~Canvas();
 
   bool create(int w, int h);
-  void drawRegion(Canvas *src, const MARect *srcRect, int dstx, int dsty);
-  void fillRect(int x, int y, int w, int h, pixel_t color);
+  void drawRegion(Canvas *src, const MARect *srcRect, int dstx, int dsty) const;
+  void fillRect(int x, int y, int w, int h, pixel_t color) const;
   void setClip(int x, int y, int w, int h);
-  pixel_t *getLine(int y) { return _pixels + (y * _w); }
-  int x() { return _clip ? _clip->left : 0; }
-  int y() { return _clip ? _clip->top : 0; }
-  int w() { return _clip ? _clip->right : _w; }
-  int h() { return _clip ? _clip->bottom : _h; }
+  pixel_t *getLine(int y) const { return _pixels + (y * _w); }
+  int x() const { return _clip ? _clip->left : 0; }
+  int y() const { return _clip ? _clip->top : 0; }
+  int w() const { return _clip ? _clip->right : _w; }
+  int h() const { return _clip ? _clip->bottom : _h; }
 
   int _w;
   int _h;

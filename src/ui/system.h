@@ -14,10 +14,8 @@
 #include "ui/ansiwidget.h"
 #include "ui/textedit.h"
 
-void reset_image_cache();
-
-struct Cache : public strlib::Properties<String *> {
-  Cache(int size) : Properties(size * 2), _index(0) {}
+struct Cache final : public strlib::Properties<String *> {
+  explicit Cache(int size) : Properties(size * 2), _index(0) {}
   void add(const char *key, const char *value);
   int _index;
 };
@@ -46,9 +44,9 @@ struct System {
   void setLoadBreak(const char *path);
   void setLoadPath(const char *path);
   void setRunning(bool running);
-  void systemLog(const char *msg);
-  void systemPrint(const char *msg, ...);
-  AnsiWidget *getOutput() { return _output; }
+  void systemLog(const char *msg) const;
+  void systemPrint(const char *msg, ...) const;
+  AnsiWidget *getOutput() const { return _output; }
 
   enum CursorType {
     kHand, kArrow, kIBeam
@@ -59,8 +57,10 @@ struct System {
   virtual void alert(const char *title, const char *message) = 0;
   virtual int ask(const char *title, const char *prompt, bool cancel=true) = 0;
   virtual void browseFile(const char *url) = 0;
+  virtual bool hasBackMenu() const = 0;
   virtual MAEvent processEvents(int waitFlag) = 0;
   virtual char *loadResource(const char *fileName);
+  virtual void openFolder() = 0;
   virtual void optionsBox(StringList *items);
   virtual void onRunCompleted() = 0;
   virtual void saveWindowRect() = 0;
@@ -72,32 +72,35 @@ struct System {
   virtual char *getClipboardText() = 0;
 
   protected:
-  void editSource(strlib::String loadPath, bool restoreOnExit);
+  static bool fileExists(strlib::String &path);
+  static void formatOptions(StringList *items);
+  static void setupPath(String &loadPath);
+  static bool setParentPath();
+
+  virtual void editSource(strlib::String loadPath, bool restoreOnExit) = 0;
+  virtual int externalExecute(const char *bas) const = 0;
   bool execute(const char *bas);
-  bool fileExists(strlib::String &path);
-  void formatOptions(StringList *items);
   MAEvent getNextEvent() { return processEvents(1); }
-  uint32_t getModifiedTime();
+  uint32_t getModifiedTime() const;
   void handleEvent(MAEvent &event);
   void handleMenu(MAEvent &event);
-  bool isEditEnabled() const {return opt_ide == IDE_INTERNAL || isScratchLoad();}
+  bool isEditEnabled() const {return opt_ide == IDE_INTERNAL || opt_ide == IDE_EXTERNAL || isScratchLoad();}
   bool isEditReady() const {return !isRestart() && isEditEnabled() && !isNetworkLoad();}
   bool isNetworkLoad() const {return _loadPath.indexOf("://", 1) != -1;}
   bool isScratchLoad() const {return _loadPath.indexOf("scratch", 0) != -1;}
+  bool isExternalLaunch() const { return !gsb_last_error && gsb_err_mod_perm; }
   bool loadSource(const char *fileName);
-  void resize();
+  void resize() const;
   void runEdit(const char *startupBas);
   void runLive(const char *startupBas);
   void runMain(const char *mainBasPath);
   void runOnce(const char *startupBas, bool runWait);
   void saveFile(TextEditInput *edit, strlib::String &path);
-  void setupPath(String &loadpath);
-  bool setParentPath();
-  void setDimensions();
+  void setDimensions() const;
   void showCompletion(bool success);
-  void printErrorLine();
+  void printErrorLine() const;
   void printSource();
-  void printSourceLine(char *text, int line, bool last);
+  void printSourceLine(char *text, int line, bool last) const;
   void setRestart();
   void showMenu();
   void showSystemScreen(bool showSrc);
@@ -144,6 +147,7 @@ struct System {
   bool _buttonPressed;
   bool _srcRendered;
   bool _menuActive;
+  bool _compileError;
   strlib::String _loadPath;
   strlib::String _activeFile;
 };

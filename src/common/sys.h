@@ -71,20 +71,29 @@ extern "C" {
 #endif
 
 // SB's constants
-#if defined(_SDL)
- #define SB_STR_VER VERSION " SDL " _SDL_VERSION SB_VERSYS SB_BIT_SZ BUILD_DATE
+#if defined(_SDL) && defined(_FLATPAK)
+  #define SB_STR_VER VERSION " FLATPAK SDL " _SDL_VERSION SB_VERSYS SB_BIT_SZ BUILD_DATE
+#elif defined(_SDL)
+  #define SB_STR_VER VERSION " SDL " _SDL_VERSION SB_VERSYS SB_BIT_SZ BUILD_DATE
 #elif defined (_ANDROID)
   #define SB_STR_VER VERSION " Android " BUILD_DATE
 #elif defined (_FLTK)
   #define SB_STR_VER VERSION " FLTK " _FLTK_VERSION SB_VERSYS SB_BIT_SZ BUILD_DATE
 #elif defined (_EMCC)
   #define SB_STR_VER VERSION " Emscripten " BUILD_DATE
+#elif defined (_TEENSY)
+  #define SB_STR_VER VERSION " Teensy " BUILD_DATE
 #else
   #define SB_STR_VER VERSION " Console " SB_VERSYS SB_BIT_SZ BUILD_DATE
 #endif
 #define SB_ERRMSG_SIZE      2048
 #define SB_KEYWORD_SIZE     128
+
+#if defined (_MCU)
+#define SB_SOURCELINE_SIZE  8192  // compiler
+#else
 #define SB_SOURCELINE_SIZE  65536 // compiler
+#endif
 #define SB_TEXTLINE_SIZE    8192  // RTL
 #define SB_EXEC_STACK_SIZE  1024  // executor's stack size
 #define SB_EVAL_STACK_SIZE  16    // evaluation stack size

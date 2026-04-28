@@ -100,7 +100,7 @@ void sc_raise(const char *format, ...) {
 
     va_list args;
     va_start(args, format);
-    unsigned size = vsnprintf(NULL, 0, format, args);
+    unsigned size = format ? vsnprintf(NULL, 0, format, args) : 0;
     va_end(args);
 
     if (comp_bc_sec) {
@@ -123,7 +123,7 @@ void rt_raise(const char *format, ...) {
 
     va_list args;
     va_start(args, format);
-    unsigned size = vsnprintf(NULL, 0, format, args);
+    unsigned size = format ? vsnprintf(NULL, 0, format, args) : 0;
     va_end(args);
 
     err_title_msg(0, strcmp(format, ERR_PARAM_NUM) == 0);
@@ -365,6 +365,10 @@ void err_ref_circ_var() {
 
 void err_array() {
   rt_raise(MSG_ARRAY_SE);
+}
+
+void err_json(int pos) {
+  err_throw(MSG_ERR_JSON, pos);
 }
 
 void err_form_input() {

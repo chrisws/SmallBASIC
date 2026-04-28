@@ -28,6 +28,15 @@ int sblib_init(const char *sourceFile);
 /**
  * @ingroup modstd
  *
+ * Returns whether the module is compatible with IDE builds
+ *
+ * @return non-zero on success
+ */
+int sblib_has_window_ui(void);
+
+/**
+ * @ingroup modstd
+ *
  * Closes the library. Called by module manager on unload.
  */
 void sblib_close(void);
@@ -111,12 +120,22 @@ int sblib_func_exec(int index, int param_count, slib_par_t *params, var_t *retva
 /**
  * @ingroup modlib
  *
- * executes a function
+ * free resources associated with the variable
  *
  * @param cls_id the variable class identifier
  * @param id the variable instance identifier
  */
-void sblib_free(int cls_id, int id);
+int sblib_free(int cls_id, int id);
+
+/**
+ * @ingroup modlib
+ *
+ * registers a fresh id to replace the given id
+ *
+ * @param cls_id the variable class identifier
+ * @param id the variable instance identifier
+ */
+int sblib_refresh_id(int cls_id, int id);
 
 /**
  * @ingroup modlib

@@ -53,7 +53,7 @@ bool Canvas::create(int w, int h) {
   return result;
 }
 
-void Canvas::drawRegion(Canvas *src, const MARect *srcRect, int destX, int destY) {
+void Canvas::drawRegion(Canvas *src, const MARect *srcRect, int destX, int destY) const {
   int srcH = srcRect->height;
   if (srcRect->top + srcRect->height > src->_h) {
     srcH = src->_h - srcRect->top;
@@ -65,7 +65,7 @@ void Canvas::drawRegion(Canvas *src, const MARect *srcRect, int destX, int destY
   }
 }
 
-void Canvas::fillRect(int left, int top, int width, int height, pixel_t drawColor) {
+void Canvas::fillRect(int left, int top, int width, int height, pixel_t drawColor) const {
   int dtX = x();
   int dtY = y();
   uint8_t dR, dG, dB;
@@ -119,6 +119,7 @@ Graphics::Graphics(android_app *app) : ui::Graphics(),
   _fontBuffer(nullptr),
   _fontBufferB(nullptr),
   _app(app),
+  _top(0),
   _w(0),
   _h(0),
   _paused(false) {
@@ -170,13 +171,13 @@ void Graphics::redraw() {
         trace("Restore format %d", locked);
       }
       if (locked) {
-        void *pixels = buffer.bits;
-        int width = MIN(_w, MIN(buffer.width, _screen->_w));
-        int height = MIN(_h, MIN(buffer.height, _screen->_h));
+        auto *pixels = ((pixel_t *)buffer.bits) + (_top * buffer.stride);
+        int const width = MIN(_w, MIN(buffer.width, _screen->_w));
+        int const height = MIN(_h, MIN(buffer.height, _screen->_h));
         for (int y = 0; y < height; y++) {
-          pixel_t *line = _screen->getLine(y);
-          memcpy((pixel_t *)pixels, line, width * sizeof(pixel_t));
-          pixels = (pixel_t*)pixels + buffer.stride;
+          pixel_t  const* line = _screen->getLine(y);
+          memcpy(pixels, line, width * sizeof(pixel_t));
+          pixels = pixels + buffer.stride;
         }
         ANativeWindow_unlockAndPost(_app->window);
       }

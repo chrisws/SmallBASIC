@@ -1,13 +1,13 @@
 dnl
 dnl Configure script for SmallBASIC
 dnl
-dnl Copyright(C) 2001-2020 Chris Warren-Smith.
+dnl Copyright(C) 2001-2026 Chris Warren-Smith.
 dnl
 dnl This program is distributed under the terms of the GPL v2.0
 dnl Download the GNU Public License (GPL) from www.gnu.org
 dnl
 
-AC_INIT([smallbasic], [12.27])
+AC_INIT([smallbasic], [12.33])
 AC_CONFIG_SRCDIR([configure.ac])
 
 AC_CANONICAL_TARGET
@@ -53,7 +53,12 @@ AC_ARG_ENABLE(dist,
   [ac_build_dist="yes"],
   [ac_build_dist="no"])
 
-function checkForWindows() {
+AC_ARG_ENABLE(teensy,
+  AS_HELP_STRING([--enable-teensy],[build teensy version(default=no)]),
+  [ac_build_teensy="yes"],
+  [ac_build_teensy="no"])
+
+checkForWindows() {
    win32=no
    case "${host_os}" in
      *mingw* | pw32* | cygwin*)
@@ -67,7 +72,7 @@ function checkForWindows() {
    AM_CONDITIONAL(WITH_WIN32, test x"$win32" = "xyes")
 }
 
-function checkDebugMode() {
+checkDebugMode() {
    AC_MSG_CHECKING([if debug mode is enabled])
    AC_ARG_WITH(debug,
    [  --with-debug            Build the debug version default=no],
@@ -76,14 +81,16 @@ function checkDebugMode() {
    AC_MSG_RESULT([$with_debug])
    if test "$with_debug" = "yes" || test "$with_debug" = "full"
    then
-     CFLAGS="${CFLAGS} -g -O0 -fstack-protector-all"
-     CXXFLAGS="${CXXFLAGS} -g -O0 -fstack-protector-all"
+     DEBUG_FLAGS="-g -O1 -fstack-protector-all -fno-omit-frame-pointer"
+     #-fsanitize=address,undefined"
+     CFLAGS="${DEBUG_FLAGS}"
+     CXXFLAGS="${DEBUG_FLAGS}"
      AC_DEFINE(_DEBUG, 1, [debugging build enabled])
    fi
    AC_SUBST(CFLAGS)
 }
 
-function checkProfiling() {
+checkProfiling() {
    AC_MSG_CHECKING([if profile generate is enabled])
    AC_ARG_WITH(profile-generate,
    [  --with-profile-generate          Build the profile generate default=no],
@@ -109,7 +116,7 @@ function checkProfiling() {
    fi
 }
 
-function checkPCRE() {
+checkPCRE() {
    AC_CHECK_PROG(have_pcre, pcre-config, [yes], [no])
 
    dnl supported under linux only for now
@@ -126,13 +133,17 @@ function checkPCRE() {
      have_pcre="no"
    fi
 
+   if test x$ac_build_teensy = xyes; then
+     have_pcre="no"
+   fi
+
    if test "${have_pcre}" = "yes" ; then
      AC_DEFINE(USE_PCRE, 1, [match.c used with libpcre.])
      PACKAGE_LIBS="${PACKAGE_LIBS} `pcre-config --libs`"
    fi
 }
 
-function checkTermios() {
+checkTermios() {
    AC_CHECK_HEADERS([termios.h], [have_termios_h=yes; break;])
 
    case "${host_os}" in
@@ -144,23 +155,27 @@ function checkTermios() {
      have_termios_h="no"
    fi
 
+   if test x$ac_build_teensy = xyes; then
+     have_termios_h="no"
+   fi
+
    if test "${have_termios_h}" = "yes" ; then
      AC_DEFINE(USE_TERM_IO, 1, [use the termios library.])
    fi
 }
 
-function defaultConditionals() {
+defaultConditionals() {
    AM_CONDITIONAL(WITH_CYGWIN_CONSOLE, false)
 }
 
-function buildSDL() {
+buildSDL() {
    TARGET="Building SDL version."
    defaultConditionals
 
-   AC_CHECK_PROG(have_sdl, sdl2-config, [yes], [no])
-   if test "${have_sdl}" = "no" ; then
-     AC_MSG_ERROR([libsdl2-dev not installed: configure failed.])
-   fi
+   PKG_CHECK_MODULES([SDL3], [sdl3])
+
+   AC_MSG_CHECKING([for SDL3 library linking])
+   SDL3_LIBS=`pkg-config sdl3 --libs --static`
 
    SAVED_CPPFLAGS="$CPPFLAGS"
    CPPFLAGS="$CPPFLAGS `pkg-config freetype2 --cflags`"
@@ -170,6 +185,15 @@ function buildSDL() {
    AC_CHECK_PROG(have_xxd, xxd, [yes], [no])
    if test "${have_xxd}" = "no" ; then
      AC_MSG_ERROR([xxd command not installed: configure failed.])
+   fi
+
+   AC_ARG_WITH(flatpak,
+   [  --with-flatpak  Build the flatpak version default=no],
+       [with_flatpak=$withval],
+       [with_flatpak=no])
+   if test "$with_flatpak" = "yes" || test "$with_flatpak" = "full"
+   then
+     AC_DEFINE(_FLATPAK, 1, [flatpak build enabled])
    fi
 
    case "${host_os}" in
@@ -184,7 +208,7 @@ function buildSDL() {
      PACKAGE_CFLAGS="${PACKAGE_CFLAGS} -mms-bitfields"
      PACKAGE_LIBS="${PACKAGE_LIBS} -lwsock32 -lws2_32 -static-libgcc -static-libstdc++"
      PACKAGE_LIBS="${PACKAGE_LIBS} -Wl,-Bstatic -Wl,-Map=output.map"
-     PACKAGE_LIBS="${PACKAGE_LIBS} `sdl2-config --static-libs` `pkg-config freetype2 --libs --static`"
+     PACKAGE_LIBS="${PACKAGE_LIBS} ${SDL3_LIBS} `pkg-config freetype2 --libs --static`"
      AC_DEFINE(_Win32, 1, [Windows build])
      ;;
 
@@ -199,7 +223,7 @@ function buildSDL() {
      dnl backlinking support for modules
      PACKAGE_LIBS="${PACKAGE_LIBS} -ldl"
      PACKAGE_LIBS="${PACKAGE_LIBS} ${FONTCONFIG_LIBS}"
-     PACKAGE_LIBS="${PACKAGE_LIBS} `sdl2-config --libs` `pkg-config freetype2 --libs`"
+     PACKAGE_LIBS="${PACKAGE_LIBS} ${SDL3_LIBS} `pkg-config freetype2 --libs`"
      ;;
 
      *)
@@ -210,34 +234,23 @@ function buildSDL() {
 
      PACKAGE_CFLAGS="${PACKAGE_CFLAGS} ${FONTCONFIG_CFLAGS}"
 
-     (cd images && xxd -i sb-desktop-128x128.png > ../src/platform/sdl/icon.h)
-
-     HAVE_SDL2_STATIC=yes
-     AC_MSG_CHECKING([if installed SDL2 supports static libs])
-     AC_PATH_PROGS_FEATURE_CHECK([SDL2_STATIC_TMP], [sdl2-config],
-       AS_IF([`"$ac_path_SDL2_STATIC_TMP" --static-libs  2>&1 | sed '/Usage/!{q1};' > /dev/null`], [HAVE_SDL2_STATIC=no]))
-     AC_MSG_RESULT([$HAVE_SDL2_STATIC])
-
-     if test "x$HAVE_SDL2_STATIC" = "xno"; then
-        SDL_LIBS=`sdl2-config --libs`
-     else
-        SDL_LIBS=`sdl2-config --static-libs`
-     fi
+     (cd images && xxd -i io.github.smallbasic.SmallBASIC.png > ../src/platform/sdl/icon.h)
 
      dnl backlinking support for modules
      PACKAGE_LIBS="${PACKAGE_LIBS} -ldl -no-pie"
      PACKAGE_LIBS="${PACKAGE_LIBS} ${FONTCONFIG_LIBS}"
-
-     PACKAGE_LIBS="-static-libgcc ${PACKAGE_LIBS} ${SDL_LIBS} `pkg-config freetype2 --libs`"
+     PACKAGE_LIBS="-static-libgcc ${PACKAGE_LIBS} ${SDL3_LIBS} `pkg-config freetype2 --libs`"
    esac
 
-   PACKAGE_CFLAGS="${PACKAGE_CFLAGS} `sdl2-config --cflags` `pkg-config freetype2 --cflags` -fno-exceptions"
+   SDL3_CFLAGS=`pkg-config sdl3 --cflags`
+   PACKAGE_CFLAGS="${PACKAGE_CFLAGS} ${SDL3_CFLAGS} `pkg-config freetype2 --cflags` -fno-exceptions"
    CXXFLAGS="${CXXFLAGS} -fno-rtti -std=c++14"
 
    dnl preconfigured values for SDL build
-   AC_DEFINE_UNQUOTED([_SDL_VERSION], ["`sdl2-config --version` "], [SDL library version])
+   SDL3_VERSION=`pkg-config sdl3 --modversion`
+   AC_DEFINE_UNQUOTED([_SDL_VERSION], ["${SDL3_VERSION} "], [SDL library version])
    AC_DEFINE(_SDL, 1, [Defined when building SDL version])
-   AC_DEFINE(_UnixOS, 1, [Building under Unix like systems.])
+   AC_DEFINE(_UnixOS, 1, [Building under Unix-like systems.])
    AC_DEFINE(IMPL_DEV_READ, 1, [Implement dev_read()])
    AC_DEFINE(IMPL_LOG_WRITE, 1, [Driver implements lwrite()])
 
@@ -246,7 +259,7 @@ function buildSDL() {
    (cd src/platform/android/app/src/main/assets && xxd -i main.bas > ../../../../../../../src/platform/sdl/main_bas.h)
 }
 
-function buildAndroid() {
+buildAndroid() {
    defaultConditionals
 
    AC_MSG_CHECKING([if library mode is enabled])
@@ -266,7 +279,6 @@ function buildAndroid() {
    TEST_DIR="src/platform/android"
    AC_SUBST(TEST_DIR)
    if test $with_library = no; then
-      (cd src/platform/android/webui && npm run build)
       TARGET="Building for Android."
    else
       TARGET="Building for Android library."
@@ -274,7 +286,7 @@ function buildAndroid() {
    fi
 }
 
-function buildConsole() {
+buildConsole() {
    win32=no
    case "${host_os}" in
      *mingw* | pw32* | cygwin*)
@@ -333,7 +345,7 @@ function buildConsole() {
    AC_SUBST(BUILD_SUBDIRS)
 }
 
-function buildWeb() {
+buildWeb() {
    if test $host_os = 'mingw32'; then
      TARGET="Building Ming32 Web server version."
      AC_DEFINE(__MINGW32__, 1, [as above])
@@ -346,6 +358,14 @@ function buildWeb() {
      PACKAGE_LIBS="${PACKAGE_LIBS} -lm -ldl -lpthread -lmicrohttpd"
      AC_CHECK_HEADERS([microhttpd.h], [], [AC_MSG_ERROR([microhttpd is not installed])])
    fi
+
+   AC_CHECK_HEADERS([curl/curl.h], [have_curl_h=yes; break;])
+
+   if test "x${have_curl_h}" = "xyes" ; then
+      AC_DEFINE(USE_LIB_CURL, 1, [use the curl library.])
+      PACKAGE_LIBS="${PACKAGE_LIBS} -lcurl"
+   fi
+
    BUILD_SUBDIRS="src/common src/platform/web"
    AM_CONDITIONAL(WITH_CYGWIN_CONSOLE, false)
    AC_DEFINE(_UnixOS, 1, [Building under Unix like systems.])
@@ -355,7 +375,7 @@ function buildWeb() {
    AC_SUBST(BUILD_SUBDIRS)
 }
 
-function buildEmscripten() {
+buildEmscripten() {
    TARGET="Building Emscripten version."
    BUILD_SUBDIRS="src/common src/platform/emcc"
    AC_CHECK_PROG(have_xxd, xxd, [yes], [no])
@@ -373,7 +393,36 @@ function buildEmscripten() {
    (cd src/platform/android/app/src/main/assets && xxd -i main.bas > ../../../../../../../src/platform/emcc/main_bas.h)
 }
 
-function buildFLTK() {
+buildTEENSY() {
+   TARGET="Building teensy version."
+   BUILD_SUBDIRS="src/platform/teensy"
+   AC_CHECK_PROG(have_xxd, xxd, [yes], [no])
+   if test "${have_xxd}" = "no" ; then
+     AC_MSG_ERROR([xxd command not installed: configure failed.])
+   fi
+   AC_CHECK_PROG([ARM_GCC], [arm-none-eabi-gcc], [yes], [no])
+   AC_CHECK_PROG([ARM_GXX], [arm-none-eabi-g++], [yes], [no])
+   if test "$ARM_GCC" = "no"; then
+     AC_MSG_ERROR([arm-none-eabi-gcc not found in PATH. Please install gcc-arm-none-eabi.])
+   fi
+   if test "$ARM_GXX" = "no"; then
+     AC_MSG_ERROR([arm-none-eabi-g++ not found in PATH. Please install g++-arm-none-eabi.])
+   fi
+   PKG_CHECK_MODULES([LIBUSB], [libusb], [],
+     [AC_MSG_ERROR([libusb not found. Please install libusb-dev])]
+   )
+   AM_CONDITIONAL(WITH_CYGWIN_CONSOLE, false)
+   AC_DEFINE(_UnixOS, 1, [Building under Unix like systems.])
+   AC_DEFINE(_MCU, 1, [Micro controller based builds])
+   AC_DEFINE(_TEENSY, 1, [Teensy Micro controller based build])
+   AC_DEFINE(USE_TERM_IO, 0, [dont use the termios library.])
+   AC_DEFINE(IMPL_LOG_WRITE, 1, [Driver implements lwrite()])
+   AC_DEFINE(IMPL_DEV_READ, 1, [Implement dev_read()])
+   AC_SUBST(BUILD_SUBDIRS)
+   (cd src/platform/teensy && xxd -i main.bas > src/main_bas.h)
+}
+
+buildFLTK() {
    TARGET="Building FLTK version."
 
    dnl Checks for FLTK 1.x
@@ -431,7 +480,7 @@ function buildFLTK() {
    AC_SUBST(desktopentrydir)
 
    dnl generate kwp.h
-   (cd src/platform/fltk && g++ -o build_kwp build_kwp.cxx && ./build_kwp)
+   (cd src/platform/fltk && ${CXX} -o build_kwp build_kwp.cxx && ./build_kwp)
 }
 
 if test x$ac_build_sdl = xyes; then
@@ -444,11 +493,13 @@ elif test x$ac_build_fltk = xyes; then
    buildFLTK
 elif test x$ac_build_emcc = xyes; then
    buildEmscripten
+elif test x$ac_build_teensy = xyes; then
+   buildTEENSY
 else
    buildConsole
 fi
 
-(cd documentation && g++ -o build_kwp build_kwp.cpp && ./build_kwp > ../src/ui/kwp.h)
+(cd documentation && ${CXX} -o build_kwp build_kwp.cpp && ./build_kwp > ../src/ui/kwp.h)
 
 checkPCRE
 checkTermios
@@ -457,11 +508,12 @@ checkProfiling
 checkForWindows
 
 CFLAGS="${CFLAGS} -std=gnu11"
-PACKAGE_CFLAGS="${PACKAGE_CFLAGS} -Wall -Wno-unused-result"
+PACKAGE_CFLAGS="${PACKAGE_CFLAGS} -Wall -Werror -Wno-unused-result"
 BUILD_DATE=`date +"%a, %d %b %Y"`
 AC_DEFINE_UNQUOTED([BUILD_DATE],["$BUILD_DATE"],[Build date])
 
-SB_DWORD_VER=`awk -F "." '{printf "0x%02d%02d%02d", $1,$2,$3}' <<< ${PACKAGE_VERSION}`
+SB_DWORD_VER=$(printf '%s' "$PACKAGE_VERSION" | awk -F. '{printf "0x%02d%02d%02d", $1,$2,$3}')
+
 AC_DEFINE_UNQUOTED([SB_DWORD_VER],[$SB_DWORD_VER],[SB_DWORD_VER])
 
 AC_SUBST(PACKAGE_CFLAGS)
@@ -484,6 +536,7 @@ src/platform/emcc/Makefile
 src/platform/sdl/Makefile
 src/platform/web/Makefile
 src/platform/fltk/Makefile
+src/platform/teensy/Makefile
 ])
 AC_OUTPUT
 
@@ -495,8 +548,8 @@ echo "PACKAGE_LIBS=${PACKAGE_LIBS}"
 
 if test x$ac_build_sdl = xyes; then
    echo
-   echo "sdl2: `sdl2-config --version`"
-   echo "freetype: `pkg-config --version freetype2`"
+   echo "sdl3: `pkg-config sdl3 --modversion`"
+   echo "freetype: `pkg-config freetype2 --modversion`"
 fi
 
 echo

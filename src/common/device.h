@@ -969,7 +969,7 @@ void dev_chdir(const char *dir);
  *
  * @return the current directory
  */
-char *dev_getcwd(void);
+const char *dev_getcwd(void);
 
 /**
  * @ingroup dev
@@ -1037,7 +1037,7 @@ void dev_destroy_file_list(char_p_t *list, int count);
  * Returns the number of milliseconds that has passed since
  * some unknown point in time.
  */
-uint32_t dev_get_millisecond_count();
+uint64_t dev_get_millisecond_count();
 
 /**
  * @ingroup dev_f

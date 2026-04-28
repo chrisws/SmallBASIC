@@ -15,9 +15,9 @@
 #define MAX_MARKERS 10
 
 #include <config.h>
-#include <stdlib.h>
-#include <string.h>
-#include <ctype.h>
+#include <cstdlib>
+#include <cstring>
+#include <cctype>
 #include "lib/stb/stb_textedit.h"
 #include "ui/inputs.h"
 #include "ui/theme.h"
@@ -29,7 +29,7 @@ struct TextEditInput;
 struct StackTraceNode {
   StackTraceNode(const char *keyword, int type, int line)
     : _keyword(keyword), _type(type), _line(line) {}
-  virtual ~StackTraceNode() {}
+  virtual ~StackTraceNode() = default;
   const char *_keyword;
   int _type;
   int _line;
@@ -47,11 +47,12 @@ struct EditBuffer {
   EditBuffer(TextEditInput *in, const char *text);
   virtual ~EditBuffer();
 
+  static int countNewlines(const char *text, int num);
+
   void append(const char *text, int len) { insertChars(_len, text, len); }
   void append(const char *text) { insertChars(_len, text, strlen(text)); }
   void clear();
-  void convertTabs();
-  int  countNewlines(const char *text, int num);
+  void convertTabs() const;
   int  deleteChars(int pos, int num);
   char getChar(int pos) const;
   int  insertChars(int pos, const char *text, int num);
@@ -62,54 +63,56 @@ struct EditBuffer {
 
 struct TextEditInput : public FormEditInput {
   TextEditInput(const char *text, int chW, int chH, int x, int y, int w, int h);
-  virtual ~TextEditInput();
+  ~TextEditInput() override;
+
+  static int *getMarkers();
 
   void append(const char *text, int len) { _buf.append(text, len); }
   void completeWord(const char *word);
-  const char *completeKeyword(int index);
-  void draw(int x, int y, int w, int h, int chw);
-  bool edit(int key, int screenWidth, int charWidth);
+  const char *completeKeyword(int index) override;
+  void draw(int x, int y, int w, int h, int chw) override;
+  bool edit(int key, int screenWidth, int charWidth) override;
   bool find(const char *word, bool next);
   int  getCursorPos() const { return _state.cursor; }
   int  getCol() const { return _cursorCol; }
   int  getRow() const { return _cursorRow + 1; }
   int  getPageRows() const { return _height / _charHeight; }
   int  getLines() { return _buf.lineCount(); }
-  int  getMarginWidth() { return _marginWidth; }
-  void getSelectionCounts(int *lines, int *chars);
-  int  getSelectionRow();
-  int  getSelectionStart() { return _state.select_start; }
+  int  getErrorAtLine() const { return _errorAtLine; }
+  int  getMarginWidth() const { return _marginWidth; }
+  void getSelectionCounts(int *lines, int *chars) const;
+  int  getSelectionRow() const;
+  int  getSelectionStart() const { return _state.select_start; }
   int  getScroll() const { return _scroll; }
-  const char *getText() const { return _buf._buffer; }
-  char *getTextSelection(bool selectAll);
+  const char *getText() const override { return _buf._buffer; }
+  char *getTextSelection(bool selectAll) const;
   int  getTextLength() const { return _buf._len; }
-  int *getMarkers();
   void gotoLine(const char *buffer);
   void reload(const char *text);
   bool save(const char *filePath);
   void setCursor(int pos);
   void setCursorPos(int pos);
   void setCursorRow(int row);
+  void setErrorAtLine(int line) { _errorAtLine = line; }
   void setLineNumbers() { _marginWidth = 1 + (_charWidth * MARGIN_CHARS); }
-  void setText(const char *text) { _buf.clear(); _buf.append(text); }
-  void setTheme(EditTheme *theme) { _theme = theme; }
-  void clicked(int x, int y, bool pressed);
-  void updateField(var_p_t form);
-  bool updateUI(var_p_t form, var_p_t field);
-  bool selected(MAPoint2d pt, int scrollX, int scrollY, bool &redraw);
-  int  padding(bool) const { return 0; }
+  void setText(const char *text) override { _buf.clear(); _buf.append(text); }
+  void clicked(int x, int y, bool pressed) override;
+  void updateField(var_p_t form) override;
+  bool updateUI(var_p_t form, var_p_t field) override;
+  bool selected(MAPoint2d pt, int scrollX, int scrollY, bool &redraw) override;
+  int  padding(bool) const override { return 0; }
   void layout(StbTexteditRow *row, int start_i) const;
   int  charWidth(int k, int i) const;
-  char *copy(bool cut);
-  void paste(const char *text);
-  void selectAll();
-  bool isDirty() { return _dirty && _state.undostate.undo_point > 0; }
+  char *copy(bool cut) override;
+  void paste(const char *text) override;
+  void selectAll() override;
+  bool isDirty() const { return _dirty && _state.undostate.undo_point > 0; }
   void setDirty(bool dirty) { _dirty = dirty; }
-  void layout(int w, int h);
-  const char *getNodeId();
-  char *getWordBeforeCursor();
+  void layout(int x, int y, int w, int h) override;
+  const char *getNodeId() const;
+  char *getWordBeforeCursor() const;
   bool replaceNext(const char *text, bool skip);
-  int  getCompletions(StringList *list, int max);
+  int  getCompletions(StringList *list, int max) override;
   void selectNavigate(bool up);
   EditTheme *getTheme() { return _theme; }
 
@@ -123,39 +126,40 @@ protected:
     kDigit,
   };
 
+  static bool endStatement(const char *buf);
+  static uint32_t getHash(const char *str, int offs, int &count);
+  static bool matchCommand(uint32_t hash);
+  static bool matchStatement(uint32_t hash);
+
   void dragPage(int y, bool &redraw);
-  void drawText(int x, int y, const char *str, int length, SyntaxState &state);
+  void drawText(int x, int y, const char *str, int length, SyntaxState &state) const;
   void calcMargin();
   void changeCase();
-  void cycleTheme();
-  void drawLineNumber(int x, int y, int row, bool selected);
+  void cycleTheme() const;
+  void drawLineNumber(int x, int y, int row, bool selected) const;
   void editDeleteLine();
   void editEnter();
   void editTab();
-  bool endStatement(const char *buf);
   void findMatchingBrace();
   int  getCursorRow();
-  uint32_t getHash(const char *str, int offs, int &count);
-  int  getIndent(char *spaces, int len, int pos);
-  int  getLineChars(StbTexteditRow *row, int pos) const;
-  char *getSelection(int *start, int *end);
+  int  getIndent(char *spaces, int len, int pos) const;
+  int  getLineChars(const StbTexteditRow *row, int pos) const;
+  char *getSelection(int *start, int *end) const;
   void gotoNextMarker();
   void killWord();
   void lineNavigate(bool lineDown);
-  char *lineText(int pos);
+  char *lineText(int pos) const;
   int  lineEnd(int pos) { return linePos(pos, true); }
-  int  linePos(int pos, bool end, bool excludeBreak=true);
+  int  linePos(int pos, bool end, bool excludeBreak=true) const;
   int  lineStart(int pos) { return linePos(pos, false); }
-  bool matchCommand(uint32_t hash);
-  bool matchStatement(uint32_t hash);
   void pageNavigate(bool pageDown, bool shift);
   void removeTrailingSpaces();
   void selectWord();
-  void setColor(SyntaxState &state);
-  void toggleMarker();
+  void setColor(const SyntaxState &state) const;
+  void toggleMarker() const;
   void updateScroll();
-  int wordEnd();
-  int wordStart();
+  int wordEnd() const;
+  int wordStart() const;
 
   EditBuffer _buf;
   STB_TexteditState _state{};
@@ -173,13 +177,15 @@ protected:
   int _pressTick;
   int _xmargin;
   int _ymargin;
+  int _errorAtLine;
   bool _bottom;
   bool _dirty;
+  bool _comment;
 };
 
 struct TextEditHelpWidget : public TextEditInput {
   TextEditHelpWidget(TextEditInput *editor, int chW, int chH, bool overlay=true);
-  virtual ~TextEditHelpWidget();
+  ~TextEditHelpWidget() override;
 
   enum HelpMode {
     kNone,
@@ -198,7 +204,7 @@ struct TextEditHelpWidget : public TextEditInput {
     kStacktrace
   };
 
-  void clicked(int x, int y, bool pressed);
+  void clicked(int x, int y, bool pressed) override;
   void createCompletionHelp();
   void createGotoLine();
   void createHelp();
@@ -207,36 +213,39 @@ struct TextEditHelpWidget : public TextEditInput {
   void createMessage() { reset(kMessage); }
   void createOutline();
   void createSearch(bool replace);
-  void createStackTrace(const char *error, int line, StackTrace &trace);
-  void draw(int x, int y, int w, int h, int chw);
-  bool edit(int key, int screenWidth, int charWidth);
-  void paste(const char *text);
-  bool isDrawTop() { return true; }
+  void createStackTrace(const char *error, int line, const StackTrace &trace);
+  void draw(int x, int y, int w, int h, int chw) override;
+  bool edit(int key, int screenWidth, int charWidth) override;
+  void paste(const char *text) override;
+  bool isDrawTop() override { return true; }
   void reset(HelpMode mode);
   void cancelMode() { _mode = kNone; }
   bool closeOnEnter() const;
   bool searchMode() const { return _mode >= kSearch && _mode <= kReplaceDone; }
-  void layout(int w, int h);
+  void layout(int x, int y, int w, int h) override;
   bool lineEditMode() const { return _mode == kLineEdit; }
   bool messageMode() const { return _mode == kMessage; }
   bool replaceMode() const { return _mode == kReplace; }
   bool replaceModeWith() const { return _mode == kEnterReplaceWith; }
   bool replaceDoneMode() const { return _mode == kReplaceDone; }
-  bool selected(MAPoint2d pt, int scrollX, int scrollY, bool &redraw);
+  bool selected(MAPoint2d pt, int scrollX, int scrollY, bool &redraw) override;
   void showPopup(int cols, int rows);
   void showSidebar();
-  void toggleKeyword();
 
 private:
-  void completeLine(int pos);
-  void completeWord(int pos);
-  void createPackageIndex();
+  void completeLine(int pos) const;
+  void completeWord(int pos) const;
+  void buildKeywordIndex();
+  void toggleKeyword();
 
   HelpMode _mode;
   strlib::List<int *> _outline;
   TextEditInput *_editor;
-  const char *_openPackage;
-  int _openKeyword;
+  int _keywordIndex;
+  int _packageIndex;
+  bool _packageOpen;
+  int _xBase;
+  int _yBase;
   enum Layout {
     kLine,
     kSidebar,

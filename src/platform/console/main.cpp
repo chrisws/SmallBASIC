@@ -288,7 +288,7 @@ bool process_options(int argc, char *argv[], char **runFile, bool *tmpFile, bool
       break;
     case 'm':
       if (optarg) {
-        strcpy(opt_modpath, optarg);
+        strlcpy(opt_modpath, optarg, sizeof(opt_modpath));
       }
       break;
     case 's':
@@ -301,7 +301,7 @@ bool process_options(int argc, char *argv[], char **runFile, bool *tmpFile, bool
       }
       break;
     case 'o':
-      strcpy(opt_command, optarg);
+      strlcpy(opt_command, optarg, sizeof(opt_command));
       break;
     case 'c':
       if (setup_command_program(optarg, runFile)) {
@@ -449,7 +449,7 @@ int main(int argc, char *argv[]) {
   return gsb_last_error ? gsb_last_line : 0;
 }
 
-#if defined(__GNUC__) && !defined(__MACH__) && !defined(_Win32) && !defined(__CYGWIN__)
+#if defined(__GNUC__) && !defined(__MACH__) && !defined(_Win32) && !defined(__CYGWIN__) && !defined(__FreeBSD__)
 // for analysing excessive malloc calls using kdbg
 extern "C" void *__libc_malloc(size_t size);
 void *malloc(size_t size) {

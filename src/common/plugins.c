@@ -12,22 +12,23 @@
 #endif
 
 #include "common/smbas.h"
+#include "common/pproc.h"
 
 #if defined(__MINGW32__)
 #include <windows.h>
 #include <error.h>
 #define WIN_EXTLIB
 #define LIB_EXT ".dll"
+#elif defined(_MCU)
+#define LIB_EXT ""
 #elif defined(_UnixOS)
 #include <dlfcn.h>
 #define LNX_EXTLIB
 #define LIB_EXT ".so"
 #endif
 
-#if defined(LNX_EXTLIB) || defined(WIN_EXTLIB)
+#if defined(LNX_EXTLIB) || defined(WIN_EXTLIB) || defined(_MCU)
 #include "common/plugins.h"
-#include "common/pproc.h"
-#include <dirent.h>
 
 #define MAX_SLIBS 64
 #define MAX_PARAM 16
@@ -39,7 +40,9 @@ typedef int (*sblib_exec_fn)(int, int, slib_par_t *, var_t *);
 typedef int (*sblib_getname_fn) (int, char *);
 typedef int (*sblib_count_fn) (void);
 typedef int (*sblib_init_fn) (const char *);
+typedef int (*sblib_has_window_ui_fn) (void);
 typedef int (*sblib_free_fn) (int, int);
+typedef int (*sblib_refresh_id_fn) (int, int);
 typedef void (*sblib_close_fn) (void);
 
 typedef struct {
@@ -49,6 +52,7 @@ typedef struct {
   sblib_exec_fn _sblib_proc_exec;
   sblib_exec_fn _sblib_func_exec;
   sblib_free_fn _sblib_free;
+  sblib_refresh_id_fn _sblib_refresh_id;
   ext_func_node_t *_func_list;
   ext_proc_node_t *_proc_list;
   uint32_t _id;
@@ -62,7 +66,25 @@ typedef struct {
 
 static slib_t *plugins[MAX_SLIBS];
 
-#if defined(LNX_EXTLIB)
+#if defined(_MCU)
+int slib_llopen(slib_t *lib) {
+  lib->_handle = plugin_lib_open(lib->_fullname);
+  if (lib->_handle == NULL) {
+    sc_raise("LIB: error on loading %s\n", lib->_name);
+  }
+  return (lib->_handle != NULL);
+}
+
+void *slib_getoptptr(slib_t *lib, const char *name) {
+  return plugin_lib_address(lib->_handle, name);
+}
+
+static int slib_llclose(slib_t *lib) {
+  lib->_handle = NULL;
+  return 1;
+}
+
+#elif defined(LNX_EXTLIB)
 int slib_llopen(slib_t *lib) {
   lib->_handle = dlopen(lib->_fullname, RTLD_NOW);
   if (lib->_handle == NULL) {
@@ -307,6 +329,7 @@ static void slib_import_routines(slib_t *lib, int comp) {
   lib->_sblib_func_exec = slib_getoptptr(lib, "sblib_func_exec");
   lib->_sblib_proc_exec = slib_getoptptr(lib, "sblib_proc_exec");
   lib->_sblib_free = slib_getoptptr(lib, "sblib_free");
+  lib->_sblib_refresh_id = slib_getoptptr(lib, "sblib_refresh_id");
   sblib_count_fn fcount = slib_getoptptr(lib, "sblib_proc_count");
   sblib_getname_fn fgetname = slib_getoptptr(lib, "sblib_proc_getname");
 
@@ -352,6 +375,13 @@ static void slib_import_routines(slib_t *lib, int comp) {
       }
     }
   }
+
+#if !defined(_CONSOLE)
+  sblib_has_window_ui_fn has_window_ui = slib_getoptptr(lib, "sblib_has_window_ui");
+  if (has_window_ui && has_window_ui()) {
+    gsb_err_mod_perm = 1;
+  }
+#endif
 
   if (!total) {
     log_printf("LIB: module '%s' has no exports\n", lib->_name);
@@ -424,7 +454,7 @@ int plugin_import(const char *name, const char *alias) {
     for (int i = 0; i < MAX_SLIBS; i++) {
       if (!plugins[i]) {
         // found free slot
-        slib_t *lib = plugins[i] = (slib_t *)calloc(sizeof(slib_t), 1);
+        slib_t *lib = plugins[i] = (slib_t *)calloc(1, sizeof(slib_t));
         if (!lib) {
           sc_raise("LIB: plugin_import failed");
           break;
@@ -446,7 +476,7 @@ int plugin_import(const char *name, const char *alias) {
 void plugin_open(const char *name, int lib_id) {
   slib_t *lib = get_lib(lib_id);
   if (!lib && lib_id >= 0 && lib_id < MAX_SLIBS) {
-    lib = plugins[lib_id] = (slib_t *)calloc(sizeof(slib_t), 1);
+    lib = plugins[lib_id] = (slib_t *)calloc(1, sizeof(slib_t));
     if (lib) {
       char path[PATH_SIZE];
       char file[PATH_SIZE];
@@ -538,6 +568,17 @@ void plugin_free(int lib_id, int cls_id, int id) {
   }
 }
 
+int plugin_refresh_id(int lib_id, int cls_id, int id) {
+  int result = id;
+  if (lib_id != -1 && cls_id != -1 && id != -1) {
+    slib_t *lib = get_lib(lib_id);
+    if (lib && lib->_sblib_refresh_id) {
+      result = lib->_sblib_refresh_id(cls_id, id);
+    }
+  }
+  return result;
+}
+
 void plugin_close() {
   for (int i = 0; i < MAX_SLIBS; i++) {
     if (plugins[i]) {
@@ -567,6 +608,7 @@ void *plugin_get_func(const char *name) { return 0; }
 int plugin_procexec(int lib_id, int index) { return -1; }
 int plugin_funcexec(int lib_id, int index, var_t *ret) { return -1; }
 void plugin_free(int lib_id, int cls_id, int id) {}
+int plugin_refresh_id(int lib_id, int cls_id, int id) {return id;}
 void plugin_close() {}
 #endif
 
@@ -603,7 +645,8 @@ int plugin_build_ptable(slib_par_t *ptable, int size) {
 
         // restore IP
         prog_ip = ofs;
-        // no 'break' here
+        // fallthrough
+
       default:
         // default --- expression (BYVAL ONLY)
         arg = v_new();

@@ -682,7 +682,7 @@ var_int_t cmd_fre(var_int_t arg) {
     r = 0x120000;
     break;
   }
-#elif defined(_UnixOS) && !defined(__MACH__)
+#elif defined(_UnixOS) && !defined(__MACH__) && !defined(__FreeBSD__)
   // assumes first two items are total + free
   #define I_MEM_TOTAL 0
   #define I_MEM_FREE  1
@@ -1922,7 +1922,7 @@ void cmd_intN(long funcCode, var_t *r) {
           if (l >= 0 && l < v_maxdim(var_p)) {
             r->v.i = v_ubound(var_p, l);
           } else {
-            rt_raise(ERR_BOUND_DIM, v_maxdim(var_p));
+            rt_raise(ERR_BOUND_DIM, l, v_maxdim(var_p));
           }
         }
       } else {
@@ -2003,9 +2003,7 @@ void cmd_numN(long funcCode, var_t *r) {
       int pw;
       if (code_peek() == kwTYPE_SEP) {
         par_getcomma();
-        if (!prog_error) {
-          pw = par_getint();
-        }
+        pw = prog_error ? 0 : par_getint();
       } else {
         pw = 0;
       }
@@ -2576,7 +2574,8 @@ void cmd_genfunc(long funcCode, var_t *r) {
           }
         }
         prog_ip = ofs;
-        // no 'break' here
+        // fallthrough
+
       default:
         // default --- expression
         v_init(&arg);
@@ -2648,7 +2647,8 @@ void cmd_genfunc(long funcCode, var_t *r) {
           }
         }
         prog_ip = ofs;
-        // no 'break' here
+        // fallthrough
+
       default:
         // default --- expression
         v_init(&arg);

@@ -47,7 +47,8 @@
 #define MENU_SHORTCUT   22
 #define MENU_SHARE      23
 #define MENU_THEME      24
-#define MENU_SIZE       25
+#define MENU_FIND       25
+#define MENU_SIZE       26
 #define MENU_COMPLETION_0  (MENU_SIZE + 1)
 #define MENU_COMPLETION_1  (MENU_SIZE + 2)
 #define MENU_COMPLETION_2  (MENU_SIZE + 3)
@@ -57,8 +58,8 @@
 #define CHANGE_WAIT_SLEEP 1000
 
 #define FONT_SCALE_INTERVAL 10
-#define FONT_MIN 20
-#define FONT_MAX 200
+#define FONT_MIN 80
+#define FONT_MAX 160
 
 #define OPTIONS_BOX_WIDTH_EXTRA 1
 #define OPTIONS_BOX_BG 0xd2d1d0
@@ -82,6 +83,7 @@
 #define MENU_STR_SELECT  MK_MENU("Select All", "^a")
 #define MENU_STR_OFF     "OFF"
 #define MENU_STR_ON      "ON"
+#define MENU_STR_EXT     "SYSTEM"
 #define MENU_STR_AUDIO   " Audio  [%s] "
 #define MENU_STR_EDITOR  " Editor [%s] "
 #define MENU_STR_THEME   " Theme  [%s] "
@@ -96,6 +98,7 @@
 #define MENU_STR_SHARE   " Share "
 #define MENU_STR_SHORT   " Desktop Shortcut "
 #define MENU_STR_SOURCE  " View Source "
+#define MENU_STR_FIND    " Find "
 
 System *g_system;
 
@@ -132,7 +135,8 @@ System::System() :
   _mainBas(false),
   _buttonPressed(false),
   _srcRendered(false),
-  _menuActive(false) {
+  _menuActive(false),
+  _compileError(false) {
   g_system = this;
 }
 
@@ -147,26 +151,43 @@ System::~System() {
 }
 
 bool System::execute(const char *bas) {
+  _compileError = true;
   _stackTrace.removeAll();
-  _output->reset();
   reset_image_cache();
 
   // reset program controlled options
-  opt_antialias = 1;
-  opt_show_page = 0;
-
+  opt_antialias = true;
+  opt_show_page = false;
   opt_pref_width = _output->getWidth();
   opt_pref_height = _output->getHeight();
   opt_base = 0;
-  opt_usepcre = 0;
-  opt_autolocal = 0;
+  opt_usepcre = false;
+  opt_autolocal = false;
 
   _state = kRunState;
   setWindowTitle(bas);
-  showCursor(kArrow);
   saveWindowRect();
 
   int result = ::sbasic_main(bas);
+
+  if (isExternalLaunch()) {
+    if (_editor != nullptr) {
+      // returning to the editor
+      String path(bas);
+      saveFile(_editor, path);
+    }
+    int result = externalExecute(bas);
+    if (_editor != nullptr && result > 0) {
+      _editor->setErrorAtLine(result);
+    }
+  }
+
+  if (_editor == nullptr) {
+    _output->selectScreen(USER_SCREEN1);
+  }
+  _output->resetFont();
+  _output->flush(false);
+
   if (isRunning()) {
     _state = kActiveState;
   }
@@ -175,15 +196,8 @@ bool System::execute(const char *bas) {
     opt_command[0] = '\0';
   }
 
-  if (!_mainBas) {
-    onRunCompleted();
-  }
-
-  enableCursor(true);
+  onRunCompleted();
   opt_file_permitted = 1;
-  _output->selectScreen(USER_SCREEN1);
-  _output->resetFont();
-  _output->flush(true);
   _userScreenId = -1;
   return result != 0;
 }
@@ -334,7 +348,7 @@ char *System::getText(char *dest, int maxSize) {
   return dest;
 }
 
-uint32_t System::getModifiedTime() {
+uint32_t System::getModifiedTime() const {
   uint32_t result = 0;
   if (!_activeFile.empty()) {
     struct stat st_file{};
@@ -412,7 +426,12 @@ void System::handleMenu(MAEvent &event) {
     }
     break;
   case MENU_EDITMODE:
+#if defined(_ANDROID)
+    opt_ide = (opt_ide == IDE_NONE ? IDE_INTERNAL :
+               opt_ide == IDE_INTERNAL ? IDE_EXTERNAL : IDE_NONE);
+#else
     opt_ide = (opt_ide == IDE_NONE ? IDE_INTERNAL : IDE_NONE);
+#endif
     break;
   case MENU_THEME:
     g_themeId = (g_themeId + 1) % NUM_THEMES;
@@ -447,6 +466,10 @@ void System::handleMenu(MAEvent &event) {
   case MENU_OUTPUT:
     event.type = EVENT_TYPE_KEY_PRESSED;
     event.key = SB_KEY_CTRL('o');
+    break;
+  case MENU_FIND:
+    event.type = EVENT_TYPE_KEY_PRESSED;
+    event.key = SB_KEY_CTRL('f');
     break;
   case MENU_HELP:
     event.type = EVENT_TYPE_KEY_PRESSED;
@@ -510,7 +533,11 @@ void System::handleEvent(MAEvent &event) {
     } else {
       dev_pushkey(SB_KEY_MK_PUSH);
       _buttonPressed = _output->pointerTouchEvent(event);
-      showCursor(get_focus_edit() != nullptr ? kIBeam : kHand);
+      if (_buttonPressed) {
+        showCursor(kHand);
+      } else {
+        showCursor(get_focus_edit() != nullptr ? kIBeam : kHand);
+      }
     }
     break;
   case EVENT_TYPE_POINTER_DRAGGED:
@@ -530,10 +557,15 @@ void System::handleEvent(MAEvent &event) {
     }
     break;
   case EVENT_TYPE_POINTER_RELEASED:
-    _buttonPressed = false;
-    _touchX = _touchY = _touchCurX = _touchCurY = -1;
+    _touchCurX = event.point.x;
+    _touchCurY = event.point.y;
+    _touchX = -1;
+    _touchY = -1;
     _output->pointerReleaseEvent(event);
-    showCursor(get_focus_edit() != nullptr ? kIBeam : kArrow);
+    if (!_buttonPressed) {
+      showCursor(get_focus_edit() != nullptr ? kIBeam : kArrow);
+    }
+    _buttonPressed = false;
     break;
   default:
     // no event
@@ -561,7 +593,7 @@ char *System::loadResource(const char *fileName) {
         if (http_read(f, var_p) == 0) {
           systemPrint("\nfailed to read %s\n", fileName);
         } else {
-          int len = var_p->v.p.length;
+          uint32_t len = var_p->v.p.length;
           buffer = (char *)malloc(len + 1);
           memcpy(buffer, var_p->v.p.ptr, len);
           buffer[len] = '\0';
@@ -610,6 +642,7 @@ void System::logStack(const char *keyword, int type, int line) {
 void System::optionsBox(StringList *items) {
   int backScreenId = _output->getScreenId(true);
   int frontScreenId = _output->getScreenId(false);
+  int screenHeight = _output->getStatusHeight();
   _output->selectBackScreen(MENU_SCREEN);
 
   int width = 0;
@@ -631,14 +664,14 @@ void System::optionsBox(StringList *items) {
     _menuX = _output->getWidth() - (width + charWidth * 2);
   }
   if (!_menuY) {
-    _menuY = _output->getHeight() - height;
+    _menuY = screenHeight - height;
   }
 
   if (_menuX + width >= _output->getWidth()) {
     _menuX = _output->getWidth() - width;
   }
-  if (_menuY + height >= _output->getHeight()) {
-    _menuY = _output->getHeight() - height;
+  if (_menuY + height >= screenHeight) {
+    _menuY = screenHeight - height;
   }
 
   int y = 0;
@@ -737,7 +770,7 @@ char *System::readSource(const char *fileName) {
   }
   if (buffer != nullptr) {
     delete [] _programSrc;
-    int len = strlen(buffer) + 1;
+    size_t len = strlen(buffer) + 1;
     _programSrc = new char[len];
     memcpy(_programSrc, buffer, len);
     _programSrc[len - 1] = '\0';
@@ -747,7 +780,7 @@ char *System::readSource(const char *fileName) {
   return buffer;
 }
 
-void System::resize() {
+void System::resize() const {
   MAExtent screenSize = maGetScrSize();
   logEntered();
   _output->resize(EXTENT_X(screenSize), EXTENT_Y(screenSize));
@@ -813,7 +846,7 @@ void System::runMain(const char *mainBasPath) {
   String activePath = mainBasPath;
   _loadPath = mainBasPath;
   _mainBas = true;
-  strcpy(opt_command, "welcome");
+  strlcpy(opt_command, "welcome", sizeof(opt_command));
 
   bool started = execute(_loadPath);
   if (!started) {
@@ -852,6 +885,15 @@ void System::runMain(const char *mainBasPath) {
 
     bool success = execute(_loadPath);
     bool networkFile = isNetworkLoad();
+
+    if (isExternalLaunch()) {
+      if (_editor == nullptr) {
+        _loadPath.clear();
+        _state = kActiveState;
+      }
+      continue;
+    }
+
     if (!isBack() && !isClosing() &&
         (success || networkFile || !isEditEnabled())) {
       // when editing, only pause here when successful, otherwise the editor shows
@@ -919,9 +961,7 @@ void System::setBack() {
     if (!_mainBas) {
       // remove the current item
       strlib::String *old = _history.pop();
-
-        delete old;
-
+      delete old;
       if (_history.peek() != nullptr) {
         _loadPath.clear();
         _loadPath.append(_history.peek());
@@ -948,7 +988,7 @@ bool System::setParentPath() {
   if (!path[0] || strcmp(path, "/") == 0) {
     result = false;
   } else {
-    int len = strlen(path);
+    size_t len = strlen(path);
     if (path[len - 1] == '/') {
       // eg /sdcard/bas/
       path[len - 1] = '\0';
@@ -992,7 +1032,7 @@ void System::setupPath(String &loadPath) {
   }
 }
 
-void System::setDimensions() {
+void System::setDimensions() const {
   dev_resize(_output->getWidth(), _output->getHeight());
 }
 
@@ -1000,14 +1040,19 @@ void System::setRunning(bool running) {
   if (running) {
     dev_fgcolor = -DEFAULT_FOREGROUND;
     dev_bgcolor = -DEFAULT_BACKGROUND;
-    setDimensions();
     dev_clrkb();
+
+    setDimensions();
+    showCursor(kArrow);
+    _output->reset();
     _output->setAutoflush(!opt_show_page);
+    _userScreenId = -1;
+    _compileError = false;
     if (_mainBas || isNetworkLoad() || !isEditEnabled()) {
       _loadPath.clear();
     }
-    _userScreenId = -1;
   } else {
+    enableCursor(true);
     osd_clear_sound_queue();
     if (!isClosing() && !isRestart() && !isBack()) {
       _state = kActiveState;
@@ -1020,8 +1065,11 @@ void System::showCompletion(bool success) {
   if (success) {
     _output->setStatus("Done - press back [<-]");
   } else {
-    printErrorLine();
+    if (_compileError) {
+      _output->reset();
+    }
     _output->setStatus("Error - see console");
+    printErrorLine();
     showSystemScreen(true);
   }
   _output->flush(true);
@@ -1057,6 +1105,10 @@ void System::showMenu() {
 #if defined(_SDL)
         items->add(new String(MENU_STR_DEBUG));
         items->add(new String(MENU_STR_OUTPUT));
+#elif defined(_ANDROID)
+        if (opt_ide == IDE_INTERNAL) {
+          items->add(new String(MENU_STR_FIND));
+        }
 #endif
         items->add(new String(MENU_STR_HELP));
         for (int i = 0; i < completions; i++) {
@@ -1073,6 +1125,10 @@ void System::showMenu() {
 #if defined(_SDL)
         _systemMenu[index++] = MENU_DEBUG;
         _systemMenu[index++] = MENU_OUTPUT;
+#elif defined(_ANDROID)
+        if (opt_ide == IDE_INTERNAL) {
+          _systemMenu[index++] = MENU_FIND;
+        }
 #endif
         _systemMenu[index++] = MENU_HELP;
       } else if (isRunning()) {
@@ -1085,12 +1141,15 @@ void System::showMenu() {
         _systemMenu[index++] = MENU_PASTE;
         _systemMenu[index++] = MENU_SELECT_ALL;
       }
+      if (hasBackMenu()) {
+        items->add(new String(MENU_STR_BACK));
+        _systemMenu[index++] = MENU_BACK;
+      }
 #if defined(_SDL) || defined(_FLTK) || defined(_EMCC)
-      items->add(new String(MENU_STR_BACK));
-      _systemMenu[index++] = MENU_BACK;
-#else
-      items->add(new String(MENU_STR_KEYPAD));
-      _systemMenu[index++] = MENU_KEYPAD;
+      if (!isEditing() || opt_ide == IDE_EXTERNAL) {
+        items->add(new String(MENU_STR_KEYPAD));
+        _systemMenu[index++] = MENU_KEYPAD;
+      }
       if (!isEditing()) {
         bool controlMode = get_focus_edit()->getControlMode();
         sprintf(buffer, MENU_STR_CONTROL, (controlMode ? MENU_STR_ON : MENU_STR_OFF));
@@ -1123,7 +1182,17 @@ void System::showMenu() {
         _systemMenu[index++] = MENU_ZOOM_DN;
 #endif
 #if !defined(_ANDROID_LIBRARY)
-        sprintf(buffer, MENU_STR_EDITOR, opt_ide == IDE_NONE ? MENU_STR_OFF : MENU_STR_ON);
+        switch (opt_ide) {
+        case IDE_NONE:
+          sprintf(buffer, MENU_STR_EDITOR, MENU_STR_OFF);
+          break;
+        case IDE_INTERNAL:
+          sprintf(buffer, MENU_STR_EDITOR, MENU_STR_ON);
+          break;
+        case IDE_EXTERNAL:
+          sprintf(buffer, MENU_STR_EDITOR, MENU_STR_EXT);
+          break;
+        }
         items->add(new String(buffer));
         _systemMenu[index++] = MENU_EDITMODE;
 #endif
@@ -1146,10 +1215,10 @@ void System::showMenu() {
       items->add(new String(MENU_STR_SCREEN));
       _systemMenu[index++] = MENU_SCREENSHOT;
 #endif
-#if defined(_SDL) || defined(_FLTK) || defined(_EMCC)
-      items->add(new String(MENU_STR_BACK));
-      _systemMenu[index++] = MENU_BACK;
-#endif
+      if (hasBackMenu()) {
+        items->add(new String(MENU_STR_BACK));
+        _systemMenu[index++] = MENU_BACK;
+      }
     }
 
     formatOptions(items);
@@ -1201,7 +1270,7 @@ void System::waitForChange(bool error) {
   }
 }
 
-void System::printErrorLine() {
+void System::printErrorLine() const {
   if (_programSrc) {
     int line = 1;
     char *errLine = _programSrc;
@@ -1239,7 +1308,7 @@ void System::printErrorLine() {
   }
 }
 
-void System::printSourceLine(char *text, int line, bool last) {
+void System::printSourceLine(char *text, int line, bool last) const {
   char lineMargin[32];
   sprintf(lineMargin, "\033[7m%03d\033[0m ", line);
   _output->print(lineMargin);
@@ -1332,7 +1401,7 @@ void System::setRestart() {
   _state = kRestartState;
 }
 
-void System::systemLog(const char *buf) {
+void System::systemLog(const char *buf) const {
   deviceLog("%s", buf);
   int prevScreenId = _output->getScreenId(true);
   _output->selectBackScreen(CONSOLE_SCREEN);
@@ -1340,11 +1409,11 @@ void System::systemLog(const char *buf) {
   _output->selectBackScreen(prevScreenId);
 }
 
-void System::systemPrint(const char *format, ...) {
+void System::systemPrint(const char *format, ...) const {
   va_list args;
 
   va_start(args, format);
-  unsigned size = vsnprintf(nullptr, 0, format, args);
+  unsigned size = format ? vsnprintf(nullptr, 0, format, args) : 0;
   va_end(args);
 
   if (size) {
@@ -1478,10 +1547,10 @@ char *dev_read(const char *fileName) {
   return g_system->readSource(fileName);
 }
 
-int maGetMilliSecondCount() {
-  return dev_get_millisecond_count();
-}
-
 void dev_log_stack(const char *keyword, int type, int line) {
   return g_system->logStack(keyword, type, line);
+}
+
+int maGetMilliSecondCount() {
+  return dev_get_millisecond_count();
 }

@@ -4446,7 +4446,7 @@ char *comp_preproc_options(char *p) {
       char lc = *pe;
       *pe = '\0';
       if (strlen(p) < OPT_CMD_SZ) {
-        strcpy(opt_command, p);
+        strlcpy(opt_command, p, sizeof(opt_command));
       } else {
         memcpy(opt_command, p, OPT_CMD_SZ - 1);
         opt_command[OPT_CMD_SZ - 1] = '\0';
@@ -4576,6 +4576,8 @@ void comp_preproc_pass1(char *p) {
   comp_proc_level = 0;
   *comp_bc_proc = '\0';
 
+  SKIP_SPACES(p);
+
   while (*p) {
     if (strncmp(LCN_OPTION, p, LEN_OPTION) == 0) {
       // options
@@ -4654,6 +4656,10 @@ int comp_pass1(const char *section, const char *text) {
   }
 
   char *code_line = malloc(SB_SOURCELINE_SIZE + 1);
+  if (!code_line) {
+    panic("Failed to allocate %d bytes\n", SB_SOURCELINE_SIZE + 1);
+  }
+
   char *new_text = comp_format_text(text);
 
   comp_preproc_pass1(new_text);
