@@ -7,13 +7,31 @@
 // Download the GNU Public License (GPL) from www.gnu.org
 //
 
+// Thanks to: https://viewsourcecode.org/snaptoken/kilo        -> Linux RAW mode
+//            https://en.wikipedia.org/wiki/ANSI_escape_code   -> Escape codes
+//            https://invisible-island.net/xterm/ctlseqs/ctlseqs.html#h2-Mouse-Tracking  -> Mouse in terminal
+
 #include "config.h"
 #include "include/osd.h"
 #include "common/device.h"
 #include "common/plugins.h"
 #include "common/smbas.h"
+#include "common/keymap.h"
+#include <stdio.h>
+#include "terminal.h"
+
+#if USE_TERM_IO
+#include <sys/ioctl.h>
+#include <unistd.h>
+#include <termios.h>
+#include <stdlib.h>
+#endif
 
 #define WAIT_INTERVAL 5
+
+#if USE_TERM_IO
+struct winsize consoleSize;
+#endif
 
 typedef void (*settextcolor_fn)(long fg, long bg);
 typedef void (*setpenmode_fn)(int enable);
@@ -64,6 +82,31 @@ static audio_fn p_audio;
 static textwidth_fn p_textwidth;
 static textheight_fn p_textheight;
 
+extern long foregroundColor;
+extern long backgroundColor;
+extern int lastMouseX;
+extern int lastMouseY;
+extern int lastMouseButton;
+
+const uint32_t color_map[] = {
+  0x000000, // 0 black
+  0x000080, // 1 blue
+  0x008000, // 2 green
+  0x008080, // 3 cyan
+  0x800000, // 4 red
+  0x800080, // 5 magenta
+  0x808000, // 6 yellow
+  0xC0C0C0, // 7 white
+  0x808080, // 8 gray
+  0x0000FF, // 9 light blue
+  0x00FF00, // 10 light green
+  0x00FFFF, // 11 light cyan
+  0xFF0000, // 12 light red
+  0xFF00FF, // 13 light magenta
+  0xFFFF00, // 14 light yellow
+  0xFFFFFF  // 15 bright white
+};
+
 int get_escape(const char *str, int begin, int end) {
   int result = 0;
   for (int i = begin; i < end; i++) {
@@ -108,6 +151,41 @@ void default_write(const char *str) {
 }
 
 //
+// Converts the given 32bit ARGB color to an extended
+// 256-color set value for use with the ANSI escapes
+//
+long convertColor(long color) {
+  // convert from internal format
+  if (color < 0) {
+    color = -color;
+  } else if (color < 16) {
+    color = color_map[color];
+  }
+
+  // Extract RGB (ignore alpha)
+  int r = (color >> 16) & 0xFF;
+  int g = (color >> 8) & 0xFF;
+  int b = color & 0xFF;
+
+  // Check if it's close to gray
+  if (r == g && g == b) {
+    if (r < 8) return 16;
+    if (r > 248) return 231;
+
+    // Map to grayscale (232–255)
+    return 232 + (r - 8) / 10;
+  }
+
+  // Map RGB to 6x6x6 cube (values 0–5)
+  int r6 = (r * 5) / 255;
+  int g6 = (g * 5) / 255;
+  int b6 = (b * 5) / 255;
+
+  // Compute final index
+  return 16 + (36 * r6) + (6 * g6) + b6;
+}
+
+//
 // console output if vt100 (esc sequences) is supported
 //
 void vt100_write(const char *str) {
@@ -117,6 +195,179 @@ void vt100_write(const char *str) {
 
 void console_init() {
   p_write = default_write;
+}
+
+#if USE_TERM_IO
+void getTerminalSize(int *x, int *y) {
+  ioctl(STDOUT_FILENO, TIOCGWINSZ, &consoleSize);
+  *x = consoleSize.ws_col;
+  *y = consoleSize.ws_row;
+}
+
+int getCursorPosition(int *rows, int *cols) {
+  char buf[32];
+  unsigned int i = 0;
+  long int startTime;
+
+  *rows = 0;
+  *cols = 0;
+
+  if (write(STDOUT_FILENO, "\x1b[6n", 4) != 4) {
+    return -1;
+  }
+  // There might be a slight delay between write() and the
+  // response from the terminal printing the escape sequence.
+  // Therfore we try to read several times until either the
+  // timeout is reached or the 'R' letter is printed
+  startTime = dev_get_millisecond_count();
+  while (i < sizeof(buf) - 1) {
+    if (dev_get_millisecond_count() - startTime > 50) {
+      return -1;
+    }
+    if (read(STDIN_FILENO, &buf[i], 1) != 1) {
+      continue;
+    }
+    if (buf[i] == 'R') {
+      break;
+    }
+    i++;
+  }
+
+  buf[i] = '\0';
+  if (buf[0] != '\x1b' || buf[1] != '[') {
+    return -1;
+  }
+  if (sscanf(&buf[2], "%d;%d", rows, cols) != 2) {
+    *rows = 0;
+    *cols = 0;
+    return -1;
+  }
+
+  return 0;
+}
+
+void clearScreen(void) {
+  // VT100: Move cursor to 1,1 and clear screen from cursor
+  printf("\033[H\033[J");
+  fflush(stdout);
+}
+
+void setTextColor(long fg, long bg) {
+  printf("\033[38;5;%ldm\033[48;5;%ldm", convertColor(fg), convertColor(bg));
+  fflush(stdout);
+}
+
+void setCursorPosition(int row, int col) {
+  printf("\033[%d;%dH", row, col);
+  fflush(stdout);
+}
+
+// Bit 0 to 7 is drawing color
+// Bit 8 to 15 is drawing character
+void setDrawingColor(long color) {
+  //VT100: 8bit color mode
+  // set background color
+  foregroundColor = convertColor(color);
+  setDrawingCharacter(foregroundColor);
+  printf("\033[38;5;%ldm", foregroundColor);
+  fflush(stdout);
+}
+
+#elif defined (_Win32)
+void initTerminal(void) {
+  // Enable vt100 support in newer versions of Windows 10 or 11.
+  // If vt100 is not supported fall back to default_write.
+  // See: https://learn.microsoft.com/en-us/windows/console/console-virtual-terminal-sequences
+
+  HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+  if (hOut == INVALID_HANDLE_VALUE) {
+    p_write = default_write;
+    return;
+  }
+
+  DWORD dwMode = 0;
+  if (!GetConsoleMode(hOut, &dwMode)) {
+    p_write = default_write;
+    return;
+  }
+
+  dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+  if (!SetConsoleMode(hOut, dwMode)) {
+    p_write = default_write;
+    return;
+  }
+}
+
+void getTerminalSize(int *x, int *y) {
+  *x = 0;
+  *y = 0;
+}
+
+int getCursorPosition(int *rows, int *cols) {
+  *rows = 0;
+  *cols = 0;
+  return 0;
+}
+
+void clearScreen(void) {
+  // VT100: Move cursor to 1,1 and clear screen from cursor
+  printf("\033[H\033[J");
+  fflush(stdout);
+}
+
+void setTextColor(long fg, long bg) {
+  // VT100: 3bit and 4 bit color
+  if (fg < 8) {
+    fg = 30 + fg;
+  } else {
+    fg = 90 - 8 + fg;
+  }
+  if (bg < 8) {
+    bg = 40 + bg;
+  } else {
+    bg = 100 - 8 + bg;
+  }
+  printf("\033[%ld;%ldm", fg, bg);
+  fflush(stdout);
+}
+
+void setCursorPosition(int x, int y) {
+  printf("\033[%d;%dH", x, y);
+  fflush(stdout);
+}
+
+void setForegroundColor(long color) {
+  // VT100: 3bit and 4 bit color
+  if (color < 8) {
+    color = 30 + color;
+  } else {
+    color = 90 - 8 + color;
+  }
+  printf("\033[%ldm", color);
+}
+#else
+void initTerminal(void) {}
+void clearScreen(void) {}
+void setTextColor(long fg, long bg) {}
+void setCursorPosition(int x, int y) {}
+void setForegroundColor(long color) {}
+void getTerminalSize(int *x, int *y) {
+  *x = 0;
+  *y = 0;
+}
+int getCursorPosition(int *rows, int *cols) {
+  *rows = 0;
+  *cols = 0;
+  return 0;
+}
+#endif
+
+void readKey(void) {
+  uint32_t c = terminalReadKey();
+  if (c > 0) {
+    dev_clrkb();
+    dev_pushkey(c);
+  }
 }
 
 //
@@ -147,18 +398,24 @@ int osd_devinit() {
   p_textwidth = (textwidth_fn)plugin_get_func("sblib_textwidth");
   p_write = (write_fn)plugin_get_func("sblib_write");
 
+  dev_fgcolor = 15;
+  dev_bgcolor = 0;
+
   init_fn devinit = (init_fn)plugin_get_func("sblib_devinit");
   if (devinit) {
+    os_graf_mx = opt_pref_width;
+    os_graf_my = opt_pref_height;
+    setsysvar_int(SYSVAR_XMAX, os_graf_mx);
+    setsysvar_int(SYSVAR_YMAX, os_graf_my);
     devinit(prog_file, opt_pref_width, opt_pref_height);
+  } else {
+    os_graphics = 1;
+    getTerminalSize(&os_graf_mx, &os_graf_my);
+    setsysvar_int(SYSVAR_XMAX, os_graf_mx);
+    setsysvar_int(SYSVAR_YMAX, os_graf_my);
   }
-  os_graf_mx = opt_pref_width;
-  os_graf_my = opt_pref_height;
-  setsysvar_int(SYSVAR_XMAX, os_graf_mx);
-  setsysvar_int(SYSVAR_YMAX, os_graf_my);
 
   if (p_write == NULL) {
-    p_write = vt100_write;
-  
     // Test if output is printed in a terminal. If output is piped into
     // a text file or sbasic is running as a cron job, use
     // default_write without vt100 support
@@ -166,30 +423,7 @@ int osd_devinit() {
       p_write = default_write;
       return 1;
     }
-
-    #if defined(_Win32)
-    // Enable vt100 support in newer versions of Windows 10 or 11.
-    // If vt100 is not supported fall back to default_write.
-    // See: https://learn.microsoft.com/en-us/windows/console/console-virtual-terminal-sequences
-
-    HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
-    if (hOut == INVALID_HANDLE_VALUE) {
-      p_write = default_write;
-      return 1;
-    }
-
-    DWORD dwMode = 0;
-    if (!GetConsoleMode(hOut, &dwMode)) {
-      p_write = default_write;
-      return 1;
-    }
-
-    dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
-    if (!SetConsoleMode(hOut, dwMode)) {
-      p_write = default_write;
-      return 1;
-    }
-    #endif
+    p_write = vt100_write;
   }
   return 1;
 }
@@ -204,10 +438,15 @@ int osd_devrestore() {
 //
 // set foreground and background color
 // a value of -1 means not change that color
+// called by COLOR keyword
 //
 void osd_settextcolor(long fg, long bg) {
   if (p_settextcolor) {
     p_settextcolor(fg, bg);
+  } else {
+    setTextColor(fg, bg);
+    foregroundColor = fg;
+    backgroundColor = bg;
   }
 }
 
@@ -217,6 +456,8 @@ void osd_settextcolor(long fg, long bg) {
 void osd_setpenmode(int enable) {
   if (p_setpenmode) {
     p_setpenmode(enable);
+  } else {
+    setMouse(enable);
   }
 }
 
@@ -228,7 +469,7 @@ int osd_getpen(int code) {
   if (p_getpen) {
     result = p_getpen(code);
   } else {
-    result = 0;
+    result = getMouse(code);
   }
   return result;
 }
@@ -239,6 +480,8 @@ int osd_getpen(int code) {
 void osd_cls() {
   if (p_cls) {
     p_cls();
+  } else {
+    clearScreen();
   }
 }
 
@@ -250,7 +493,9 @@ int osd_getx() {
   if (p_getx) {
     result = p_getx();
   } else {
-    result = 0;
+    int cols = 0, rows = 0;
+    getCursorPosition(&rows, &cols);
+    result = cols;
   }
   return result;
 }
@@ -263,7 +508,9 @@ int osd_gety() {
   if (p_gety) {
     result = p_gety();
   } else {
-    result = 0;
+    int cols = 0, rows = 0;
+    getCursorPosition(&rows, &cols);
+    result = rows;
   }
   return result;
 }
@@ -274,6 +521,8 @@ int osd_gety() {
 void osd_setxy(int x, int y) {
   if (p_setxy) {
     p_setxy(x, y);
+  } else {
+    setCursorPosition(y, x);
   }
 }
 
@@ -289,23 +538,35 @@ void osd_write(const char *str) {
 //
 int osd_events(int wait_flag) {
   int result = 0;
+  int x = os_graf_mx;
+  int y = os_graf_my;
+
   if (p_events) {
-    int x = os_graf_mx;
-    int y = os_graf_my;
     result = p_events(wait_flag, &x, &y);
-    if (x != os_graf_mx || y != os_graf_my) {
-      dev_resize(x, y);
+  } else {
+    if (wait_flag) {
+      usleep(WAIT_INTERVAL * 1000);
     }
+
+    getTerminalSize(&x, &y);    // XMAX, YMAX
+    readKey();                  // INKEY
   }
+
+  if (x != os_graf_mx || y != os_graf_my) {
+    dev_resize(x, y);
+  }
+
   return result;
 }
 
 //
-// sets foreground color
+// sets color for drawing routines like LINE or RECT
 //
 void osd_setcolor(long color) {
   if (p_setcolor) {
     p_setcolor(color);
+  } else {
+    setDrawingColor(color);
   }
 }
 
@@ -315,6 +576,8 @@ void osd_setcolor(long color) {
 void osd_line(int x1, int y1, int x2, int y2) {
   if (p_line) {
     p_line(x1, y1, x2, y2);
+  } else {
+    drawLine(x1, y1, x2, y2);
   }
 }
 
@@ -342,6 +605,8 @@ void osd_arc(int xc, int yc, double r, double as, double ae, double aspect) {
 void osd_setpixel(int x, int y) {
   if (p_setpixel) {
     p_setpixel(x, y);
+  } else {
+    drawPoint(x, y);
   }
 }
 
@@ -364,6 +629,8 @@ long osd_getpixel(int x, int y) {
 void osd_rect(int x1, int y1, int x2, int y2, int fill) {
   if (p_rect) {
     p_rect(x1, y1, x2, y2, fill);
+  } else {
+    drawRect(x1, y1, x2, y2, fill);
   }
 }
 
@@ -373,6 +640,9 @@ void osd_rect(int x1, int y1, int x2, int y2, int fill) {
 void osd_refresh() {
   if (p_refresh) {
     p_refresh();
+  } else {
+    osd_events(0);
+    fflush(stdout);
   }
 }
 
@@ -447,19 +717,23 @@ void dev_delay(uint32_t timeout) {
   uint32_t slept;
   uint32_t now = dev_get_millisecond_count();
   while (1) {
-    if (osd_events(0) < 0) {
+    if (osd_events(0) < 0 || timeout == 0) {
       break;
     }
     slept = dev_get_millisecond_count() - now;
-    if (slept > timeout) {
-      break;
-    } else if (timeout - slept > WAIT_INTERVAL) {
+    if (timeout - slept > WAIT_INTERVAL) {
       usleep(WAIT_INTERVAL * 1000);
     } else {
       usleep((timeout - slept) * 1000);
       break;
     }
   }
+}
+//
+// update terminal size and flush stdout
+//
+void dev_show_page() {
+  osd_refresh();
 }
 
 //
@@ -468,4 +742,4 @@ void dev_delay(uint32_t timeout) {
 void dev_log_stack(const char *keyword, int type, int line) {}
 void v_create_form(var_p_t var) {}
 void v_create_window(var_p_t var) {}
-void dev_show_page() {}
+
