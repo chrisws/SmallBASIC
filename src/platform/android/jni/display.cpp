@@ -188,6 +188,22 @@ void Graphics::redraw() {
           void *dst = base + ((_top + y) * strideBytes);
           memcpy(dst, line, copyBytes);
         }
+
+        // Fill title bar area above canvas
+        for (int y = 0; y < _top; y++) {
+          void *dst = base + (y * strideBytes);
+          memset(dst, 0, buffer.width * sizeof(pixel_t));
+        }
+
+        // Fill the navigation bar area below the canvas with black
+        int const remaining = buffer.height - (_top + height);
+        if (remaining > 0) {
+          for (int y = 0; y < remaining; y++) {
+            void *dst = base + ((_top + height + y) * strideBytes);
+            memset(dst, 0, buffer.width * sizeof(pixel_t));
+          }
+        }
+
         ANativeWindow_unlockAndPost(_app->window);
       }
     }
